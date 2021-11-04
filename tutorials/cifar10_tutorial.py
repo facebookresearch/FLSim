@@ -21,7 +21,7 @@ from flsim.baselines.models.cnn import SimpleConvNet
 from flsim.baselines.models.cv_model import FLModel
 from flsim.data.data_sharder import FLDataSharder, ShardingStrategyType
 from flsim.interfaces.metrics_reporter import Channel
-from flsim.tutorials.metrics_reporter.fl_metrics_reporter import CIFARMetricsReporter
+from flsim.tutorials.metrics_reporter.fl_metrics_reporter import MetricsReporter
 from flsim.utils.config_utils import maybe_parse_json_config
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
@@ -79,7 +79,7 @@ def main(
         drop_last=False,
     )
 
-    metrics_reporter = CIFARMetricsReporter([Channel.TENSORBOARD, Channel.STDOUT])
+    metrics_reporter = MetricsReporter([Channel.TENSORBOARD, Channel.STDOUT])
 
     final_model, eval_score = trainer.train(
         data_provider=data_provider,
@@ -89,7 +89,7 @@ def main(
 
     trainer.test(
         data_iter=data_provider.test_data(),
-        metric_reporter=CIFARMetricsReporter([Channel.STDOUT]),
+        metric_reporter=MetricsReporter([Channel.STDOUT]),
     )
 
 

@@ -15,7 +15,7 @@ from flsim.utils.fl.stats import (
 from flsim.utils.fl.target_metric import TargetMetricTracker, TargetMetricDirection
 
 
-class CIFARMetricsReporter(FLMetricsReporter):
+class MetricsReporter(FLMetricsReporter):
     ACCURACY = "Accuracy"
     ROUND_TO_TARGET = "round_to_target"
 
