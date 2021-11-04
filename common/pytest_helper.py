@@ -7,6 +7,8 @@ There are a list of helper utilities missing in PyTest.
 We define some of the helpful utilities in this one file
 so that all FL-sim PyTests can reuse them easily.
 """
+from typing import Any
+
 import numpy as np
 
 
@@ -36,3 +38,16 @@ def assertTrue(o: object) -> None:
 
 def assertFalse(o: object, e: object = None) -> None:
     assert not o, e
+
+
+class assertRaises(object):
+    def __init__(self, expected_exc: type) -> None:
+        self.expected_exc = expected_exc
+
+    def __enter__(self) -> "assertRaises":
+        return self
+
+    def __exit__(self, exc_type: type, exc_value: Exception, traceback: Any) -> bool:
+        if exc_type is None:
+            raise AssertionError(f"{self.expected_exc} was not raised")
+        return isinstance(exc_value, self.expected_exc)
