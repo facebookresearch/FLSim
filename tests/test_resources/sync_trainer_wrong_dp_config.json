@@ -1,0 +1,36 @@
+{
+  "trainer": {
+    "aggregator": {
+      "_base_": "base_fed_avg_sync_aggregator",
+      "reducer": {
+        "reduction_type": "SUM",
+        "privacy_setting": {
+          "noise_multiplier": 1e-6,
+          "clipping_value": 10,
+          "target_delta": 1e-5
+        },
+        "_base_": "base_dp_reducer"
+      }
+    },
+    "users_per_round": 10,
+    "epochs": 1,
+    "always_keep_trained_model": false,
+    "train_metrics_reported_per_epoch": 1,
+    "report_train_metrics": true,
+    "eval_epoch_frequency": 1,
+    "do_eval": true,
+    "active_user_selector": {
+      "_base_": "base_sequential_active_user_selector"
+    },
+    "report_train_metrics_after_aggregation": true,
+    "_base_": "base_sync_trainer",
+    "client": {
+      "optimizer": {
+        "lr": 0.01,
+        "momentum": 0.9,
+        "_base_": "base_optimizer_sgd"
+      },
+      "epochs": 5
+    }
+  }
+}

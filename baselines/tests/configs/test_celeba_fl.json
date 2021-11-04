@@ -1,0 +1,33 @@
+{
+  "trainer": {
+    "epochs": 1,
+    "users_per_round": 2,
+    "do_eval": false,
+    "report_train_metrics": false,
+    "use_train_clients_for_aggregation_metrics": false,
+    "client": {
+      "optimizer": {
+        "lr": 0.01,
+        "momentum": 0.9
+      }
+    },
+    "_base_": "base_sync_trainer",
+    "active_user_selector": {
+      "_base_": "base_sequential_active_user_selector"
+    }
+  },
+  "data": {
+    "local_batch_size": 32,
+    "user_dist": "niid"
+  },
+  "model": {
+    "use_resnet": true,
+    "dropout": 0.1,
+    "target_eval": 10,
+    "window_size": 1,
+    "average_type": "sma"
+  },
+  "use_cuda_if_available": true,
+  "distributed_world_size": 1,
+  "non_fl": false
+}

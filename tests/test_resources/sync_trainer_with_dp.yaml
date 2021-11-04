@@ -1,0 +1,32 @@
+defaults:
+    - trainer/base_private_sync_trainer
+    - /aggregator@trainer.aggregator: base_fed_avg_sync_aggregator
+    - /reducer@trainer.reducer: base_dp_reducer
+    - /optimizer@trainer.client.optimizer: base_optimizer_sgd
+    - /active_user_selector@trainer.active_user_selector: base_sequential_active_user_selector
+    - _self_
+
+trainer:
+    reducer:
+        reduction_type: SUM
+        privacy_setting:
+            alphas: [2, 3, 4, 6, 7, 8, 9, 10, 20, 30 , 40 , 60]
+            noise_multiplier: 1.0
+            clipping_value: 10000.0
+            target_delta: 1e-6
+    aggregator:
+        num_users_per_round: 10
+        total_number_of_users: 10000
+    client:
+        epochs: 10
+        optimizer:
+            lr: 0.01
+            momentum: 0.9
+    users_per_round: 10
+    epochs: 1
+    always_keep_trained_model: false
+    train_metrics_reported_per_epoch: 1
+    report_train_metrics: true
+    eval_epoch_frequency: 1
+    do_eval: true
+    report_train_metrics_after_aggregation: true

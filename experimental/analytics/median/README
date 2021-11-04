@@ -1,0 +1,23 @@
+Steps to run bin_quant algorithm:
+
+1. Procure the data:
+
+Once the table is available on Presto/Hive, run either hive_reader.py or hive_reader_pdp.py to procure the data as needed (for the FAM and PDP use cases respectively). Here are the sample commands:
+
+buck run @mode/dev-nosan papaya/toolkit/simulation/experimental/analytics/median:hive_reader -- --output_file "/data/users/akashb/fa_data/fam_data.csv" --table_name "FAM_cvr_app_ads_after_sl_train_set_rid_with_weight_April_24" --table_namespace "ad_delivery" --oncall "Looper" --feat_ids 21179536 3029 4160 4461 11225961 11532367 11607667 11655148 11980884 12213457 12511372 13134225 13697760 15048077 15145804 16062953 17136232 17324224 17568074 19251365
+
+buck run @mode/dev-nosan papaya/toolkit/simulation/experimental/analytics/median:hive_reader_pdp -- --output_file "/data/users/akashb/fa_data/pdp_data.csv" --table_name "pdp_fb_cp_data_for_feat_193_country_123" --table_namespace "growth" --oncall "pdp_ml_infra" --feat_ids 193 192 9
+
+Both of the above scripts produce a CSV file at the provided path as their output.
+
+To handle another use case, simple create another script that handles the schema of the table associated with that use case.
+
+2. Run bin_quant.py on the produced csv file as follows:
+
+buck run @mode/dev-nosan papaya/toolkit/simulation/experimental/analytics/median:bin_quant --  --csv_file "/data/users/akashb/fa_data/pdp_data.csv" --op_dir "/data/users/akashb/fbsource/fbcode/papaya/toolkit/simulation/experimental/analytics/median/data/results/canonical_dist" --max_freq 5000 --desired_percentiles 0.05 0.5 0.95 --epsilon 1.0 --lamda 0.001 --tau 0.00000001 --upr 1000 --min -100 --max 100 --eval_csv
+
+Note: You can optionally specify --eval_mock to also run simulations on mock data from gaussian and exponential distributions
+
+3. If the --eval_mock flag was enabled when running bin_quant, then plot 3-D graphs of the results generated as follows:
+
+buck run @mode/dev-nosan papaya/toolkit/simulation/experimental/analytics/median:plot_bin_quant_results --  --op_dir "/data/users/akashb/fbsource/fbcode/papaya/toolkit/simulation/experimental/analytics/median/data/results/canonical_dist" --plot_dir "/data/users/akashb/fbsource/fbcode/papaya/toolkit/simulation/experimental/analytics/median/data/results/canonical_dist_plots"

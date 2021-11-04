@@ -1,0 +1,32 @@
+{
+  "trainer_config": {
+    "type": "SyncTrainer",
+    "aggregator": {
+      "type": "FedAvg"
+    },
+    "optimizer": {
+      "type": "SGD",
+      "lr": 0.01,
+      "momentum": 0.9
+    },
+    "users_per_round": 10,
+    "epochs": 1,
+    "user_epochs_per_round": 5,
+    "always_keep_trained_model": false,
+    "train_metrics_reported_per_epoch": 1,
+    "report_train_metrics": true,
+    "max_clip_norm_normalized": false,
+    "eval_epoch_frequency": 1,
+    "do_eval": true,
+    "active_user_selector": {
+      "type": "sequential"
+    },
+    "report_train_metrics_after_aggregation": true
+  },
+  "distributed_world_size": 1,
+  "memory_requirement": "16G",
+  "data_config": {"local_batch_size": 128},
+  "use_cuda_if_available": true,
+  "is_integration_test": true,
+  "use_resnet": false
+}
