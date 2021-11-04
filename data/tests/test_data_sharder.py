@@ -6,6 +6,7 @@ import random
 import string
 
 import torch
+from flsim.common.pytest_helper import assertEqual, assertTrue, assertIsInstance
 from flsim.data.data_sharder import (
     FLDataSharder,
     ShardingStrategyFactory,
@@ -17,7 +18,6 @@ from flsim.utils.tests.helpers.test_data_utils import (
     DummyAlphabetDataset,
     Utils,
 )
-from libfb.py import testutil
 
 
 class MockData:
@@ -93,14 +93,11 @@ def provide_configs():
     }
 
 
-class DataSharderTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestDataSharder:
     def test_sharder_strategy_factory(self) -> None:
         for sharder_type, config in provide_configs().items():
             sharder = ShardingStrategyFactory.create(config)
-            self.assertIsInstance(sharder, sharder_type)
+            assertIsInstance(sharder, sharder_type)
 
     def test_random_sharder(self) -> None:
         """Only tests random sharding strategy in this test case. All the other
@@ -114,9 +111,9 @@ class DataSharderTest(testutil.BaseFacebookTestCase):
                 MockData.provide_data()[i % sum(1 for row in MockData.provide_data())]
             )
             if i == 0:
-                self.assertEqual(shard, [6])
+                assertEqual(shard, [6])
             elif i == random_sharder_config.num_shards:
-                self.assertEqual(shard, [3])
+                assertEqual(shard, [3])
 
     def test_shard_rows_random(self) -> None:
         random_sharder_config = provide_configs()[FLDataSharder.RandomSharding]
@@ -134,7 +131,7 @@ class DataSharderTest(testutil.BaseFacebookTestCase):
                 ]
             )
         )
-        self.assertEqual(len(random_sharded_rows), random_sharder_config.num_shards)
+        assertEqual(len(random_sharded_rows), random_sharder_config.num_shards)
 
     def test_shard_rows_power_law(self) -> None:
         power_sharder_config = provide_configs()[FLDataSharder.PowerLawSharding]
@@ -147,9 +144,9 @@ class DataSharderTest(testutil.BaseFacebookTestCase):
             power_fl_sharder.shard_rows(MockData.provide_data())
         )
         num_examples_per_user = [len(p) for _, p in power_law_sharded_rows]
-        self.assertEqual(len(num_examples_per_user), power_sharder_config.num_shards)
+        assertEqual(len(num_examples_per_user), power_sharder_config.num_shards)
         # assert that top user will have more than 20% of the examples
-        self.assertTrue(max(num_examples_per_user) / sum(num_examples_per_user) > 0.20)
+        assertTrue(max(num_examples_per_user) / sum(num_examples_per_user) > 0.20)
 
     def test_shard_rows_broadcast(self) -> None:
         broadcast_sharder_config = provide_configs()[FLDataSharder.BroadcastSharding]
@@ -161,7 +158,7 @@ class DataSharderTest(testutil.BaseFacebookTestCase):
             broadcast_sharder_config.alpha,
         )
         # all rows from dataset should be replicated to all shards
-        self.assertEqual(
+        assertEqual(
             [
                 user_data
                 for _, user_data in broadcast_fl_sharder.shard_rows(
@@ -185,7 +182,7 @@ class DataSharderTest(testutil.BaseFacebookTestCase):
         )
         # each data row should be assigned to a unique shard, since column
         # sharding is based on user id here and each mocked user id is unique
-        self.assertEqual(
+        assertEqual(
             [
                 user_data
                 for _, user_data in column_fl_sharder.shard_rows(
@@ -214,7 +211,7 @@ class DataSharderTest(testutil.BaseFacebookTestCase):
         # robin fashion with 10 shards. e.g. 1th, 11th, 21th data row
         # should be in the same shard.
         for shard_index in range(TestDataSetting.NUM_SHARDS):
-            self.assertEqual(
+            assertEqual(
                 sharded_rows_from_roundrobin[shard_index],
                 [
                     one_data_row
@@ -239,7 +236,7 @@ class DataSharderTest(testutil.BaseFacebookTestCase):
                 MockData.provide_data()
             )
         ]
-        self.assertEqual(
+        assertEqual(
             len(sharded_rows_from_sequential),
             len(string.ascii_lowercase)
             / sequential_sharder_config.shard_size_for_sequential,
@@ -249,7 +246,7 @@ class DataSharderTest(testutil.BaseFacebookTestCase):
             start_index = (
                 shard_index * sequential_sharder_config.shard_size_for_sequential
             )
-            self.assertEqual(
+            assertEqual(
                 data_for_a_shard,
                 dataset[
                     start_index : start_index
@@ -276,11 +273,11 @@ class DataSharderTest(testutil.BaseFacebookTestCase):
                 local_batch_size,  # test_batch_size
             )
             train_set = data_loader.fl_train_set(rank=rank, world_size=world_size)
-            self.assertEqual(data_loader.num_total_users, math.ceil(26 / shard_size))
+            assertEqual(data_loader.num_total_users, math.ceil(26 / shard_size))
             number_of_users_on_worker = 2 if rank in (0, 1, 2) else 1
             # pyre-fixme[6]
             train_set_size = len(train_set)
-            self.assertEqual(train_set_size, number_of_users_on_worker)
+            assertEqual(train_set_size, number_of_users_on_worker)
 
     def test_pytorch_dataset_wrapper(self) -> None:
         # mock 26 rows
@@ -300,7 +297,7 @@ class DataSharderTest(testutil.BaseFacebookTestCase):
         )
 
         data_loader.fl_train_set()
-        self.assertEqual(data_loader.num_total_users, math.ceil(26 / shard_size))
+        assertEqual(data_loader.num_total_users, math.ceil(26 / shard_size))
         eval_set = data_loader.fl_eval_set()
         # pyre-fixme[6]
-        self.assertEqual(len(eval_set), (26 / local_batch_size))
+        assertEqual(len(eval_set), (26 / local_batch_size))
