@@ -4,11 +4,21 @@
 from typing import Any, Dict
 
 import pkg_resources
+import pytest
 import torch
+from flsim.common.pytest_helper import assertEqual
 from flsim.data.csv_dataset import FLCSVDataset
 from flsim.data.data_sharder import FLDataSharder
 from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
-from libfb.py import testutil
+
+
+@pytest.fixture(scope="class")
+def prepare_dataset_data_loader_with_batch(request):
+    request.cls.test_csv_path = "test_resources/data.csv"
+    request.cls.total_data_count = 15
+    request.cls.train_batch_size = 1
+    request.cls.eval_batch_size = 3
+    request.cls.test_batch_size = 5
 
 
 class TestDataset(FLCSVDataset):
@@ -19,20 +29,10 @@ class TestDataset(FLCSVDataset):
         }
 
 
-class DatasetDataLoaderWithBatchTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-        self.test_csv_path = "test_resources/data.csv"
-        self.total_data_count = 15
-        self.train_batch_size = 1
-        self.eval_batch_size = 3
-        # pyre-fixme[8]: Attribute has type
-        #  `BoundMethod[typing.Callable(DatasetDataLoaderWithBatchTest.test_batch_size)[[Named(self,
-        #  DatasetDataLoaderWithBatchTest)], None], DatasetDataLoaderWithBatchTest]`;
-        #  used as `int`.
-        self.test_batch_size = 5
-
+@pytest.mark.usefixtures("prepare_dataset_data_loader_with_batch")
+class TestDatasetDataLoaderWithBatch:
     def test_batch_size(self) -> None:
+        # pyre-ignore[16]: for pytest fixture
         file_path = pkg_resources.resource_filename(__name__, self.test_csv_path)
         dataset = TestDataset(file_path)
 
@@ -44,24 +44,23 @@ class DatasetDataLoaderWithBatchTest(testutil.BaseFacebookTestCase):
             dataset,
             dataset,
             fl_data_sharder,
+            # pyre-ignore[16]: for pytest fixture
             self.train_batch_size,
+            # pyre-ignore[16]: for pytest fixture
             self.eval_batch_size,
-            # pyre-fixme[6]: Expected `Optional[int]` for 7th param but got
-            #  `BoundMethod[typing.Callable(DatasetDataLoaderWithBatchTest.test_batch_size)[[Named(self,
-            #  DatasetDataLoaderWithBatchTest)], None],
-            #  DatasetDataLoaderWithBatchTest]`.
+            # pyre-ignore[6]
             self.test_batch_size,
         )
-        self.assertEqual(
+        assertEqual(
             len(list(data_loader.fl_train_set())),
+            # pyre-ignore[16]: for pytest fixture
             self.total_data_count / self.train_batch_size,
         )
-        self.assertEqual(
+        assertEqual(
             len(list(data_loader.fl_eval_set())),
             self.total_data_count / self.eval_batch_size,
         )
-        self.assertEqual(
+        assertEqual(
             len(list(data_loader.fl_test_set())),
-            # pyre-fixme[58]: `/` is not supported for operand types `int` and `Bound...
             self.total_data_count / self.test_batch_size,
         )
