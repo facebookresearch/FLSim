@@ -9,13 +9,13 @@ from flsim.common.diversity_metrics import (
     DiversityMetricType,
     DiversityStatistics,
 )
-from libfb.py import testutil
+from flsim.common.pytest_helper import (
+    assertEqual,
+    assertTrue,
+)
 
 
-class DiversityStatisticsTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestDiversityStatistics:
     def test_initialize_diversity_statistics(self):
         n_test_cases = 1000
         num_cohorts_per_test = 10
@@ -38,23 +38,23 @@ class DiversityStatisticsTest(testutil.BaseFacebookTestCase):
 
             diversity_statistics = DiversityStatistics(cohort_diversity_metrics)
             diversity_statistics_eq = DiversityStatistics(cohort_diversity_metrics)
-            self.assertEqual(diversity_statistics, diversity_statistics_eq)
+            assertEqual(diversity_statistics, diversity_statistics_eq)
 
-            self.assertTrue(
+            assertTrue(
                 math.isclose(
                     diversity_statistics.maximum_metric,
                     max(cohort_gradient_diversities),
                     rel_tol=num_tol,
                 )
             )
-            self.assertTrue(
+            assertTrue(
                 math.isclose(
                     diversity_statistics.minimum_metric,
                     min(cohort_gradient_diversities),
                     rel_tol=num_tol,
                 )
             )
-            self.assertTrue(
+            assertTrue(
                 math.isclose(
                     diversity_statistics.average_metric,
                     sum(cohort_gradient_diversities) / len(cohort_gradient_diversities),
@@ -66,21 +66,21 @@ class DiversityStatisticsTest(testutil.BaseFacebookTestCase):
                 metric.diversity_metric_type = DiversityMetricType.orthogonality
 
             diversity_statistics = DiversityStatistics(cohort_diversity_metrics)
-            self.assertTrue(
+            assertTrue(
                 math.isclose(
                     diversity_statistics.maximum_metric,
                     max(cohort_orthogonalities),
                     rel_tol=num_tol,
                 )
             )
-            self.assertTrue(
+            assertTrue(
                 math.isclose(
                     diversity_statistics.minimum_metric,
                     min(cohort_orthogonalities),
                     rel_tol=num_tol,
                 )
             )
-            self.assertTrue(
+            assertTrue(
                 math.isclose(
                     diversity_statistics.average_metric,
                     sum(cohort_orthogonalities) / len(cohort_orthogonalities),
@@ -89,34 +89,31 @@ class DiversityStatisticsTest(testutil.BaseFacebookTestCase):
             )
 
 
-class DiversityMetricsTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestDiversityMetrics:
     def test_initialize_diversity_metrics(self):
         diversity_metrics = DiversityMetrics(norm_of_sum=1.0, sum_of_norms=2.0)
-        self.assertTrue(isinstance(diversity_metrics, DiversityMetrics))
-        self.assertEqual(
+        assertTrue(isinstance(diversity_metrics, DiversityMetrics))
+        assertEqual(
             diversity_metrics.diversity_metric_type,
             DiversityMetricType.gradient_diversity,
         )
 
         # Test all comparators for both metrics of interest
         diversity_metrics_incr = DiversityMetrics(norm_of_sum=1.0, sum_of_norms=3.0)
-        self.assertTrue(diversity_metrics_incr > diversity_metrics)
-        self.assertTrue(diversity_metrics_incr >= diversity_metrics)
-        self.assertTrue(diversity_metrics < diversity_metrics_incr)
-        self.assertTrue(diversity_metrics <= diversity_metrics_incr)
-        self.assertTrue(diversity_metrics != diversity_metrics_incr)
-        self.assertTrue(not (diversity_metrics == diversity_metrics_incr))
+        assertTrue(diversity_metrics_incr > diversity_metrics)
+        assertTrue(diversity_metrics_incr >= diversity_metrics)
+        assertTrue(diversity_metrics < diversity_metrics_incr)
+        assertTrue(diversity_metrics <= diversity_metrics_incr)
+        assertTrue(diversity_metrics != diversity_metrics_incr)
+        assertTrue(not (diversity_metrics == diversity_metrics_incr))
         diversity_metrics.diversity_metric_type = DiversityMetricType.orthogonality
         diversity_metrics_incr.diversity_metric_type = DiversityMetricType.orthogonality
-        self.assertTrue(diversity_metrics_incr > diversity_metrics)
-        self.assertTrue(diversity_metrics_incr >= diversity_metrics)
-        self.assertTrue(diversity_metrics < diversity_metrics_incr)
-        self.assertTrue(diversity_metrics <= diversity_metrics_incr)
-        self.assertTrue(diversity_metrics != diversity_metrics_incr)
-        self.assertTrue(not (diversity_metrics == diversity_metrics_incr))
+        assertTrue(diversity_metrics_incr > diversity_metrics)
+        assertTrue(diversity_metrics_incr >= diversity_metrics)
+        assertTrue(diversity_metrics < diversity_metrics_incr)
+        assertTrue(diversity_metrics <= diversity_metrics_incr)
+        assertTrue(diversity_metrics != diversity_metrics_incr)
+        assertTrue(not (diversity_metrics == diversity_metrics_incr))
 
         n_test_cases = 1000
         std_dev = 500.0
@@ -127,14 +124,14 @@ class DiversityMetricsTest(testutil.BaseFacebookTestCase):
             diversity_metrics = DiversityMetrics(norm_of_sum, sum_of_norms)
 
             # Check bounds on and relationship between the two stored quantities
-            self.assertTrue(diversity_metrics._recpr_gradient_diversity >= 0.0)
-            self.assertTrue(diversity_metrics._recpr_orthogonality >= -1.0)
-            self.assertTrue(
+            assertTrue(diversity_metrics._recpr_gradient_diversity >= 0.0)
+            assertTrue(diversity_metrics._recpr_orthogonality >= -1.0)
+            assertTrue(
                 diversity_metrics.orthogonality < 0
                 or diversity_metrics.gradient_diversity
                 <= diversity_metrics.orthogonality
             )
-            self.assertTrue(
+            assertTrue(
                 math.isclose(
                     diversity_metrics._recpr_gradient_diversity
                     - diversity_metrics._recpr_orthogonality,
@@ -144,15 +141,15 @@ class DiversityMetricsTest(testutil.BaseFacebookTestCase):
             )
             diversity_metrics_cpy = copy.deepcopy(diversity_metrics)
             diversity_metrics_eq = DiversityMetrics(norm_of_sum, sum_of_norms)
-            self.assertEqual(diversity_metrics_cpy, diversity_metrics)
-            self.assertEqual(diversity_metrics_eq, diversity_metrics)
+            assertEqual(diversity_metrics_cpy, diversity_metrics)
+            assertEqual(diversity_metrics_eq, diversity_metrics)
 
             # Increasing sum_of_norms will increase both gradient diversity and orthogonality.
             # Increasing norm_of_sum will decrease them both.
             diversity_metrics_incr = DiversityMetrics(norm_of_sum, sum_of_norms * 1.01)
             diversity_metrics_decr = DiversityMetrics(norm_of_sum * 1.01, sum_of_norms)
-            self.assertTrue(diversity_metrics_incr > diversity_metrics)
-            self.assertTrue(diversity_metrics_decr < diversity_metrics)
+            assertTrue(diversity_metrics_incr > diversity_metrics)
+            assertTrue(diversity_metrics_decr < diversity_metrics)
             diversity_metrics.diversity_metric_type = DiversityMetricType.orthogonality
             diversity_metrics_incr.diversity_metric_type = (
                 DiversityMetricType.orthogonality
@@ -160,15 +157,15 @@ class DiversityMetricsTest(testutil.BaseFacebookTestCase):
             diversity_metrics_decr.diversity_metric_type = (
                 DiversityMetricType.orthogonality
             )
-            self.assertTrue(diversity_metrics_incr > diversity_metrics)
-            self.assertTrue(diversity_metrics_decr < diversity_metrics)
+            assertTrue(diversity_metrics_incr > diversity_metrics)
+            assertTrue(diversity_metrics_decr < diversity_metrics)
             diversity_metrics.diversity_metric_type = (
                 DiversityMetricType.gradient_diversity
             )
 
             # Check that metric_value returns the value of the poperty of interest
             diversity_metrics.diversity_metric_type = DiversityMetricType.orthogonality
-            self.assertTrue(
+            assertTrue(
                 math.isclose(
                     diversity_metrics.metric_value, diversity_metrics.orthogonality
                 )
@@ -176,7 +173,7 @@ class DiversityMetricsTest(testutil.BaseFacebookTestCase):
             diversity_metrics.diversity_metric_type = (
                 DiversityMetricType.gradient_diversity
             )
-            self.assertTrue(
+            assertTrue(
                 math.isclose(
                     diversity_metrics.metric_value, diversity_metrics.gradient_diversity
                 )
@@ -184,23 +181,23 @@ class DiversityMetricsTest(testutil.BaseFacebookTestCase):
 
             # Check the special case when norm_of_sum = sum_of_norms
             diversity_metrics_eq = DiversityMetrics(sum_of_norms, sum_of_norms)
-            self.assertTrue(
+            assertTrue(
                 math.isclose(
                     diversity_metrics_eq._recpr_gradient_diversity,
                     1.0,
                     rel_tol=numerical_tol,
                 )
             )
-            self.assertTrue(
+            assertTrue(
                 math.isclose(
                     diversity_metrics_eq._recpr_orthogonality,
                     0.0,
                     rel_tol=numerical_tol,
                 )
             )
-            self.assertTrue(
+            assertTrue(
                 math.isclose(
                     diversity_metrics_eq.gradient_diversity, 1.0, rel_tol=numerical_tol
                 )
             )
-            self.assertTrue(math.isnan(diversity_metrics_eq.orthogonality))
+            assertTrue(math.isnan(diversity_metrics_eq.orthogonality))
