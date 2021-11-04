@@ -5,8 +5,16 @@ import math
 from typing import List, Tuple, Type
 
 import numpy as np
+import pytest
 import torch
 from flsim.clients.base_client import ClientConfig
+from flsim.common.pytest_helper import (
+    assertAlmostEqual,
+    assertEqual,
+    assertTrue,
+    assertLessEqual,
+    assertGreaterEqual,
+)
 from flsim.common.training_event_handler import TestAsyncTrainingEventHandler
 from flsim.common.training_simulator import AsyncTrainingSimulator
 from flsim.data.data_provider import FLDataProviderFromList, IFLDataProvider
@@ -41,7 +49,6 @@ from flsim.utils.timing.training_duration_distribution import (
     PerUserUniformDurationDistributionConfig,
     PerUserExponentialDurationDistributionConfig,
 )
-from libfb.py import testutil
 from omegaconf import OmegaConf
 
 
@@ -50,17 +57,19 @@ class Globals:
     TRAINING_STATE_IDX = 1
 
 
-class TrainingSimulatorUtilsTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-        self.shared_client_config = ClientConfig(
-            epochs=1,
-            max_clip_norm_normalized=0,
-            only_federated_params=True,
-            random_seed=1,
-            store_models_and_optimizers=False,
-        )
+@pytest.fixture(scope="class")
+def prepare_training_simulator_test_utils(request):
+    request.cls.shared_client_config = ClientConfig(
+        epochs=1,
+        max_clip_norm_normalized=0,
+        only_federated_params=True,
+        random_seed=1,
+        store_models_and_optimizers=False,
+    )
 
+
+@pytest.mark.usefixtures("prepare_training_simulator_test_utils")
+class TestTrainingSimulatorUtils:
     def random_user_selector(self, data_provider: IFLDataProvider) -> AsyncUserSelector:
         return RandomAsyncUserSelector(data_provider=data_provider)
 
@@ -88,16 +97,16 @@ class TrainingSimulatorUtilsTest(testutil.BaseFacebookTestCase):
         exp_end_time: int,
         exp_training_state: TrainingState,
     ):
-        self.assertEqual(
+        assertEqual(
             # pyre-fixme[16]: `TrainingState` has no attribute `training_start_time`.
             training_event[Globals.DEVICE_STATE_IDX].training_schedule.start_time,
             exp_start_time,
         )
-        self.assertEqual(
+        assertEqual(
             training_event[Globals.DEVICE_STATE_IDX].training_schedule.end_time,
             exp_end_time,
         )
-        self.assertEqual(training_event[Globals.TRAINING_STATE_IDX], exp_training_state)
+        assertEqual(training_event[Globals.TRAINING_STATE_IDX], exp_training_state)
 
     def test_training_simulator(self):
         """Check that the priority queue in the training simulator works as
@@ -197,15 +206,15 @@ class TrainingSimulatorUtilsTest(testutil.BaseFacebookTestCase):
             TrainingState.TRAINING_FINISHED,
         )
 
-        self.assertEqual(job_scheduler.current_seqnum, 3)
+        assertEqual(job_scheduler.current_seqnum, 3)
         # check stats for seqnum
         # global model updates are as below: {user_seqnum, global_seqnum}
         # {1, 1} event1 ends
         # {2, 2} event3 ends
         # {1, 3} event2 ends
         # seqnum_diffs = [0, 0, 2], mean = 2/3, sd = sqrt(24/27)
-        self.assertAlmostEqual(job_scheduler.seqnum_diff_mean(), 2 / 3)
-        self.assertAlmostEqual(job_scheduler.seqnum_std(), math.sqrt(24 / 27))
+        assertAlmostEqual(job_scheduler.seqnum_diff_mean(), 2 / 3)
+        assertAlmostEqual(job_scheduler.seqnum_std(), math.sqrt(24 / 27))
 
     def test_async_stats(self):
         """Check that the priority JobQueueStats functionality in the training
@@ -244,7 +253,7 @@ class TrainingSimulatorUtilsTest(testutil.BaseFacebookTestCase):
         )
         training_sim.run_one_epoch()
         avg_pending_jobs = training_sim.avg_pending_jobs()
-        self.assertTrue(avg_pending_jobs == 5 / 3)
+        assertTrue(avg_pending_jobs == 5 / 3)
 
     def test_sequential_training(self) -> None:
         """Check that in sequential training (where mean and SD of training
@@ -275,6 +284,7 @@ class TrainingSimulatorUtilsTest(testutil.BaseFacebookTestCase):
             job_scheduler=job_scheduler,
             user_selector=self.random_user_selector(data_provider=data_provider),
             event_generator=distr,
+            # pyre-ignore[16]: for pytest fixture
             shared_client_config=self.shared_client_config,
             num_train_end_events_per_epoch=num_users,
         )
@@ -282,22 +292,22 @@ class TrainingSimulatorUtilsTest(testutil.BaseFacebookTestCase):
         # two 'events' are generated for each job,
         # and stored in job_scheduler.training_events
         # one TRAINING event and one TRAINING_FINISHED event
-        self.assertEqual(len(job_scheduler.training_events), num_users * 2)
+        assertEqual(len(job_scheduler.training_events), num_users * 2)
         for user_num in range(num_users):
             # two events for each user
             user_index = 2 * user_num
-            self.assertEqual(
+            assertEqual(
                 job_scheduler.training_events[user_index][Globals.TRAINING_STATE_IDX],
                 TrainingState.TRAINING,
             )
-            self.assertEqual(
+            assertEqual(
                 job_scheduler.training_events[user_index + 1][
                     Globals.TRAINING_STATE_IDX
                 ],
                 TrainingState.TRAINING_FINISHED,
             )
             # verify that both events are from the same user
-            self.assertEqual(
+            assertEqual(
                 job_scheduler.training_events[user_index][Globals.DEVICE_STATE_IDX],
                 job_scheduler.training_events[user_index + 1][Globals.DEVICE_STATE_IDX],
             )
@@ -338,18 +348,17 @@ class TrainingSimulatorUtilsTest(testutil.BaseFacebookTestCase):
                 job_scheduler=job_scheduler,
                 user_selector=self.random_user_selector(data_provider=data_provider),
                 event_generator=distr,
+                # pyre-ignore[16]: for pytest fixture
                 shared_client_config=self.shared_client_config,
                 num_train_end_events_per_epoch=num_users,
             )
             training_sim.run_one_epoch()
-            self.assertEqual(
+            assertEqual(
                 training_sim.queue_stats.avg_pending_jobs(),
                 test_config.mean_pending_jobs,
             )
-            self.assertEqual(
-                job_scheduler.seqnum_diff_mean(), test_config.mean_seqnum_diff
-            )
-            self.assertEqual(job_scheduler.seqnum_std(), test_config.sd_seqnum_diff)
+            assertEqual(job_scheduler.seqnum_diff_mean(), test_config.mean_seqnum_diff)
+            assertEqual(job_scheduler.seqnum_std(), test_config.sd_seqnum_diff)
 
     def test_poisson_event_gen_stats(self) -> None:
         """Test that when using an EventGenerator with poisson distributed
@@ -387,19 +396,18 @@ class TrainingSimulatorUtilsTest(testutil.BaseFacebookTestCase):
                 job_scheduler=job_scheduler,
                 user_selector=self.random_user_selector(data_provider=data_provider),
                 event_generator=distr,
+                # pyre-ignore[16]: for pytest fixture
                 shared_client_config=self.shared_client_config,
                 num_train_end_events_per_epoch=num_users,
             )
             training_sim.run_one_epoch()
-            self.assertAlmostEqual(
+            assertAlmostEqual(
                 training_sim.queue_stats.avg_pending_jobs(),
                 test_config.mean_pending_jobs,
                 delta=0.50,
             )
-            self.assertEqual(
-                job_scheduler.seqnum_diff_mean(), test_config.mean_seqnum_diff
-            )
-            self.assertAlmostEqual(
+            assertEqual(job_scheduler.seqnum_diff_mean(), test_config.mean_seqnum_diff)
+            assertAlmostEqual(
                 job_scheduler.seqnum_std(), test_config.sd_seqnum_diff, delta=0.001
             )
 
@@ -476,6 +484,7 @@ class TrainingSimulatorUtilsTest(testutil.BaseFacebookTestCase):
             job_scheduler=job_scheduler,
             user_selector=self.round_robin_user_selector(data_provider),
             event_generator=distr,
+            # pyre-ignore[16]: for pytest fixture
             shared_client_config=self.shared_client_config,
             num_train_end_events_per_epoch=num_users,
         )
@@ -485,21 +494,21 @@ class TrainingSimulatorUtilsTest(testutil.BaseFacebookTestCase):
         # two 'events' are generated for each job,
         # and stored in job_scheduler.training_events
         # one TRAINING event and one TRAINING_FINISHED event
-        self.assertEqual(len(job_scheduler.training_events), num_users * 2)
+        assertEqual(len(job_scheduler.training_events), num_users * 2)
         first_n_events = job_scheduler.training_events[:num_users]
         # First num_user events should be TRAINING events
-        self.assertEqual(
+        assertEqual(
             [i[ts_idx] for i in first_n_events], [TrainingState.TRAINING] * num_users
         )
         # First num_user events should have user_index in sequence
-        self.assertEqual(
+        assertEqual(
             [i[ds_idx].user_info.user_index for i in first_n_events],
             list(range(num_users)),
         )
 
         last_n_events = job_scheduler.training_events[num_users:]
         # Next num_user events should be TRAINING_FINISHED events:
-        self.assertEqual(
+        assertEqual(
             [i[ts_idx] for i in last_n_events],
             [TrainingState.TRAINING_FINISHED] * num_users,
         )
@@ -508,7 +517,7 @@ class TrainingSimulatorUtilsTest(testutil.BaseFacebookTestCase):
         user_finishing_seq = self.get_user_finishing_seq(
             num_users, duration_distr_config
         )
-        self.assertEqual(
+        assertEqual(
             [i[ds_idx].user_info.user_index for i in last_n_events], user_finishing_seq
         )
 
@@ -553,8 +562,8 @@ class TrainingSimulatorUtilsTest(testutil.BaseFacebookTestCase):
             shared_client_config=self.shared_client_config,
             num_train_end_events_per_epoch=num_users,
         )
-        self.assertTrue(check_inherit_logging_level(training_sim, 50))
-        self.assertTrue(check_inherit_logging_level(training_sim, 10))
+        assertTrue(check_inherit_logging_level(training_sim, 50))
+        assertTrue(check_inherit_logging_level(training_sim, 10))
 
     def _training_staleness_distribution(
         self,
@@ -614,12 +623,12 @@ class TrainingSimulatorUtilsTest(testutil.BaseFacebookTestCase):
         mean = np.mean(staleness)
         sd = np.std(staleness)
 
-        self.assertLessEqual(np.median(staleness), mean)
+        assertLessEqual(np.median(staleness), mean)
         # check that not all values are within 2 sd
-        self.assertGreaterEqual(max(staleness), mean + 2 * sd)
+        assertGreaterEqual(max(staleness), mean + 2 * sd)
         # check all values are within 7 sd of the mean
         # 2e-11 = e^(−k^2/2) = exp(-7^2/2)
-        self.assertLessEqual(max(staleness), mean + 7 * sd)
+        assertLessEqual(max(staleness), mean + 7 * sd)
 
     def test_per_user_uniform_training_duration(self):
         num_users = 2000
@@ -637,11 +646,11 @@ class TrainingSimulatorUtilsTest(testutil.BaseFacebookTestCase):
         sd = np.std(staleness)
 
         # check that under uniform mean and median close to the same
-        self.assertAlmostEqual(np.median(staleness), mean, delta=1.5)
+        assertAlmostEqual(np.median(staleness), mean, delta=1.5)
 
         # check that all values are within 4 sd from the mean
-        self.assertLessEqual(max(staleness), mean + 4 * sd)
-        self.assertGreaterEqual(min(staleness), mean - 4 * sd)
+        assertLessEqual(max(staleness), mean + 4 * sd)
+        assertGreaterEqual(min(staleness), mean - 4 * sd)
 
     def test_per_user_exponential_training_duration(self):
         for training_mean in [0.5, 1, 2]:
@@ -658,5 +667,5 @@ class TrainingSimulatorUtilsTest(testutil.BaseFacebookTestCase):
             median = np.median(staleness)
 
             expected_mean = training_rate * training_mean
-            self.assertAlmostEqual(expected_mean, mean, delta=1.5)
-            self.assertLessEqual(median, mean)
+            assertAlmostEqual(expected_mean, mean, delta=1.5)
+            assertLessEqual(median, mean)
