@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
+import pytest
+from flsim.common.pytest_helper import assertEqual, assertAlmostEqual
 from flsim.optimizers.sync_aggregators import (
     FedLARSSyncAggregator,
     FedAvgWithLRSyncAggregator,
@@ -8,17 +10,17 @@ from flsim.optimizers.sync_aggregators import (
     FedAvgWithLRSyncAggregatorConfig,
 )
 from flsim.tests.utils import MockQuadratic1DFL, Quadratic1D
-from libfb.py import testutil
 from omegaconf import OmegaConf
 
 
-class LarsOptimizerTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        self.quadratic1D_lars = MockQuadratic1DFL(Quadratic1D())
-        self.quadratic1D_sgd = MockQuadratic1DFL(Quadratic1D())
+@pytest.fixture(scope="class")
+def prepare_lars_optimizer_test(request):
+    request.cls.quadratic1D_lars = MockQuadratic1DFL(Quadratic1D())
+    request.cls.quadratic1D_sgd = MockQuadratic1DFL(Quadratic1D())
 
-        super().setUp()
 
+@pytest.mark.usefixtures("prepare_lars_optimizer_test")
+class TestLarsOptimizer:
     def test_lars_multiple_steps(self):
         """
             a toy optimization example:
@@ -54,10 +56,12 @@ class LarsOptimizerTest(testutil.BaseFacebookTestCase):
             lars_gradient_norm = abs(lars_gradient)
 
             if i == 0:
-                assert (
-                    abs((original_param_value - updated_param_value_lars) - 0.01) < 1e-4
+                assertAlmostEqual(
+                    abs((original_param_value - updated_param_value_lars)),
+                    0.01,
+                    delta=1e-4,
                 )
-                assert abs(lars_gradient_norm - 200) < 1e-4
+                assertAlmostEqual(lars_gradient_norm, 200, delta=1e-4)
 
             equivalent_sgd_lr = (
                 dict_config_lars["lr"] * weight_norm / lars_gradient_norm
@@ -82,4 +86,4 @@ class LarsOptimizerTest(testutil.BaseFacebookTestCase):
                 self.quadratic1D_sgd.fl_get_module().state_dict()["x"].item()
             )
 
-            assert updated_param_value_lars == updated_param_value_sgd
+            assertEqual(updated_param_value_lars, updated_param_value_sgd)
