@@ -64,8 +64,8 @@ def assertIsNotNone(o: object) -> None:
     assert o is not None
 
 
-def assertTrue(o: object) -> None:
-    assert o
+def assertTrue(o: object, e: object = None) -> None:
+    assert o, e
 
 
 def assertFalse(o: object, e: object = None) -> None:
