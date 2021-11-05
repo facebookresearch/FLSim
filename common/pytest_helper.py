@@ -72,6 +72,14 @@ def assertFalse(o: object, e: object = None) -> None:
     assert not o, e
 
 
+def assertEmpty(o, msg: object = None) -> None:
+    assert len(o) == 0, msg
+
+
+def assertNotEmpty(o, msg: object = None) -> None:
+    assert len(o) > 0, msg
+
+
 class assertRaises(object):
     def __init__(self, expected_exc: type) -> None:
         self.expected_exc = expected_exc
