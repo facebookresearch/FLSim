@@ -11,6 +11,9 @@ import torch
 import torch.distributed as dist
 import torch.distributed.fb.test.test_util as test_util
 import torch.multiprocessing as mp
+from flsim.active_user_selectors.simple_user_selector import (
+    SequentialActiveUserSelectorConfig,
+)
 from flsim.baselines.utils import (
     GlobalOptimizerType,
     create_global_aggregator,
@@ -18,9 +21,6 @@ from flsim.baselines.utils import (
 )
 from flsim.clients.base_client import ClientConfig
 from flsim.clients.dp_client import DPClientConfig
-from flsim.common.active_user_selectors.simple_user_selector import (
-    SequentialActiveUserSelectorConfig,
-)
 from flsim.data.data_provider import FLDataProviderFromList
 from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
 from flsim.privacy.common import PrivacySetting

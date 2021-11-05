@@ -10,16 +10,16 @@ from dataclasses import dataclass
 from typing import Any, Iterable, List, Optional, Tuple
 
 import torch
+from flsim.active_user_selectors.simple_user_selector import (
+    ActiveUserSelectorConfig,
+    UniformlyRandomActiveUserSelectorConfig,
+)
 from flsim.channels.base_channel import FLChannelConfig
 from flsim.channels.communication_stats import (
     ChannelStatsCollector,
     ChannelDirection,
 )
 from flsim.clients.base_client import ClientConfig
-from flsim.common.active_user_selectors.simple_user_selector import (
-    ActiveUserSelectorConfig,
-    UniformlyRandomActiveUserSelectorConfig,
-)
 from flsim.common.logger import Logger
 from flsim.common.timeline import Timeline
 from flsim.common.timeout_simulator import (

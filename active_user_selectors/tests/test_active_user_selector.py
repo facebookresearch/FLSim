@@ -5,7 +5,7 @@ import math
 from collections import Counter
 
 import torch
-from flsim.common.active_user_selectors.simple_user_selector import (
+from flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorUtils,
     HighLossActiveUserSelector,
     HighLossActiveUserSelectorConfig,
