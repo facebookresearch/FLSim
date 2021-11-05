@@ -18,20 +18,22 @@ from flsim.common.active_user_selectors.simple_user_selector import (
     UniformlyRandomActiveUserSelector,
     UniformlyRandomActiveUserSelectorConfig,
 )
+from flsim.common.pytest_helper import (
+    assertEqual,
+    assertTrue,
+    assertRaises,
+    assertIsInstance,
+)
 from flsim.utils.sample_model import DummyAlphabetFLModel
 from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
 from hydra.utils import instantiate
-from libfb.py import testutil
 
 
-class ActiveUserSelectorTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestActiveUserSelector:
     def test_uniformly_random_user_selection(self):
         # Test the uniformly random user selection in the ActiveUserSelector base class
         null_selector = instantiate(SequentialActiveUserSelectorConfig())
-        self.assertTrue(isinstance(null_selector, SequentialActiveUserSelector))
+        assertIsInstance(null_selector, SequentialActiveUserSelector)
         users = tuple(range(5))
         torch.manual_seed(123456789)
         selections = [
@@ -41,10 +43,10 @@ class ActiveUserSelectorTest(testutil.BaseFacebookTestCase):
             for _ in range(10000)
         ]
         counts = Counter(selections)
-        self.assertTrue(min(counts.values()) > 1500 and max(counts.values()) < 2500)
+        assertTrue(min(counts.values()) > 1500 and max(counts.values()) < 2500)
         # Make sure that the users aren't being selected sequentially
-        self.assertTrue(min(counts.values()) < max(counts.values()) - 2)
-        with self.assertRaises(AssertionError):
+        assertTrue(min(counts.values()) < max(counts.values()) - 2)
+        with assertRaises(AssertionError):
             null_selector.get_user_indices()
 
         uniform_selector_1 = instantiate(
@@ -59,11 +61,11 @@ class ActiveUserSelectorTest(testutil.BaseFacebookTestCase):
         selection_2 = uniform_selector_2.get_users_unif_rand(
             num_total_users=10000, users_per_round=1
         )
-        self.assertEqual(selection_1, selection_2)
+        assertEqual(selection_1, selection_2)
 
     def test_uniformly_random_user_selector(self):
         null_selector = instantiate(UniformlyRandomActiveUserSelectorConfig())
-        self.assertTrue(isinstance(null_selector, UniformlyRandomActiveUserSelector))
+        assertIsInstance(null_selector, UniformlyRandomActiveUserSelector)
         users = tuple(range(5))
         torch.manual_seed(123456789)
         selections = [
@@ -73,8 +75,8 @@ class ActiveUserSelectorTest(testutil.BaseFacebookTestCase):
             for _ in range(10000)
         ]
         counts = Counter(selections)
-        self.assertTrue(min(counts.values()) > 1500 and max(counts.values()) < 2500)
-        with self.assertRaises(AssertionError):
+        assertTrue(min(counts.values()) > 1500 and max(counts.values()) < 2500)
+        with assertRaises(AssertionError):
             null_selector.get_user_indices()
 
         uniform_selector_1 = instantiate(
@@ -89,25 +91,25 @@ class ActiveUserSelectorTest(testutil.BaseFacebookTestCase):
         selection_2 = uniform_selector_2.get_user_indices(
             num_total_users=10000, users_per_round=1
         )
-        self.assertEqual(selection_1, selection_2)
+        assertEqual(selection_1, selection_2)
 
     def test_sequential_user_selector(self):
         # 1) test if num_users is not divisible by users_per_round
         num_total_users, users_per_round, round_num = 10, 3, 8
         selector = instantiate(SequentialActiveUserSelectorConfig())
-        self.assertTrue(isinstance(selector, SequentialActiveUserSelector))
+        assertIsInstance(selector, SequentialActiveUserSelector)
         for round_index in range(round_num):
             user_indices = selector.get_user_indices(
                 num_total_users=num_total_users, users_per_round=users_per_round
             )
             if round_index % 4 == 0:
-                self.assertEqual(user_indices, [0, 1, 2])
+                assertEqual(user_indices, [0, 1, 2])
             if round_index % 4 == 1:
-                self.assertEqual(user_indices, [3, 4, 5])
+                assertEqual(user_indices, [3, 4, 5])
             if round_index % 4 == 2:
-                self.assertEqual(user_indices, [6, 7, 8])
+                assertEqual(user_indices, [6, 7, 8])
             if round_index % 4 == 3:
-                self.assertEqual(user_indices, [9])
+                assertEqual(user_indices, [9])
 
         # 2) test if num_users is divisible by users_per_round
         num_total_users, round_num = 9, 6
@@ -117,30 +119,28 @@ class ActiveUserSelectorTest(testutil.BaseFacebookTestCase):
                 num_total_users=num_total_users, users_per_round=users_per_round
             )
             if round_index % 3 == 0:
-                self.assertEqual(user_indices, [0, 1, 2])
+                assertEqual(user_indices, [0, 1, 2])
             if round_index % 3 == 1:
-                self.assertEqual(user_indices, [3, 4, 5])
+                assertEqual(user_indices, [3, 4, 5])
             if round_index % 3 == 2:
-                self.assertEqual(user_indices, [6, 7, 8])
+                assertEqual(user_indices, [6, 7, 8])
 
     def test_random_round_robin_user_selector(self):
         # 1) test if num_users is not divisible by users_per_round
         num_total_users, users_per_round = 87, 15
         available_users = range(num_total_users)
         selector = instantiate(RandomRoundRobinActiveUserSelectorConfig())
-        self.assertTrue(isinstance(selector, RandomRoundRobinActiveUserSelector))
+        assertIsInstance(selector, RandomRoundRobinActiveUserSelector)
         while len(available_users) > 0:
             user_indices = selector.get_user_indices(
                 num_total_users=num_total_users, users_per_round=users_per_round
             )
             user_indices_set = set(user_indices)
             available_user_set = set(available_users)
-            self.assertEqual(
-                len(user_indices), min(users_per_round, len(available_users))
-            )
-            self.assertEqual(len(user_indices_set), len(user_indices))
-            self.assertEqual(len(available_user_set), len(available_users))
-            self.assertTrue(user_indices_set.issubset(available_user_set))
+            assertEqual(len(user_indices), min(users_per_round, len(available_users)))
+            assertEqual(len(user_indices_set), len(user_indices))
+            assertEqual(len(available_user_set), len(available_users))
+            assertTrue(user_indices_set.issubset(available_user_set))
             available_users = list(available_user_set - user_indices_set)
 
         # Try one more time to make sure that the user selector class reset
@@ -149,9 +149,9 @@ class ActiveUserSelectorTest(testutil.BaseFacebookTestCase):
         )
         user_indices_set = set(user_indices)
         available_user_set = set(range(num_total_users))
-        self.assertEqual(len(user_indices), users_per_round)
-        self.assertEqual(len(user_indices_set), users_per_round)
-        self.assertTrue(user_indices_set.issubset(available_user_set))
+        assertEqual(len(user_indices), users_per_round)
+        assertEqual(len(user_indices_set), users_per_round)
+        assertTrue(user_indices_set.issubset(available_user_set))
 
         # 2) test if num_users is divisible by users_per_round
         num_total_users, users_per_round = 60, 15
@@ -162,10 +162,10 @@ class ActiveUserSelectorTest(testutil.BaseFacebookTestCase):
             )
             user_indices_set = set(user_indices)
             available_user_set = set(available_users)
-            self.assertEqual(len(user_indices), users_per_round)
-            self.assertEqual(len(user_indices_set), len(user_indices))
-            self.assertEqual(len(available_user_set), len(available_users))
-            self.assertTrue(user_indices_set.issubset(available_user_set))
+            assertEqual(len(user_indices), users_per_round)
+            assertEqual(len(user_indices_set), len(user_indices))
+            assertEqual(len(available_user_set), len(available_users))
+            assertTrue(user_indices_set.issubset(available_user_set))
             available_users = list(available_user_set - user_indices_set)
 
         # Try one more time to make sure that the user selector class reset
@@ -174,13 +174,13 @@ class ActiveUserSelectorTest(testutil.BaseFacebookTestCase):
         )
         user_indices_set = set(user_indices)
         available_user_set = set(range(num_total_users))
-        self.assertEqual(len(user_indices), users_per_round)
-        self.assertEqual(len(user_indices_set), users_per_round)
-        self.assertTrue(user_indices_set.issubset(available_user_set))
+        assertEqual(len(user_indices), users_per_round)
+        assertEqual(len(user_indices_set), users_per_round)
+        assertTrue(user_indices_set.issubset(available_user_set))
 
     def test_number_of_samples_user_selector(self):
         selector = instantiate(NumberOfSamplesActiveUserSelectorConfig())
-        self.assertTrue(isinstance(selector, NumberOfSamplesActiveUserSelector))
+        assertIsInstance(selector, NumberOfSamplesActiveUserSelector)
 
         shard_size = 5
         local_batch_size = 4
@@ -195,11 +195,11 @@ class ActiveUserSelectorTest(testutil.BaseFacebookTestCase):
             for _ in range(1000)
         ]
         counts = Counter(selections)
-        self.assertTrue(counts[0] > counts[1])
+        assertTrue(counts[0] > counts[1])
 
     def test_high_loss_user_selector(self):
         selector = instantiate(HighLossActiveUserSelectorConfig())
-        self.assertTrue(isinstance(selector, HighLossActiveUserSelector))
+        assertIsInstance(selector, HighLossActiveUserSelector)
 
         selector = instantiate(
             HighLossActiveUserSelectorConfig(softmax_temperature=0.01)
@@ -225,7 +225,7 @@ class ActiveUserSelectorTest(testutil.BaseFacebookTestCase):
             for i in range(1000)
         ]
         counts = Counter(selections)
-        self.assertTrue(counts[0] > counts[1])
+        assertTrue(counts[0] > counts[1])
 
         selector = instantiate(
             HighLossActiveUserSelectorConfig(
@@ -244,16 +244,13 @@ class ActiveUserSelectorTest(testutil.BaseFacebookTestCase):
             for i in range(1000)
         ]
         counts = Counter(selections)
-        self.assertTrue(counts[0] > 400)
-        self.assertTrue(counts[0] < 600)
+        assertTrue(counts[0] > 400)
+        assertTrue(counts[0] < 600)
 
 
-class ActiveUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
+class TestActiveUserSelectorUtils:
 
     tolerence = 1e-5
-
-    def setUp(self) -> None:
-        super().setUp()
 
     def test_convert_to_probability(self):
         valuations = torch.tensor([1, 1, 1, 2, 2], dtype=torch.float)
@@ -263,17 +260,17 @@ class ActiveUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
             ActiveUserSelectorUtils.convert_to_probability(valuations, 0, 1)
         )
 
-        self.assertEqual(total_prob, 1)
+        assertEqual(total_prob, 1)
 
         prob_1 = ActiveUserSelectorUtils.convert_to_probability(
             valuations, 0, 1, weights
         )
         prob_2 = ActiveUserSelectorUtils.convert_to_probability(valuations, 0, 1)
-        self.assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerence))
+        assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerence))
 
         prob_1 = ActiveUserSelectorUtils.convert_to_probability(valuations, 0, 1)
         prob_2 = torch.exp(valuations) / sum(torch.exp(valuations))
-        self.assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerence))
+        assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerence))
 
         weights = torch.tensor([1, 2, 1, 2, 1], dtype=torch.float)
         unnormalized_probs = torch.tensor(
@@ -284,20 +281,20 @@ class ActiveUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
         prob_2 = ActiveUserSelectorUtils.convert_to_probability(
             valuations, 0, 1, weights
         )
-        self.assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerence))
+        assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerence))
 
         prob_1 = ActiveUserSelectorUtils.convert_to_probability(valuations, 0, 0)
         prob_2 = torch.tensor([0.2] * 5, dtype=torch.float)
-        self.assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerence))
+        assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerence))
 
         prob_1 = ActiveUserSelectorUtils.convert_to_probability(valuations, 0, 25)
         prob_2 = torch.tensor([0, 0, 0, 0.5, 0.5], dtype=torch.float)
-        self.assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerence))
+        assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerence))
 
         prob = ActiveUserSelectorUtils.convert_to_probability(valuations, 0.5, 1)
-        self.assertEqual(len(torch.nonzero(prob)), 3)
+        assertEqual(len(torch.nonzero(prob)), 3)
 
-        with self.assertRaises(AssertionError):
+        with assertRaises(AssertionError):
             ActiveUserSelectorUtils.convert_to_probability(valuations, 1, 1)
 
     def test_normalize_by_sample_count(self):
@@ -307,15 +304,13 @@ class ActiveUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
         no_normalization = ActiveUserSelectorUtils.normalize_by_sample_count(
             user_utility, counts, 0
         )
-        self.assertTrue(
-            torch.allclose(no_normalization, user_utility, rtol=self.tolerence)
-        )
+        assertTrue(torch.allclose(no_normalization, user_utility, rtol=self.tolerence))
 
         avged = user_utility / counts
         avg_normalization = ActiveUserSelectorUtils.normalize_by_sample_count(
             user_utility, counts, 1
         )
-        self.assertTrue(torch.allclose(avg_normalization, avged, rtol=self.tolerence))
+        assertTrue(torch.allclose(avg_normalization, avged, rtol=self.tolerence))
 
     def test_samples_per_user(self):
         shard_size = 4
@@ -327,7 +322,7 @@ class ActiveUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
             dummy_dataset, shard_size, local_batch_size, dummy_model
         )
         samples_per_user = ActiveUserSelectorUtils.samples_per_user(data_provider)
-        self.assertTrue(
+        assertTrue(
             torch.allclose(
                 samples_per_user, torch.tensor([4, 4, 4, 4, 4, 4, 2], dtype=torch.float)
             )
@@ -344,17 +339,17 @@ class ActiveUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
         users_per_round = 3
         rng = torch.Generator()
 
-        self.assertEqual(
+        assertEqual(
             len(ActiveUserSelectorUtils.select_users(users_per_round, probs, 0, rng)), 3
         )
-        self.assertEqual(
+        assertEqual(
             len(ActiveUserSelectorUtils.select_users(users_per_round, probs, 1, rng)), 3
         )
-        self.assertEqual(
+        assertEqual(
             len(ActiveUserSelectorUtils.select_users(users_per_round, probs, 0.5, rng)),
             3,
         )
-        self.assertEqual(
+        assertEqual(
             sorted(
                 ActiveUserSelectorUtils.select_users(
                     2, torch.tensor([0.5, 0.5, 0, 0, 0], dtype=torch.float), 0, rng
@@ -376,12 +371,10 @@ class ActiveUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
             user_indices_set = set(user_indices)
             available_user_set = set(available_users)
 
-            self.assertEqual(
-                len(user_indices), min(users_per_round, len(available_users))
-            )
-            self.assertEqual(available_users, prev_available_users)
-            self.assertTrue(user_indices_set.issubset(available_user_set))
-            self.assertEqual(len(user_indices_set), len(user_indices))
-            self.assertEqual(len(available_user_set), len(available_users))
+            assertEqual(len(user_indices), min(users_per_round, len(available_users)))
+            assertEqual(available_users, prev_available_users)
+            assertTrue(user_indices_set.issubset(available_user_set))
+            assertEqual(len(user_indices_set), len(user_indices))
+            assertEqual(len(available_user_set), len(available_users))
 
             available_users = list(available_user_set - user_indices_set)
