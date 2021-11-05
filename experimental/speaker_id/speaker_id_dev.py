@@ -6,8 +6,8 @@ import os
 import pickle
 import tempfile
 
+import flsim.active_user_selectors.simple_user_selector as aus
 import flsim.baselines.utils as butils
-import flsim.common.active_user_selectors.simple_user_selector as aus
 import flsim.data.data_sharder as dsh
 import numpy as np
 import papaya.toolkit.simulation.experimental.speaker_id.speaker_id_fl_dataset_utils as sdu

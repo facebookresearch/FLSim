@@ -7,12 +7,12 @@ from typing import List, Optional
 
 import numpy as np
 import torch
+from flsim.active_user_selectors.simple_user_selector import (
+    SequentialActiveUserSelectorConfig,
+)
 from flsim.baselines.utils import GlobalOptimizerType, create_global_aggregator
 from flsim.clients.base_client import ClientConfig
 from flsim.clients.dp_client import DPClientConfig
-from flsim.common.active_user_selectors.simple_user_selector import (
-    SequentialActiveUserSelectorConfig,
-)
 from flsim.data.data_provider import FLDataProviderFromList
 from flsim.data.data_sharder import FLDataSharder
 from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
