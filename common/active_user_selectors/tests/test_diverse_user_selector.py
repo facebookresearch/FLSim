@@ -13,6 +13,7 @@ from flsim.common.active_user_selectors.diverse_user_selector import (
     DiversityStatisticsReportingUserSelectorConfig,
 )
 from flsim.common.diversity_metrics import DiversityMetricType
+from flsim.common.pytest_helper import assertEqual, assertTrue, assertIsInstance
 from flsim.utils.sample_model import DummyAlphabetFLModel, LinearFLModel
 from flsim.utils.tests.helpers.test_data_utils import (
     DummyAlphabetDataset,
@@ -20,12 +21,9 @@ from flsim.utils.tests.helpers.test_data_utils import (
     RandomDataset,
 )
 from hydra.utils import instantiate
-from libfb.py import testutil
 
 
-class DiverseUserSelectorTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
+class TestDiverseUserSelector:
 
     # Since diversity statistics reporting selector chooses uniformly randomly, replicate the tests
     # for that class. select_diverse_cohort is tested separately.
@@ -33,9 +31,7 @@ class DiverseUserSelectorTest(testutil.BaseFacebookTestCase):
         null_selector = instantiate(
             DiversityStatisticsReportingUserSelectorConfig(num_candidate_cohorts=2)
         )
-        self.assertTrue(
-            isinstance(null_selector, DiversityStatisticsReportingUserSelector)
-        )
+        assertIsInstance(null_selector, DiversityStatisticsReportingUserSelector)
         # This user selector class requires a global model and data provider.
         users = tuple(range(5))
 
@@ -73,7 +69,7 @@ class DiverseUserSelectorTest(testutil.BaseFacebookTestCase):
                 global_model=dummy_model,
                 epoch=0,
             )
-            self.assertEqual(selection_1, selection_2)
+            assertEqual(selection_1, selection_2)
 
     def test_diversity_maximizing_user_selector(self):
         # Check that the selector actually chooses the cohort with maximum GD.
@@ -88,7 +84,7 @@ class DiverseUserSelectorTest(testutil.BaseFacebookTestCase):
         null_selector = instantiate(
             DiversityMaximizingUserSelectorConfig(num_candidate_cohorts=num_candidates)
         )
-        self.assertTrue(isinstance(null_selector, DiversityMaximizingUserSelector))
+        assertIsInstance(null_selector, DiversityMaximizingUserSelector)
 
         linear_model = LinearFLModel(D_in=dim_data, D_out=1)
         random_dataset = RandomDataset(
@@ -125,7 +121,7 @@ class DiverseUserSelectorTest(testutil.BaseFacebookTestCase):
                 user_indices=cohort,
             )
 
-            self.assertTrue(cohort_diversity <= max_diversity)
+            assertTrue(cohort_diversity <= max_diversity)
 
         # Test epochs_before_active as is done in test_high_loss_user_selector()
         selector = instantiate(
@@ -150,8 +146,8 @@ class DiverseUserSelectorTest(testutil.BaseFacebookTestCase):
             for i in range(1000)
         ]
         counts = Counter(selections)
-        self.assertTrue(counts[0] > 400)
-        self.assertTrue(counts[0] < 600)
+        assertTrue(counts[0] > 400)
+        assertTrue(counts[0] < 600)
 
     def test_user_selector_diversity_metric_type(self):
         # Test that the created user selector uses the specified diversity metric
@@ -175,15 +171,12 @@ class DiverseUserSelectorTest(testutil.BaseFacebookTestCase):
             user_selector = instantiate(
                 DiversityMaximizingUserSelectorConfig(diversity_metric_type=metric_str)
             )
-            self.assertEqual(user_selector.cfg.diversity_metric_type, metric_type)
+            assertEqual(user_selector.cfg.diversity_metric_type, metric_type)
 
 
-class DiverseUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
+class TestDiverseUserSelectorUtils:
 
     tolerence = 1e-5
-
-    def setUp(self) -> None:
-        super().setUp()
 
     def test_calculate_diversity_metrics(self):
         # We construct nonoverlapping data for each user so that the gradient diversity will be 1
@@ -208,7 +201,7 @@ class DiverseUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
         diversity_metrics = DiverseUserSelectorUtils.calculate_diversity_metrics(
             data_provider, linear_model, available_users
         )
-        self.assertTrue(
+        assertTrue(
             math.isclose(diversity_metrics.gradient_diversity, 1.0, rel_tol=1e-04)
         )
 
@@ -226,7 +219,7 @@ class DiverseUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
             diversity_metrics = DiverseUserSelectorUtils.calculate_diversity_metrics(
                 data_provider, linear_model, user_indices
             )
-            self.assertTrue(
+            assertTrue(
                 math.isclose(diversity_metrics.gradient_diversity, 1.0, rel_tol=1e-04)
             )
 
@@ -252,7 +245,7 @@ class DiverseUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
         diversity_metrics = DiverseUserSelectorUtils.calculate_diversity_metrics(
             data_provider, linear_model, available_users
         )
-        self.assertTrue(diversity_metrics.gradient_diversity >= 1.0 / num_total_users)
+        assertTrue(diversity_metrics.gradient_diversity >= 1.0 / num_total_users)
 
         while len(available_users) > 0:
             selected_indices = torch.multinomial(
@@ -266,7 +259,7 @@ class DiverseUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
             diversity_metrics = DiverseUserSelectorUtils.calculate_diversity_metrics(
                 data_provider, linear_model, user_indices
             )
-            self.assertTrue(
+            assertTrue(
                 diversity_metrics.gradient_diversity
                 >= 1.0 / min(num_total_users, len(available_users))
             )
@@ -316,13 +309,13 @@ class DiverseUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
             diversity_metric_type=diversity_metric_type,
         )
 
-        self.assertTrue(
+        assertTrue(
             math.isclose(diversity_statistics.maximum_metric, 1.0, rel_tol=rel_tol)
         )
-        self.assertTrue(
+        assertTrue(
             math.isclose(diversity_statistics.average_metric, 1.0, rel_tol=rel_tol)
         )
-        self.assertTrue(
+        assertTrue(
             math.isclose(diversity_statistics.minimum_metric, 1.0, rel_tol=rel_tol)
         )
 
@@ -364,15 +357,15 @@ class DiverseUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
             client_gradient_scaling=client_gradient_scaling,
             diversity_metric_type=diversity_metric_type,
         )
-        self.assertEqual(set(diverse_cohort), set(available_users))
-        self.assertTrue(
+        assertEqual(set(diverse_cohort), set(available_users))
+        assertTrue(
             math.isclose(
                 diversity_statistics.maximum_metric,
                 diversity_statistics.average_metric,
                 rel_tol=rel_tol,
             )
         )
-        self.assertTrue(
+        assertTrue(
             math.isclose(
                 diversity_statistics.average_metric,
                 diversity_statistics.minimum_metric,
@@ -399,9 +392,9 @@ class DiverseUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
             )
 
             # Check that the chosen cohort is valid
-            self.assertTrue(set(diverse_cohort) <= set(available_users))
+            assertTrue(set(diverse_cohort) <= set(available_users))
 
-            self.assertTrue(
+            assertTrue(
                 diversity_statistics.minimum_metric
                 >= 1.0 / min(num_total_users, len(available_users))
             )
@@ -417,7 +410,7 @@ class DiverseUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
                     diversity_metric_type=diversity_metric_type,
                 )
             )
-            self.assertTrue(
+            assertTrue(
                 math.isclose(
                     diverse_cohort_diversity.gradient_diversity,
                     diversity_statistics.maximum_metric,
@@ -426,25 +419,25 @@ class DiverseUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
             )
 
             if len(available_users) > users_per_round:
-                self.assertEqual(len(diverse_cohort), users_per_round)
-                self.assertTrue(
+                assertEqual(len(diverse_cohort), users_per_round)
+                assertTrue(
                     diversity_statistics.maximum_metric
                     > diversity_statistics.average_metric
                 )
-                self.assertTrue(
+                assertTrue(
                     diversity_statistics.average_metric
                     > diversity_statistics.minimum_metric
                 )
             else:
-                self.assertEqual(len(diverse_cohort), len(available_users))
-                self.assertTrue(
+                assertEqual(len(diverse_cohort), len(available_users))
+                assertTrue(
                     math.isclose(
                         diversity_statistics.maximum_metric,
                         diversity_statistics.average_metric,
                         rel_tol=rel_tol,
                     )
                 )
-                self.assertTrue(
+                assertTrue(
                     math.isclose(
                         diversity_statistics.average_metric,
                         diversity_statistics.minimum_metric,
@@ -492,15 +485,15 @@ class DiverseUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
             client_gradient_scaling=client_gradient_scaling,
             diversity_metric_type=diversity_metric_type,
         )
-        self.assertEqual(set(diverse_cohort), set(available_users))
-        self.assertTrue(
+        assertEqual(set(diverse_cohort), set(available_users))
+        assertTrue(
             math.isclose(
                 diversity_statistics.maximum_metric,
                 diversity_statistics.average_metric,
                 rel_tol=rel_tol,
             )
         )
-        self.assertTrue(
+        assertTrue(
             math.isclose(
                 diversity_statistics.average_metric,
                 diversity_statistics.minimum_metric,
@@ -527,9 +520,9 @@ class DiverseUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
             )
 
             # Check that the chosen cohort is valid
-            self.assertTrue(set(diverse_cohort) <= set(available_users))
+            assertTrue(set(diverse_cohort) <= set(available_users))
 
-            self.assertTrue(
+            assertTrue(
                 diversity_statistics.minimum_metric
                 >= 1.0 / min(num_total_users, len(available_users))
             )
@@ -545,7 +538,7 @@ class DiverseUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
                     diversity_metric_type=diversity_metric_type,
                 )
             )
-            self.assertTrue(
+            assertTrue(
                 math.isclose(
                     diverse_cohort_diversity.gradient_diversity,
                     diversity_statistics.minimum_metric,
@@ -554,25 +547,25 @@ class DiverseUserSelectorUtilsTest(testutil.BaseFacebookTestCase):
             )
 
             if len(available_users) > users_per_round:
-                self.assertEqual(len(diverse_cohort), users_per_round)
-                self.assertTrue(
+                assertEqual(len(diverse_cohort), users_per_round)
+                assertTrue(
                     diversity_statistics.maximum_metric
                     > diversity_statistics.average_metric
                 )
-                self.assertTrue(
+                assertTrue(
                     diversity_statistics.average_metric
                     > diversity_statistics.minimum_metric
                 )
             else:
-                self.assertEqual(len(diverse_cohort), len(available_users))
-                self.assertTrue(
+                assertEqual(len(diverse_cohort), len(available_users))
+                assertTrue(
                     math.isclose(
                         diversity_statistics.maximum_metric,
                         diversity_statistics.average_metric,
                         rel_tol=rel_tol,
                     )
                 )
-                self.assertTrue(
+                assertTrue(
                     math.isclose(
                         diversity_statistics.average_metric,
                         diversity_statistics.minimum_metric,
