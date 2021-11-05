@@ -2,19 +2,16 @@
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
 import torch
+from flsim.common.pytest_helper import assertEqual, assertTrue
 from flsim.optimizers.optimizer_scheduler import (
     ArmijoLineSearch,
     ArmijoLineSearchSchedulerConfig,
 )
 from flsim.tests.utils import MockQuadratic1DFL, Quadratic1D
-from libfb.py import testutil
 from omegaconf import OmegaConf
 
 
-class OptimizerSchedulerTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestOptimizerScheduler:
     def test_armijo_line_search_on_parabola(self):
         """
             a toy optimization example:
@@ -41,7 +38,7 @@ class OptimizerSchedulerTest(testutil.BaseFacebookTestCase):
             quadratic_func_val.backward()
             optimizer.step()
             obj_val = quadratic1D.fl_get_module().state_dict()["x"].item()
-            self.assertEqual(obj_val, (-1.0) ** (i + 1))
+            assertEqual(obj_val, (-1.0) ** (i + 1))
 
         # set up (again) quadratic parabola objective and optimizer
         quadratic1D = MockQuadratic1DFL(Quadratic1D())
@@ -65,4 +62,4 @@ class OptimizerSchedulerTest(testutil.BaseFacebookTestCase):
             armijo_line_search_scheduler.step(metrics, quadratic1D, None, t)
             optimizer.step()
         # check converging to 0 (true answer)
-        self.assertTrue(quadratic1D.fl_get_module().state_dict()["x"].item() <= 1e-7)
+        assertTrue(quadratic1D.fl_get_module().state_dict()["x"].item() <= 1e-7)
