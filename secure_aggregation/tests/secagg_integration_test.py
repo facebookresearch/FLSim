@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
-import unittest
-
 import torch
+from flsim.common.pytest_helper import assertEqual, assertNotEqual
 from flsim.optimizers.sync_aggregators import FedAvgSyncAggregatorConfig
 from flsim.reducers.base_round_reducer import ReductionType, RoundReducerConfig
 from flsim.reducers.secure_round_reducer import SecureRoundReducerConfig
@@ -19,7 +18,7 @@ from flsim.utils.tests.helpers.sync_trainer_test_utils import (
 from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
 
 
-class SecureAggregationIntegrationTest(unittest.TestCase):
+class TestSecureAggregationIntegration:
     def _load_data(self, num_users: int = 26):
         """
         Loads the data, which is a Dummy alphabet for N (`num_users`) users,
@@ -34,8 +33,8 @@ class SecureAggregationIntegrationTest(unittest.TestCase):
         ) = DummyAlphabetDataset.create_data_provider_and_loader(
             dummy_dataset, shard_size, local_batch_size, DummyAlphabetFLModel()
         )
-        self.assertEqual(data_loader.num_total_users, num_users / shard_size)
-        self.assertEqual(data_loader.num_total_users, data_provider.num_users())
+        assertEqual(data_loader.num_total_users, num_users / shard_size)
+        assertEqual(data_loader.num_total_users, data_provider.num_users())
         return data_provider, data_loader.train_batch_size
 
     def _train_fl_model(
@@ -100,7 +99,7 @@ class SecureAggregationIntegrationTest(unittest.TestCase):
         # Next, call SyncTrainer (with RoundReducer)
         torch.manual_seed(1)
         fl_model_with_round_reducer = self._train_fl_model()
-        self.assertEqual(
+        assertEqual(
             FLModelParamUtils.get_mismatched_param(
                 [
                     fl_model_with_round_reducer.fl_get_module(),
@@ -126,7 +125,7 @@ class SecureAggregationIntegrationTest(unittest.TestCase):
         # Next, call SyncTrainer (with RoundReducer)
         torch.manual_seed(1)
         fl_model_with_round_reducer = self._train_fl_model()
-        self.assertNotEqual(
+        assertNotEqual(
             FLModelParamUtils.get_mismatched_param(
                 [
                     fl_model_with_round_reducer.fl_get_module(),
@@ -157,7 +156,7 @@ class SecureAggregationIntegrationTest(unittest.TestCase):
         # Next, call SyncTrainer (with RoundReducer)
         torch.manual_seed(1)
         fl_model_with_round_reducer = self._train_fl_model()
-        self.assertNotEqual(
+        assertNotEqual(
             FLModelParamUtils.get_mismatched_param(
                 [
                     fl_model_with_round_reducer.fl_get_module(),
