@@ -67,56 +67,56 @@ class OptimizerTestUtil:
 
     @classmethod
     def provide_sync_factory_creation_dataset(cls):
-        return (
-            {
-                "type_str": "FedAvg",
-                "config": OmegaConf.structured(FedAvgSyncAggregatorConfig),
-            },
-            {
-                "type_str": "FedAvgWithLR",
-                "config": OmegaConf.structured(
+        return [
+            (
+                "FedAvg",
+                OmegaConf.structured(FedAvgSyncAggregatorConfig),
+            ),
+            (
+                "FedAvgWithLR",
+                OmegaConf.structured(
                     FedAvgWithLRSyncAggregatorConfig(lr=0.1, momentum=0.9)
                 ),
-            },
-            {
-                "type_str": "FedAdam",
-                "config": OmegaConf.structured(
+            ),
+            (
+                "FedAdam",
+                OmegaConf.structured(
                     FedAdamSyncAggregatorConfig(lr=0.1, weight_decay=0.9, eps=1e-8)
                 ),
-            },
-        )
+            ),
+        ]
 
     @classmethod
     def provide_async_factory_creation_dataset(cls):
-        return (
-            {
-                "type_str": "FedAvgWithLR",
-                "config": OmegaConf.structured(
+        return [
+            (
+                "FedAvgWithLR",
+                OmegaConf.structured(
                     FedAvgWithLRAsyncAggregatorConfig(lr=0.1, momentum=0.9)
                 ),
-            },
-            {
-                "type_str": "FedAdam",
-                "config": OmegaConf.structured(
+            ),
+            (
+                "FedAdam",
+                OmegaConf.structured(
                     FedAdamAsyncAggregatorConfig(lr=0.1, weight_decay=0.9, eps=1e-8)
                 ),
-            },
-        )
+            ),
+        ]
 
     @classmethod
     def provide_hybrid_factory_creation_dataset(cls):
-        return (
-            {
-                "type_str": "FedAvgWithLR",
-                "config": OmegaConf.structured(
+        return [
+            (
+                "FedAvgWithLR",
+                OmegaConf.structured(
                     FedAvgWithLRHybridAggregatorConfig(
                         lr=0.1, momentum=0.9, buffer_size=3
                     )
                 ),
-            },
-            {
-                "type_str": "FedAdam",
-                "config": OmegaConf.structured(
+            ),
+            (
+                "FedAdam",
+                OmegaConf.structured(
                     FedAdamHybridAggregatorConfig(
                         lr=0.1,
                         weight_decay=0.9,
@@ -124,8 +124,8 @@ class OptimizerTestUtil:
                         buffer_size=3,
                     )
                 ),
-            },
-        )
+            ),
+        ]
 
     @classmethod
     def get_value_from_optimizer(cls, optimizer: Optimizer, attribute_name: str):
