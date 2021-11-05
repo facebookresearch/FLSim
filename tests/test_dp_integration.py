@@ -7,11 +7,11 @@ from typing import Any, Dict, Optional
 import numpy as np
 import torch
 import torch.nn as nn
-from flsim.clients.base_client import ClientConfig
-from flsim.clients.dp_client import DPClientConfig
-from flsim.common.active_user_selectors.simple_user_selector import (
+from flsim.active_user_selectors.simple_user_selector import (
     SequentialActiveUserSelectorConfig,
 )
+from flsim.clients.base_client import ClientConfig
+from flsim.clients.dp_client import DPClientConfig
 from flsim.optimizers.async_aggregators import FedAvgWithLRHybridAggregatorConfig
 from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
 from flsim.optimizers.sync_aggregators import FedAvgSyncAggregatorConfig

@@ -10,10 +10,10 @@ import flsim.configs  # noqa
 import hydra
 import pkg_resources
 import torch
-from flsim.clients.base_client import ClientConfig
-from flsim.common.active_user_selectors.simple_user_selector import (
+from flsim.active_user_selectors.simple_user_selector import (
     SequentialActiveUserSelectorConfig,
 )
+from flsim.clients.base_client import ClientConfig
 from flsim.common.timeout_simulator import GaussianTimeOutSimulatorConfig
 from flsim.data.data_provider import FLDataProviderFromList
 from flsim.data.data_sharder import FLDataSharder
