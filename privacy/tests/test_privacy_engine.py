@@ -9,6 +9,15 @@ from unittest.mock import MagicMock
 import numpy as np
 import torch
 import torch.nn as nn
+from flsim.common.pytest_helper import (
+    assertEqual,
+    assertNotEqual,
+    assertAlmostEqual,
+    assertRaises,
+    assertFalse,
+    assertLessEqual,
+    assertTrue,
+)
 from flsim.privacy.common import PrivacySetting
 from flsim.privacy.privacy_engine import (
     GaussianPrivacyEngine,
@@ -21,10 +30,7 @@ from libfb.py import testutil
 from opacus import privacy_analysis
 
 
-class GaussianPrivacyEngineTest(unittest.TestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestGaussianPrivacyEngine:
     def _init_privacy_engine(
         self,
         alphas=[1 + x / 10.0 for x in range(1, 100)],
@@ -63,7 +69,7 @@ class GaussianPrivacyEngineTest(unittest.TestCase):
         """
         privacy_engine = self._init_privacy_engine()
         privacy_budget = privacy_engine.get_privacy_spent()
-        self.assertTrue(privacy_budget.alpha in privacy_engine.alphas)
+        assertTrue(privacy_budget.alpha in privacy_engine.alphas)
 
     def test_privacy_analysis_epsilon_reasonable(self):
         """
@@ -74,11 +80,11 @@ class GaussianPrivacyEngineTest(unittest.TestCase):
 
         privacy_engine = self._init_privacy_engine()
         privacy_budget = privacy_engine.get_privacy_spent()
-        self.assertTrue(privacy_budget.epsilon > 0)
+        assertTrue(privacy_budget.epsilon > 0)
 
         privacy_engine.noise_multiplier = 0
         privacy_budget = privacy_engine.get_privacy_spent()
-        self.assertTrue(privacy_budget.epsilon == float("inf"))
+        assertTrue(privacy_budget.epsilon == float("inf"))
 
     def test_privacy_analysis_epsilon(self):
         """
@@ -109,7 +115,7 @@ class GaussianPrivacyEngineTest(unittest.TestCase):
         eps = self._calc_eps(
             user_sampling_rate, noise_multiplier, steps, alphas, target_delta
         )
-        self.assertEqual(privacy_budget.epsilon, eps)
+        assertEqual(privacy_budget.epsilon, eps)
 
     def test_noise_added(self):
         """
@@ -128,7 +134,7 @@ class GaussianPrivacyEngineTest(unittest.TestCase):
         mismatched = utils.verify_models_equivalent_after_training(
             model_diff_before_noise, model_diff
         )
-        self.assertNotEqual(mismatched, "")
+        assertNotEqual(mismatched, "")
 
     def test_deterministic_noise_addition(self):
         """
@@ -152,7 +158,7 @@ class GaussianPrivacyEngineTest(unittest.TestCase):
         mismatched = utils.verify_models_equivalent_after_training(
             model_diff, model_diff_another_seed
         )
-        self.assertNotEqual(mismatched, "")
+        assertNotEqual(mismatched, "")
 
         privacy_engine = self._init_privacy_engine(noise_seed=1003)
         privacy_engine.add_noise(model_diff_same_seed, sensitivity=0.5)
@@ -160,7 +166,7 @@ class GaussianPrivacyEngineTest(unittest.TestCase):
         mismatched = utils.verify_models_equivalent_after_training(
             model_diff, model_diff_same_seed
         )
-        self.assertEqual(mismatched, "")
+        assertEqual(mismatched, "")
 
     def test_not_attached_validator(self):
         """
@@ -179,7 +185,7 @@ class GaussianPrivacyEngineTest(unittest.TestCase):
             privacy_setting=privacy_setting, users_per_round=1, num_total_users=1
         )
         sensitivity = 0.5
-        with self.assertRaises(PrivacyEngineNotAttachedException):
+        with assertRaises(PrivacyEngineNotAttachedException):
             privacy_engine.add_noise(model_diff, sensitivity)
 
         raised_exception = False
@@ -190,7 +196,7 @@ class GaussianPrivacyEngineTest(unittest.TestCase):
             privacy_engine.add_noise(model_diff, sensitivity)
         except PrivacyEngineNotAttachedException:
             raised_exception = True
-        self.assertFalse(raised_exception)
+        assertFalse(raised_exception)
 
 
 class TreePrivacyEngineTest(unittest.TestCase):
@@ -229,7 +235,7 @@ class TreePrivacyEngineTest(unittest.TestCase):
         """
         tree = TreePrivacyEngine.build_tree(num_leaf)
         for node in tree:
-            self.assertLessEqual(node.height, math.ceil(math.log2(num_leaf)))
+            assertLessEqual(node.height, math.ceil(math.log2(num_leaf)))
 
     def test_basic_tree_node_sensitivity(self):
         """
@@ -252,7 +258,7 @@ class TreePrivacyEngineTest(unittest.TestCase):
         for i in range(num_steps):
             cumsum = tree.range_sum(0, i, size=torch.Size([1]), sensitivity=1.0)
             bits = float(self._count_bits(i + 1))
-            self.assertEqual(cumsum, bits)
+            assertEqual(cumsum, bits)
 
     @testutil.data_provider(
         lambda: (
@@ -284,7 +290,7 @@ class TreePrivacyEngineTest(unittest.TestCase):
         noised_delta = torch.flatten(
             torch.stack([p for name, p in delta.named_parameters() if "weight" in name])
         )
-        self.assertAlmostEqual(torch.var(noised_delta), exp_var, delta=0.15)
+        assertAlmostEqual(torch.var(noised_delta), exp_var, delta=0.15)
 
     @testutil.data_provider(
         lambda: (
@@ -312,7 +318,7 @@ class TreePrivacyEngineTest(unittest.TestCase):
         for i in range(steps):
             sum_ = privacy_engine.range_sum(0, i, torch.Size((1000,)), 1.0)
 
-        self.assertAlmostEqual(torch.var(sum_), exp_var, delta=0.15)
+        assertAlmostEqual(torch.var(sum_), exp_var, delta=0.15)
 
     @testutil.data_provider(
         lambda: (
@@ -338,4 +344,4 @@ class TreePrivacyEngineTest(unittest.TestCase):
         for _ in range(n_users // upr):
             privacy_engine.add_noise(delta, sensitivity=1.0)
         budget = privacy_engine.get_privacy_spent()
-        self.assertAlmostEqual(budget.epsilon, epsilon, delta=0.5)
+        assertAlmostEqual(budget.epsilon, epsilon, delta=0.5)

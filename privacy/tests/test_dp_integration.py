@@ -12,6 +12,7 @@ from flsim.active_user_selectors.simple_user_selector import (
 )
 from flsim.clients.base_client import ClientConfig
 from flsim.clients.dp_client import DPClientConfig
+from flsim.common.pytest_helper import assertEqual, assertEmpty, assertNotEmpty
 from flsim.optimizers.async_aggregators import FedAvgWithLRHybridAggregatorConfig
 from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
 from flsim.optimizers.sync_aggregators import FedAvgSyncAggregatorConfig
@@ -39,15 +40,11 @@ from flsim.utils.tests.helpers.async_trainer_test_utils import (
     run_fl_training,
 )
 from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
-from libfb.py import testutil
 from omegaconf import OmegaConf
 from opacus import PrivacyEngine
 
 
-class DifferentialPrivacyIntegrationTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestDifferentialPrivacyIntegration:
     def _get_weighted_dp_reducer_config(
         self,
         noise,
@@ -107,8 +104,8 @@ class DifferentialPrivacyIntegrationTest(testutil.BaseFacebookTestCase):
         ) = DummyAlphabetDataset.create_data_provider_and_loader(
             dummy_dataset, shard_size, local_batch_size, DummyAlphabetFLModel()
         )
-        self.assertEqual(data_loader.num_total_users, data_size / shard_size)
-        self.assertEqual(data_loader.num_total_users, data_provider.num_users())
+        assertEqual(data_loader.num_total_users, data_size / shard_size)
+        assertEqual(data_loader.num_total_users, data_provider.num_users())
         self.data_size = data_size  # pyre-ignore
         return data_provider, data_loader.train_batch_size
 
@@ -282,7 +279,7 @@ class DifferentialPrivacyIntegrationTest(testutil.BaseFacebookTestCase):
         fl_model_with_private_sync_trainer = self._train_fl_model(
             lr=lr, momentum=momentum, one_user=False, dp_config=off_dp_config
         )
-        self.assertEqual(
+        assertEqual(
             FLModelParamUtils.get_mismatched_param(
                 [
                     fl_model_with_sync_trainer.fl_get_module(),
@@ -331,7 +328,7 @@ class DifferentialPrivacyIntegrationTest(testutil.BaseFacebookTestCase):
             one_user=False,
             dp_config=ineffective_dp_config,
         )
-        self.assertEqual(
+        assertEqual(
             FLModelParamUtils.get_mismatched_param(
                 [
                     fl_model_with_sync_trainer.fl_get_module(),
@@ -364,7 +361,7 @@ class DifferentialPrivacyIntegrationTest(testutil.BaseFacebookTestCase):
         vanilla_dp_model = self._train_vanilla_pytorch_dp_model(
             lr=lr, momentum=momentum, sample_level_dp=False, dp_config={}
         )
-        self.assertEqual(
+        assertEqual(
             FLModelParamUtils.get_mismatched_param(
                 [fl_model.fl_get_module(), vanilla_dp_model.fl_get_module()], 1e-6
             ),
@@ -406,7 +403,7 @@ class DifferentialPrivacyIntegrationTest(testutil.BaseFacebookTestCase):
         vanilla_dp_model = self._train_vanilla_pytorch_dp_model(
             lr=lr, momentum=momentum, sample_level_dp=True, dp_config=dp_config
         )
-        self.assertEqual(
+        assertEqual(
             FLModelParamUtils.get_mismatched_param(
                 [fl_model.fl_get_module(), vanilla_dp_model.fl_get_module()], 1e-6
             ),
@@ -464,7 +461,7 @@ class DifferentialPrivacyIntegrationTest(testutil.BaseFacebookTestCase):
             noise_func_seed=1234,
         )
 
-        self.assertEqual(
+        assertEqual(
             verify_models_equivalent_after_training(
                 dp_model_sample_leve_dp_on,
                 dp_model_user_leve_dp_on,
@@ -504,7 +501,7 @@ class DifferentialPrivacyIntegrationTest(testutil.BaseFacebookTestCase):
         torch.manual_seed(1)
         no_dp_model = self._train_fl_model(lr=lr, momentum=momentum, one_user=False)
 
-        self.assertEqual(
+        assertEqual(
             verify_models_equivalent_after_training(
                 no_dp_model_one_user,
                 no_dp_model,
@@ -546,7 +543,7 @@ class DifferentialPrivacyIntegrationTest(testutil.BaseFacebookTestCase):
             one_user=False,
             dp_config=dp_config_sample_dp_off,
         )
-        self.assertEqual(
+        assertEqual(
             verify_models_equivalent_after_training(
                 dp_model_one_user_sample_dp,
                 dp_model_user_dp,
@@ -590,7 +587,7 @@ class DifferentialPrivacyIntegrationTest(testutil.BaseFacebookTestCase):
             dp_config=dp_config_sample_dp_off,
             noise_func_seed=1000,
         )
-        self.assertEqual(
+        assertEqual(
             verify_models_equivalent_after_training(
                 dp_model_one_user_sample_dp,
                 dp_model_user_dp,
@@ -640,27 +637,27 @@ class DifferentialPrivacyIntegrationTest(testutil.BaseFacebookTestCase):
 
         # print to std our prints sample_dp wich is a dict of four values once
         # hence we should get 7 occurrences.
-        self.assertEqual(
+        assertEqual(
             count_word(metrics_reporter.stdout_results, "sample level dp"),
             7,
             metrics_reporter.stdout_results,
         )
 
         # summary writer breaks dict to 4 plots, hence we get 28 occurrences.
-        self.assertEqual(
+        assertEqual(
             count_word(metrics_reporter.tensorboard_results, "sample level dp"),
             28,
             metrics_reporter.tensorboard_results,
         )
 
         # for user_dp we only log one value per round.
-        self.assertEqual(
+        assertEqual(
             count_word(metrics_reporter.stdout_results, "user level dp"),
             7,
             metrics_reporter.stdout_results,
         )
 
-        self.assertEqual(
+        assertEqual(
             count_word(metrics_reporter.tensorboard_results, "user level dp"),
             7,
             metrics_reporter.tensorboard_results,
@@ -755,7 +752,7 @@ class DifferentialPrivacyIntegrationTest(testutil.BaseFacebookTestCase):
             data_provider=data_provider,
             buffer_size=buffer_size,
         )
-        self.assertEmpty(error_msg, msg=error_msg)
+        assertEmpty(error_msg, msg=error_msg)
         # scenario 1
         error_msg = self._test_dp_no_dp_same_weighted_async(
             noise=0,
@@ -763,7 +760,7 @@ class DifferentialPrivacyIntegrationTest(testutil.BaseFacebookTestCase):
             data_provider=data_provider,
             buffer_size=buffer_size,
         )
-        self.assertEmpty(error_msg, msg=error_msg)
+        assertEmpty(error_msg, msg=error_msg)
         # scenario 2
         error_msg = self._test_dp_no_dp_same_weighted_async(
             noise=1e-14,
@@ -771,7 +768,7 @@ class DifferentialPrivacyIntegrationTest(testutil.BaseFacebookTestCase):
             data_provider=data_provider,
             buffer_size=buffer_size,
         )
-        self.assertEmpty(error_msg, msg=error_msg)
+        assertEmpty(error_msg, msg=error_msg)
 
     def test_user_dp_variable_weights_different(self) -> None:
         """
@@ -793,4 +790,4 @@ class DifferentialPrivacyIntegrationTest(testutil.BaseFacebookTestCase):
             data_provider=data_provider,
             buffer_size=buffer_size,
         )
-        self.assertNotEmpty(is_different_msg, msg=is_different_msg)
+        assertNotEmpty(is_different_msg, msg=is_different_msg)
