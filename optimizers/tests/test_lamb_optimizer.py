@@ -3,6 +3,8 @@
 
 import math
 
+import pytest
+from flsim.common.pytest_helper import assertEqual
 from flsim.optimizers.sync_aggregators import (
     FedAdamSyncAggregator,
     FedLAMBSyncAggregator,
@@ -10,7 +12,6 @@ from flsim.optimizers.sync_aggregators import (
     FedLAMBSyncAggregatorConfig,
 )
 from flsim.tests.utils import MockQuadratic1DFL, Quadratic1D
-from libfb.py import testutil
 from omegaconf import OmegaConf
 
 
@@ -19,7 +20,7 @@ def adjust_learning_rate(optimizer, new_lr):
         param_group["lr"] = new_lr
 
 
-def test_lamb_multiple_steps(test_case, weight_decay=0):
+def _test_lamb_multiple_steps(test_case, weight_decay=0):
     """
         a toy optimization example:
             min f(x) = 100 x^2 - 1
@@ -99,18 +100,19 @@ def test_lamb_multiple_steps(test_case, weight_decay=0):
             test_case.quadratic1D_adam.fl_get_module().state_dict()["x"].item()
         )
 
-        assert updated_param_value_lamb == updated_param_value_adam
+        assertEqual(updated_param_value_lamb, updated_param_value_adam)
 
 
-class LambOptimizerTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        self.quadratic1D_lamb = MockQuadratic1DFL(Quadratic1D())
-        self.quadratic1D_adam = MockQuadratic1DFL(Quadratic1D())
+@pytest.fixture(scope="class")
+def prepare_lamb_optimizer_test(request):
+    request.cls.quadratic1D_lamb = MockQuadratic1DFL(Quadratic1D())
+    request.cls.quadratic1D_adam = MockQuadratic1DFL(Quadratic1D())
 
-        super().setUp()
 
+@pytest.mark.usefixtures("prepare_lamb_optimizer_test")
+class TestLambOptimizer:
     def test_lamb_no_weight_decay(self):
-        test_lamb_multiple_steps(self, weight_decay=0.0)
+        _test_lamb_multiple_steps(self, weight_decay=0.0)
 
     def test_lamb_weight_decay(self):
-        test_lamb_multiple_steps(self, weight_decay=0.1)
+        _test_lamb_multiple_steps(self, weight_decay=0.1)
