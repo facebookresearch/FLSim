@@ -261,7 +261,8 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
             channel=self.channel,
             cuda_manager=self._cuda_state_manager,
         )
-        for _epoch in tqdm(range(1, self.cfg.epochs + 1), desc="Epoch", unit="epoch"):
+        num_int_epochs = math.ceil(self.cfg.epochs)
+        for _epoch in tqdm(range(1, num_int_epochs + 1), desc="Epoch", unit="epoch"):
             # pyre-fixme[16]: `Optional` has no attribute `run_one_epoch`.
             self._training_simulator.run_one_epoch()
             # in k-async, up to (k-1) client updates may not have been aggregated

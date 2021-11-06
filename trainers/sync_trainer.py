@@ -170,14 +170,13 @@ class SyncTrainer(FLTrainer):
             )
 
         # main training loop
-        global_round_num = 1
-        for epoch in tqdm(range(1, self.cfg.epochs + 1), desc="Epoch", unit="epoch"):
-            for _round in tqdm(
+        num_int_epochs = math.ceil(self.cfg.epochs)
+        for epoch in tqdm(range(1, num_int_epochs + 1), desc="Epoch", unit="epoch"):
+            for round in tqdm(
                 range(1, num_rounds_in_epoch + 1), desc="Round", unit="round"
             ):
-
                 timeline = Timeline(
-                    epoch=epoch, round=_round, rounds_per_epoch=num_rounds_in_epoch
+                    epoch=epoch, round=round, rounds_per_epoch=num_rounds_in_epoch
                 )
 
                 t = time()
@@ -213,12 +212,9 @@ class SyncTrainer(FLTrainer):
                     )
                     self.logger.debug(
                         self.cuda_enabled and distributed_world_size > 1,
-                        f"from worker {rank}: model norm: {norm} @round: "
-                        f"{global_round_num}",
+                        f"from worker {rank}: model norm: {norm} @ "
+                        f"epoch:{epoch}, round:{round}",
                     )
-                global_round_num += 1
-                if self.stop_fl_training():
-                    break
 
                 # report training success rate and training time variance
                 # TODO write to metrics reporter T62638873
@@ -244,12 +240,19 @@ class SyncTrainer(FLTrainer):
                         best_model_state,
                     )
                     self.logger.info(f"Evaluation took {time() - t} s.")
-            self._post_epoch_client_metrics_eval(
-                # pyre-fixme[61]: `timeline` may not be initialized here.
-                timeline,
-                metric_reporter,
-            )
-            if self.stop_fl_training():
+
+                if self.stop_fl_training(
+                    epoch=epoch, round=round, num_rounds_in_epoch=num_rounds_in_epoch
+                ):
+                    break
+
+            # pyre-fixme[61]: `timeline` may not be initialized here.
+            self._post_epoch_client_metrics_eval(timeline, metric_reporter)
+            if self.stop_fl_training(
+                epoch=epoch,
+                round=round,  # pyre-fixme[61]: `round` may not be initialized here.
+                num_rounds_in_epoch=num_rounds_in_epoch,
+            ):
                 break
 
         if rank == 0 and best_metric is not None:
@@ -267,8 +270,15 @@ class SyncTrainer(FLTrainer):
             metric_reporter=metric_reporter,
         )
 
-    def stop_fl_training(self) -> bool:
-        return self._timeout_simulator.stop_fl()
+    def stop_fl_training(self, *, epoch, round, num_rounds_in_epoch) -> bool:
+        # stop if necessary number of steps/epochs are completed in case of fractional epochs
+        # or if client times out
+        global_round_num = (epoch - 1) * num_rounds_in_epoch + round
+        return (
+            (global_round_num / num_rounds_in_epoch)
+            >= self.cfg.epochs  # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
+            or self._timeout_simulator.stop_fl()
+        )
 
     def _drop_overselected_users(
         self, clents_triggered: List[Client], num_users_keep: int

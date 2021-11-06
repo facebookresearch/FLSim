@@ -267,7 +267,7 @@ class FLTrainerConfig:
     _target_: str = MISSING
     _recursive_: bool = False
     # Training epochs
-    epochs: int = 10
+    epochs: float = 10.0
     # Whether to do evaluation and model selection based on it.
     do_eval: bool = True
     # don't use metric reporter to choose: always keep trained model
