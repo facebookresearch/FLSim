@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import List, Tuple
 
 import torch
-from flsim.common.active_user_selectors.simple_user_selector import (
+from flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelector,
     ActiveUserSelectorConfig,
 )

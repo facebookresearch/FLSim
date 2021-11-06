@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
-from flsim.channels.base_channel import FLChannelConfig
-from flsim.clients.base_client import ClientConfig
-from flsim.common.active_user_selectors.simple_user_selector import (
+from flsim.active_user_selectors.simple_user_selector import (
     SequentialActiveUserSelectorConfig,
 )
+from flsim.channels.base_channel import FLChannelConfig
+from flsim.clients.base_client import ClientConfig
 from flsim.common.timeout_simulator import (
     NeverTimeOutSimulatorConfig,
     TimeOutSimulatorConfig,
