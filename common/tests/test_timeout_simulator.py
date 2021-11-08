@@ -3,6 +3,12 @@
 
 import numpy as np
 import torch
+from flsim.common.pytest_helper import (
+    assertTrue,
+    assertIsInstance,
+    assertAlmostEqual,
+    assertEqual,
+)
 from flsim.common.timeout_simulator import (
     GaussianTimeOutSimulator,
     GaussianTimeOutSimulatorConfig,
@@ -10,14 +16,10 @@ from flsim.common.timeout_simulator import (
 from flsim.utils.timing.training_duration_distribution import (
     PerExampleGaussianDurationDistributionConfig,
 )
-from libfb.py import testutil
 from omegaconf import OmegaConf
 
 
-class TrainingTimeOutSimulatorTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestTrainingTimeOutSimulator:
     def test_online_stat_computation_correct(self):
         timeout_simulator = GaussianTimeOutSimulator(
             **OmegaConf.structured(
@@ -30,7 +32,7 @@ class TrainingTimeOutSimulatorTest(testutil.BaseFacebookTestCase):
                 ),
             )
         )
-        self.assertTrue(isinstance(timeout_simulator, GaussianTimeOutSimulator))
+        assertTrue(isinstance(timeout_simulator, GaussianTimeOutSimulator))
         num_users = 1000
         max_sample_per_user = 20
         num_samples_per_user = [
@@ -46,13 +48,13 @@ class TrainingTimeOutSimulatorTest(testutil.BaseFacebookTestCase):
             training_time_all_users.append(sim_train_time)
 
         # using np.allclose to compare floats
-        self.assertTrue(
+        assertTrue(
             np.allclose(
                 [timeout_simulator.sample_mean_per_user],
                 [np.mean(training_time_all_users)],
             )
         )
-        self.assertTrue(
+        assertTrue(
             np.allclose(
                 [timeout_simulator.sample_var_per_user],
                 [np.var(training_time_all_users, ddof=1)],
@@ -79,7 +81,7 @@ class TrainingTimeOutSimulatorTest(testutil.BaseFacebookTestCase):
                 ),
             )
         )
-        self.assertTrue(isinstance(timeout_simulator, GaussianTimeOutSimulator))
+        assertIsInstance(timeout_simulator, GaussianTimeOutSimulator)
         num_users = 1000
         max_sample_per_user = 20
         num_rounds = 10
@@ -121,12 +123,12 @@ class TrainingTimeOutSimulatorTest(testutil.BaseFacebookTestCase):
                 fl_stopping_round_simulator = r
                 break
 
-        self.assertAlmostEqual(
+        assertAlmostEqual(
             sum(elapsed_time_each_round),
             timeout_simulator._fl_total_elapse_time,
             delta=1e-6,
         )
-        self.assertEqual(fl_stopping_round_ground_truth, fl_stopping_round_simulator)
+        assertEqual(fl_stopping_round_ground_truth, fl_stopping_round_simulator)
 
     def test_fl_stops_small_stopping_time_2(self):
         r"""
