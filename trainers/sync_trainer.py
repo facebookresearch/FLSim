@@ -498,9 +498,6 @@ class SyncTrainer(FLTrainer):
         timeline: Timeline,
         metric_reporter: Optional[IFLMetricsReporter],
     ):
-        client_models = {
-            client: client.last_updated_model for client in self.clients.values()
-        }
         if (
             metric_reporter is not None
             # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
@@ -508,6 +505,9 @@ class SyncTrainer(FLTrainer):
             and self.cfg.report_client_metrics_after_epoch
             and (timeline.epoch % self.cfg.client_metrics_reported_per_epoch == 0)
         ):
+            client_models = {
+                client: client.last_updated_model for client in self.clients.values()
+            }
             client_scores = self.calc_post_epoch_client_metrics(
                 client_models, timeline, metric_reporter
             )
