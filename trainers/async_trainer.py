@@ -176,7 +176,7 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
         self._calc_post_epoch_communication_metrics(
             self._get_timeline(), self.metric_reporter
         )
-        (self.best_metric, self.best_model_state,) = FLTrainer._epoch_train_postprocess(
+        (self.best_metric, self.best_model_state,) = FLTrainer._maybe_run_evaluation(
             self,
             self.global_model(),
             timeline,

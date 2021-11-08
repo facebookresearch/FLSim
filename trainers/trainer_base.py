@@ -113,7 +113,7 @@ class FLTrainer(abc.ABC):
     def global_model(self) -> IFLModel:
         pass
 
-    def _epoch_train_postprocess(
+    def _maybe_run_evaluation(
         self,
         model: IFLModel,
         timeline: Timeline,

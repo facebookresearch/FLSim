@@ -231,7 +231,7 @@ class SyncTrainer(FLTrainer):
                         )
 
                     t = time()
-                    best_metric, best_model_state = self._epoch_train_postprocess(
+                    (best_metric, best_model_state,) = self._maybe_run_evaluation(
                         self.global_model(),
                         timeline,
                         data_provider.eval_data(),
