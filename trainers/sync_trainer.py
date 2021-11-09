@@ -171,9 +171,14 @@ class SyncTrainer(FLTrainer):
 
         # main training loop
         num_int_epochs = math.ceil(self.cfg.epochs)
-        for epoch in tqdm(range(1, num_int_epochs + 1), desc="Epoch", unit="epoch"):
+        for epoch in tqdm(
+            range(1, num_int_epochs + 1), desc="Epoch", unit="epoch", position=0
+        ):
             for round in tqdm(
-                range(1, num_rounds_in_epoch + 1), desc="Round", unit="round"
+                range(1, num_rounds_in_epoch + 1),
+                desc="Round",
+                unit="round",
+                position=0,
             ):
                 timeline = Timeline(
                     epoch=epoch, round=round, rounds_per_epoch=num_rounds_in_epoch
