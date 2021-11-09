@@ -6,6 +6,10 @@ from typing import List
 
 import numpy as np
 from flsim.channels.message import SyncServerMessage
+from flsim.active_user_selectors.simple_user_selector import (
+    UniformlyRandomActiveUserSelectorConfig,
+)
+from flsim.common.pytest_helper import assertEqual, assertEmpty
 from flsim.servers.aggregator import AggregationType
 from flsim.servers.sync_servers import (
     SyncServerConfig,
@@ -148,7 +152,7 @@ class SyncServerTest(testutil.BaseFacebookTestCase):
             error_msg = model_parameters_equal_to_value(
                 server_model, -client_updates.expected_value * (round_num + 1)
             )
-            self.assertEmpty(error_msg, msg=error_msg)
+            assertEmpty(error_msg, msg=error_msg)
 
     @testutil.data_provider(
         lambda: (
@@ -369,3 +373,24 @@ class SyncServerTest(testutil.BaseFacebookTestCase):
             num_rounds=num_rounds,
             num_clients=num_clients,
         )
+
+    def test_select_clients_for_training(self):
+        """
+        Selects 10 clients out of 100. SyncServer with seed = 0 should
+        return the same indicies as those of uniform random selector.
+        """
+        selector_config = UniformlyRandomActiveUserSelectorConfig(user_selector_seed=0)
+        uniform_selector = instantiate(selector_config)
+
+        server = instantiate(
+            SyncServerConfig(active_user_selector=selector_config),
+            global_model=SampleNet(create_model_with_value(0)),
+        )
+
+        server_selected_indices = server.select_clients_for_training(
+            num_total_users=100, users_per_round=10
+        )
+        uniform_selector_indices = uniform_selector.get_user_indices(
+            num_total_users=100, users_per_round=10
+        )
+        assertEqual(server_selected_indices, uniform_selector_indices)

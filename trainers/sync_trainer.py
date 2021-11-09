@@ -408,15 +408,16 @@ class SyncTrainer(FLTrainer):
             return train_clients
 
         # For the post-aggregation metrics, evaluate on new users
-        agg_metric_client_idcs = self.active_user_selector.get_users_unif_rand(
-            num_total_users=num_total_users,
-            users_per_round=users_per_round,
-        )
+        agg_metric_client_idcs = torch.multinomial(
+            torch.ones(num_total_users, dtype=torch.float),
+            users_per_round,
+            replacement=False,
+        ).tolist()
+
         agg_metric_clients = [
             self.create_or_get_client_for_data(i, self.data_provider)
             for i in agg_metric_client_idcs
         ]
-
         return agg_metric_clients
 
     def calc_post_aggregation_train_metrics(

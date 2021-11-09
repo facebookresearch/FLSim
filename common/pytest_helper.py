@@ -7,7 +7,7 @@ There are a list of helper utilities missing in PyTest.
 We define some of the helpful utilities in this one file
 so that all FL-sim PyTests can reuse them easily.
 """
-from typing import Any
+from typing import Any, Sized
 
 
 def assertIsInstance(o: object, t: type) -> None:
@@ -91,3 +91,7 @@ class assertRaises(object):
         if exc_type is None:
             raise AssertionError(f"{self.expected_exc} was not raised")
         return isinstance(exc_value, self.expected_exc)
+
+
+def assertEmpty(o: Sized, msg: str) -> None:
+    assert len(o) == 0, msg

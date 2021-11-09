@@ -9,6 +9,11 @@ from typing import Optional
 import torch
 from flsim.channels.base_channel import IFLChannel
 from flsim.channels.message import SyncServerMessage
+from flsim.active_user_selectors.simple_user_selector import (
+    ActiveUserSelectorConfig,
+    UniformlyRandomActiveUserSelectorConfig,
+)
+from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
 from flsim.privacy.common import PrivacySetting
 from flsim.privacy.privacy_engine import IPrivacyEngine
@@ -25,6 +30,8 @@ from flsim.servers.sync_servers import (
 from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.distributed.fl_distributed import OperationType, FLDistributedUtils
 from flsim.utils.fl.common import FLModelParamUtils
+from hydra.utils import instantiate
+from omegaconf import OmegaConf
 
 
 class SyncDPSGDServer(ISyncServer):
@@ -76,14 +83,31 @@ class SyncDPSGDServer(ISyncServer):
             noise_type=NoiseType.GAUSSIAN,
         )
         self._privacy_engine.attach(self._global_model.fl_get_module())
+        self._active_user_selector = instantiate(self.cfg.active_user_selector)
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
-        pass
+        if OmegaConf.is_missing(cfg.active_user_selector, "_target_"):
+            cfg.active_user_selector = UniformlyRandomActiveUserSelectorConfig()
 
     @property
     def global_model(self):
         return self._global_model
+
+    def select_clients_for_training(
+        self,
+        num_total_users,
+        users_per_round,
+        data_provider: Optional[IFLDataProvider] = None,
+        epoch: Optional[int] = None,
+    ):
+        return self._active_user_selector.get_user_indices(
+            num_total_users=num_total_users,
+            users_per_round=users_per_round,
+            data_provider=data_provider,
+            global_model=self.global_model,
+            epoch=epoch,
+        )
 
     def init_round(self):
         self._aggregator.zero_weights()
@@ -120,3 +144,4 @@ class SyncDPSGDServerConfig(SyncServerConfig):
     aggregation_type: AggregationType = AggregationType.AVERAGE
     optimizer: OptimizerConfig = FedAvgOptimizerConfig()
     privacy_setting: PrivacySetting = PrivacySetting()
+    active_user_selector: ActiveUserSelectorConfig = ActiveUserSelectorConfig()

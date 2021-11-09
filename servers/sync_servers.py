@@ -6,17 +6,24 @@ from __future__ import annotations
 import abc
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Optional, List
 
 import torch
 import torch.nn as nn
 from flsim.channels.base_channel import IFLChannel
 from flsim.channels.message import SyncServerMessage
+from flsim.active_user_selectors.simple_user_selector import (
+    ActiveUserSelectorConfig,
+    UniformlyRandomActiveUserSelectorConfig,
+)
+from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.layerwise_optimizers import LAMB, LARS
 from flsim.servers.aggregator import AggregationType, Aggregator
 from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.fl.common import FLModelParamUtils
+from hydra.utils import instantiate
+from omegaconf import OmegaConf
 
 
 class OptimizerType(Enum):
@@ -112,6 +119,33 @@ class ISyncServer(abc.ABC):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def select_clients_for_training(
+        self,
+        num_total_users: int,
+        users_per_round: int,
+        data_provider: Optional[IFLDataProvider] = None,
+        epoch: Optional[int] = None,
+    ) -> List[int]:
+        """
+        Selects clients to participate in a round of training.
+
+        The selection scheme depends on the underlying selector. This
+        can include: random, sequential, high loss etc.
+
+        Args:
+            num_total_users ([int]): Number of total users (population size).
+            users_per_round ([int]]): Number of users per round.
+            data_provider (Optional[IFLDataProvider], optional): This is useful when the selection scheme
+            is high loss. Defaults to None.
+            epoch (Optional[int], optional): [description]. This is useful when the selection scheme
+            is high loss. Defaults to None.
+
+        Returns:
+            List[int]: A list of client indicies
+        """
+        pass
+
     @property
     def global_model(self) -> IFLModel:
         """
@@ -145,14 +179,31 @@ class SyncServer(ISyncServer):
             aggregation_type=self.cfg.aggregation_type,
             only_federated_params=self.cfg.only_federated_params,
         )
+        self._active_user_selector = instantiate(self.cfg.active_user_selector)
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
-        pass
+        if OmegaConf.is_missing(cfg.active_user_selector, "_target_"):
+            cfg.active_user_selector = UniformlyRandomActiveUserSelectorConfig()
 
     @property
     def global_model(self):
         return self._global_model
+
+    def select_clients_for_training(
+        self,
+        num_total_users,
+        users_per_round,
+        data_provider: Optional[IFLDataProvider] = None,
+        epoch: Optional[int] = None,
+    ):
+        return self._active_user_selector.get_user_indices(
+            num_total_users=num_total_users,
+            users_per_round=users_per_round,
+            data_provider=data_provider,
+            global_model=self.global_model,
+            epoch=epoch,
+        )
 
     def init_round(self):
         self._aggregator.zero_weights()
@@ -226,3 +277,4 @@ class SyncServerConfig:
     only_federated_params: bool = True
     aggregation_type: AggregationType = AggregationType.WEIGHTED_AVERAGE
     optimizer: OptimizerConfig = FedAvgOptimizerConfig()
+    active_user_selector: ActiveUserSelectorConfig = ActiveUserSelectorConfig()
