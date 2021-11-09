@@ -125,6 +125,7 @@ class AsyncTrainingSimulator:
             total=self.num_train_end_events_per_epoch,
             desc="Client Training Per Epoch",
             unit="client",
+            position=0,
         ) as pbar:
             while not self.min_heap.empty():
                 # notify async trainer that num_train_end_events_per_epoch have ended training
