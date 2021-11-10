@@ -10,12 +10,12 @@ from typing import Optional, List
 
 import torch
 import torch.nn as nn
-from flsim.channels.base_channel import IFLChannel
-from flsim.channels.message import SyncServerMessage
 from flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorConfig,
     UniformlyRandomActiveUserSelectorConfig,
 )
+from flsim.channels.base_channel import IFLChannel
+from flsim.channels.message import SyncServerMessage
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.layerwise_optimizers import LAMB, LARS

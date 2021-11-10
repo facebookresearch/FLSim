@@ -5,10 +5,10 @@ from dataclasses import dataclass
 from typing import List
 
 import numpy as np
-from flsim.channels.message import SyncServerMessage
 from flsim.active_user_selectors.simple_user_selector import (
     UniformlyRandomActiveUserSelectorConfig,
 )
+from flsim.channels.message import SyncServerMessage
 from flsim.common.pytest_helper import assertEqual, assertEmpty
 from flsim.servers.aggregator import AggregationType
 from flsim.servers.sync_servers import (
