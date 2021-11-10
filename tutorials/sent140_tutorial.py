@@ -153,22 +153,17 @@ class Sent140Dataset(Dataset):
 def build_data_provider(data_config, drop_last=False):
 
     train_dataset = Sent140Dataset(
-        data_root="all_data_0_01_keep_1_train_9.json",
+        data_root="train/all_data_0_01_keep_1_train_9.json",
         max_seq_len=data_config.max_seq_len,
     )
     test_dataset = Sent140Dataset(
-        data_root="all_data_0_01_keep_1_test_9.json",
+        data_root="test/all_data_0_01_keep_1_test_9.json",
         max_seq_len=data_config.max_seq_len,
-    )
-    eval_size = int(0.20 * len(test_dataset))
-    test_size = len(test_dataset) - eval_size
-    eval_dataset, test_dataset = torch.utils.data.random_split(
-        test_dataset, [eval_size, test_size]
     )
 
     dataloader = LEAFDataLoader(
         train_dataset,
-        eval_dataset,
+        test_dataset,
         test_dataset,
         batch_size=data_config.local_batch_size,
         drop_last=drop_last,
