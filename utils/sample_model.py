@@ -61,7 +61,13 @@ class LinearFLModel(IFLModel):
         loss = F.mse_loss(out, stacked_label)
         # loss = F.mse_loss(out, batch_label)
         num_examples = self.get_num_examples(batch)
-        return FLBatchMetrics(loss, num_examples, out, batch_label, batch)
+        return FLBatchMetrics(
+            loss=loss,
+            num_examples=num_examples,
+            predictions=out,
+            targets=batch_label,
+            model_inputs=batch,
+        )
 
     def fl_create_training_batch(self, **kwargs) -> None:
         return kwargs.get("batch", None)
@@ -141,7 +147,13 @@ class DummyAlphabetFLModel(IFLModel):
         # this prevents unit tests from failing because of numerical issues
         loss.mul_(100.0)
         num_examples = self.get_num_examples(batch)
-        return FLBatchMetrics(loss, num_examples, out, batch_label, text_embeddings)
+        return FLBatchMetrics(
+            loss=loss,
+            num_examples=num_examples,
+            predictions=out,
+            targets=batch_label,
+            model_inputs=text_embeddings,
+        )
 
     def fl_create_training_batch(self, **kwargs) -> None:
         return kwargs.get("batch", None)
@@ -185,11 +197,11 @@ class MockFLModel(IFLModel):
     def fl_forward(self, batch) -> FLBatchMetrics:
         num_examples = self.get_num_examples(batch)
         return FLBatchMetrics(
-            self.loss,
-            num_examples,
-            self.model_output,
-            self.batch_labels,
-            self.model_input,
+            loss=self.loss,
+            num_examples=num_examples,
+            predictions=self.model_output,
+            targets=self.batch_labels,
+            model_inputs=self.model_input,
         )
 
     def fl_create_training_batch(self, **kwargs) -> None:
@@ -203,11 +215,11 @@ class MockFLModel(IFLModel):
 
     def get_eval_metrics(self, batch) -> FLBatchMetrics:
         return FLBatchMetrics(
-            self.loss,
-            self.num_examples_per_user,
-            self.model_output,
-            self.batch_labels,
-            self.model_input,
+            loss=self.loss,
+            num_examples=self.num_examples_per_user,
+            predictions=self.model_output,
+            targets=self.batch_labels,
+            model_inputs=self.model_input,
         )
 
     def get_num_examples(self, batch) -> int:

@@ -78,7 +78,11 @@ class FLModel(IFLModel):
         loss = F.nll_loss(out, stacked_label)
         num_examples = self.get_num_examples(batch)
         return FLBatchMetrics(
-            loss, num_examples, out, batch_label, [batch["float_features"]]
+            loss=loss,
+            num_examples=num_examples,
+            predictions=out,
+            targets=batch_label,
+            model_inputs=[batch["float_features"]],
         )
 
     def fl_create_training_batch(self, **kwargs):

@@ -10,6 +10,7 @@ from flsim.interfaces.batch_metrics import IFLBatchMetrics
 class FLBatchMetrics(IFLBatchMetrics):
     def __init__(
         self,
+        *,
         loss: torch.Tensor,
         num_examples: int,
         predictions: torch.Tensor,

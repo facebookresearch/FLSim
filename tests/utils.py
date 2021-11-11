@@ -94,7 +94,9 @@ class MockQuadratic1DFL(IFLModel):
 
     def fl_forward(self, data=None):
         loss = self.model()
-        return FLBatchMetrics(loss, 1, None, None, None)
+        return FLBatchMetrics(
+            loss=loss, num_examples=1, predictions=None, targets=None, model_inputs=None
+        )
 
     def fl_create_training_batch(self):
         pass

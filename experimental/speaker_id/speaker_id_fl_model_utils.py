@@ -64,7 +64,13 @@ class SpeakerIdFLModel(IFLModel):
         preds = self.model(audio_features, labels)
         loss = self.loss_fun(preds, labels)
         num_examples = labels.shape[0]
-        return FLBatchMetrics(loss, num_examples, preds, labels, [audio_features])
+        return FLBatchMetrics(
+            loss=loss,
+            num_examples=num_examples,
+            predictions=preds,
+            targets=labels,
+            model_inputs=[audio_features],
+        )
 
     def fl_get_module(self) -> nn.Module:
         return self.model
