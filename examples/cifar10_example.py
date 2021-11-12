@@ -20,8 +20,8 @@ from flsim.baselines.data_providers import FLVisionDataLoader, LEAFDataProvider
 from flsim.baselines.models.cnn import SimpleConvNet
 from flsim.baselines.models.cv_model import FLModel
 from flsim.data.data_sharder import FLDataSharder, ShardingStrategyType
+from flsim.examples.metrics_reporter.fl_metrics_reporter import MetricsReporter
 from flsim.interfaces.metrics_reporter import Channel
-from flsim.tutorials.metrics_reporter.fl_metrics_reporter import MetricsReporter
 from flsim.utils.config_utils import maybe_parse_json_config
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf

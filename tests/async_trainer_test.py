@@ -2,15 +2,15 @@
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
 import copy
-from typing import Any, List
+from typing import Any, List, Dict
 
 import numpy as np
 import torch
 from flsim.common.timeline import Timeline
 from flsim.common.timeout_simulator import GaussianTimeOutSimulatorConfig
-from flsim.examples.mnist_fl_metrics_reporter import MNISTMetricsReporter
-from flsim.interfaces.metrics_reporter import Channel, TrainingStage
+from flsim.interfaces.metrics_reporter import TrainingStage, Channel
 from flsim.interfaces.model import IFLModel
+from flsim.metrics_reporter.tensorboard_metrics_reporter import FLMetricsReporter
 from flsim.optimizers.async_aggregators import (
     AsyncAggregatorConfig,
     FedAdamAsyncAggregatorConfig,
@@ -21,6 +21,7 @@ from flsim.optimizers.optimizer_scheduler import LRBatchSizeNormalizerSchedulerC
 from flsim.tests.utils import (
     verify_models_equivalent_after_training,
     RandomEvalMetricsReporter,
+    MetricsReporterWithMockedChannels,
 )
 from flsim.utils.async_trainer.async_example_weights import (
     EqualExampleWeightConfig,
@@ -56,7 +57,7 @@ from flsim.utils.timing.training_duration_distribution import (
 from libfb.py import testutil
 
 
-class TestMetricsReporter(MNISTMetricsReporter):
+class TestMetricsReporter(MetricsReporterWithMockedChannels):
     """Don't reset metrics when reported. Else, at the end of
     training, metrics have zeroes
     """
@@ -65,11 +66,47 @@ class TestMetricsReporter(MNISTMetricsReporter):
         pass
 
 
-class ConcurrencyMetricsReporter(TestMetricsReporter):
+class ConcurrencyMetricsReporter(FLMetricsReporter):
+    ACCURACY = "Accuracy"
+
     def __init__(self, channels: List[Channel]):
         self.concurrency_metrics = []
         self.eval_rounds = []
         super().__init__(channels)
+
+    def compare_metrics(self, eval_metrics, best_metrics):
+        print(f"Current eval accuracy: {eval_metrics}%, Best so far: {best_metrics}%")
+        if best_metrics is None:
+            return True
+        return eval_metrics > best_metrics
+
+    def compute_scores(self) -> Dict[str, Any]:
+        # compute accuracy
+        correct = torch.Tensor([0])
+        for i in range(len(self.predictions_list)):
+            all_preds = self.predictions_list[i]
+            pred = all_preds.data.max(1, keepdim=True)[1]
+
+            assert pred.device == self.targets_list[i].device, (
+                f"Pred and targets moved to different devices: "
+                f"pred >> {pred.device} vs. targets >> {self.targets_list[i].device}"
+            )
+            if i == 0:
+                correct = correct.to(pred.device)
+
+            correct += pred.eq(self.targets_list[i].data.view_as(pred)).sum()
+
+        # total number of data
+        total = sum(len(batch_targets) for batch_targets in self.targets_list)
+
+        accuracy = 100.0 * correct.item() / total
+
+        return {self.ACCURACY: accuracy}
+
+    def create_eval_metrics(
+        self, scores: Dict[str, Any], total_loss: float, **kwargs
+    ) -> Any:
+        return scores[self.ACCURACY]
 
     def report_metrics(
         self,
@@ -370,7 +407,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
             )
             trained_fl_model, _ = async_trainer.train(
                 data_provider=fl_data_provider,
-                metric_reporter=MNISTMetricsReporter([Channel.STDOUT]),
+                metric_reporter=MetricsReporterWithMockedChannels(),
                 num_total_users=num_users,
                 distributed_world_size=1,
             )
@@ -393,7 +430,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
             )
             trained_fl_model, _ = async_trainer.train(
                 data_provider=fl_data_provider,
-                metric_reporter=MNISTMetricsReporter([Channel.STDOUT]),
+                metric_reporter=MetricsReporterWithMockedChannels(),
                 num_total_users=num_users,
                 distributed_world_size=1,
             )
@@ -483,7 +520,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
                 ),
             )
 
-            metric_reporter = TestMetricsReporter([Channel.STDOUT])
+            metric_reporter = TestMetricsReporter()
             fl_model, _ = async_trainer.train(
                 data_provider=fl_data_provider,
                 metric_reporter=metric_reporter,
@@ -696,7 +733,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
         global_lr = 1.0
         epochs = 1
         init_model_local = DummyAlphabetFLModel()
-        metrics_reporter = TestMetricsReporter([Channel.STDOUT])
+        metrics_reporter = TestMetricsReporter()
 
         num_users = 10
         num_examples = 100
@@ -747,7 +784,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
         2. Users are trained sequentially, which means there is no staleness hence all users can participate
         """
         global_model = DummyAlphabetFLModel()
-        metrics_reporter = TestMetricsReporter([Channel.STDOUT])
+        metrics_reporter = TestMetricsReporter()
         num_users = 10
         num_examples = num_users
         training_rate = num_users

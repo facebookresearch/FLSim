@@ -24,8 +24,8 @@ import torch
 import torch.nn as nn
 from flsim.baselines.data_providers import LEAFDataLoader, LEAFDataProvider
 from flsim.baselines.models.cv_model import FLModel
+from flsim.examples.metrics_reporter.fl_metrics_reporter import MetricsReporter
 from flsim.interfaces.metrics_reporter import Channel
-from flsim.tutorials.metrics_reporter.fl_metrics_reporter import MetricsReporter
 from flsim.utils.config_utils import maybe_parse_json_config
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf

@@ -8,8 +8,6 @@ from typing import Union
 import numpy as np
 import torch
 from flsim.data.data_provider import IFLDataProvider
-from flsim.examples.mnist_fl_metrics_reporter import MNISTMetricsReporter
-from flsim.interfaces.metrics_reporter import Channel
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.async_aggregators import (
     AsyncAggregatorConfig,
@@ -25,7 +23,10 @@ from flsim.optimizers.sync_aggregators import (
     FedAvgWithLRSyncAggregatorConfig,
     create_optimizer_for_sync_aggregator,
 )
-from flsim.tests.utils import verify_models_equivalent_after_training
+from flsim.tests.utils import (
+    MetricsReporterWithMockedChannels,
+    verify_models_equivalent_after_training,
+)
 from flsim.trainers.async_trainer import AsyncTrainerConfig
 from flsim.trainers.sync_trainer import SyncTrainerConfig
 from flsim.utils.sample_model import DummyAlphabetFLModel
@@ -78,7 +79,7 @@ class HybridFLTestUtils:
         training_duration_mean,
         training_duration_sd,
     ) -> IFLModel:
-        metric_reporter = MNISTMetricsReporter([Channel.STDOUT])
+        metric_reporter = MetricsReporterWithMockedChannels()
         if trainer_to_compare_hybrid_fl_with == TrainerType.SYNC:
             trainer = create_sync_trainer(
                 model=global_model,
@@ -218,7 +219,7 @@ class HybridFLTestUtils:
 
             hybrid_model, _ = hybrid_fl_trainer.train(
                 data_provider=data_provider,
-                metric_reporter=MNISTMetricsReporter([Channel.STDOUT]),
+                metric_reporter=MetricsReporterWithMockedChannels(),
                 num_total_users=data_provider.num_users(),
                 distributed_world_size=1,
             )
