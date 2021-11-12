@@ -109,7 +109,7 @@ class HalfPrecisionChannelTest(testutil.BaseFacebookTestCase):
     @testutil.data_provider(
         lambda: (
             {
-                "config": HalfPrecisionChannelConfig(),
+                "config": HalfPrecisionChannelConfig(report_communication_metrics=True),
                 "expected_type": HalfPrecisionChannel,
             },
         )
@@ -123,10 +123,6 @@ class HalfPrecisionChannelTest(testutil.BaseFacebookTestCase):
         # instantiation
         channel = instantiate(config)
         self.assertIsInstance(channel, expected_type)
-
-        # attach stats collector
-        stats_collector = ChannelStatsCollector()
-        channel.attach_stats_collector(stats_collector)
 
         # create dummy model
         two_fc = utils.TwoFC()
@@ -145,7 +141,7 @@ class HalfPrecisionChannelTest(testutil.BaseFacebookTestCase):
         message.update_model_(upload_model)
 
         # test communiction stats measurements
-        stats = stats_collector.get_channel_stats()
+        stats = channel.stats_collector.get_channel_stats()
         client_to_server_bytes = stats[ChannelDirection.CLIENT_TO_SERVER].mean()
         server_to_client_bytes = stats[ChannelDirection.SERVER_TO_CLIENT].mean()
         self.assertEqual(2 * client_to_server_bytes, server_to_client_bytes)

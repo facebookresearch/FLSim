@@ -134,6 +134,7 @@ class ProductQuantizationChannelTest(testutil.BaseFacebookTestCase):
                     "num_codebooks": 1,
                     "max_block_size": 1,
                     "min_numel_to_quantize": 10,
+                    "report_communication_metrics": True,
                 },
                 "expected_type": ProductQuantizationChannel,
             },
@@ -150,10 +151,6 @@ class ProductQuantizationChannelTest(testutil.BaseFacebookTestCase):
         # instantiation
         channel = instantiate(config)
 
-        # attach stats collector
-        stats_collector = ChannelStatsCollector()
-        channel.attach_stats_collector(stats_collector)
-
         # create dummy model
         two_fc = utils.TwoFC()
         base_model = utils.SampleNet(two_fc)
@@ -165,7 +162,7 @@ class ProductQuantizationChannelTest(testutil.BaseFacebookTestCase):
         message.update_model_(upload_model)
 
         # test communication stats measurements (here per_tensor int8 quantization)
-        stats = stats_collector.get_channel_stats()
+        stats = channel.stats_collector.get_channel_stats()
         client_to_server_bytes = stats[ChannelDirection.CLIENT_TO_SERVER].mean()
 
         # biases are not quantized

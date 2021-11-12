@@ -5,10 +5,8 @@ from copy import deepcopy
 from typing import Type
 
 from flsim.channels.communication_stats import (
-    ChannelStatsCollector,
     ChannelDirection,
 )
-from flsim.channels.message import Message
 from flsim.channels.scalar_quantization_channel import (
     ScalarQuantizationChannelConfig,
     ScalarQuantizationChannel,
@@ -27,7 +25,8 @@ class ScalarQuantizationChannelTest(testutil.BaseFacebookTestCase):
         lambda: (
             {
                 "config": ScalarQuantizationChannelConfig(
-                    n_bits=8, quantize_per_tensor=True
+                    n_bits=8,
+                    quantize_per_tensor=True,
                 ),
                 "expected_type": ScalarQuantizationChannel,
             },
@@ -117,7 +116,9 @@ class ScalarQuantizationChannelTest(testutil.BaseFacebookTestCase):
         lambda: (
             {
                 "config": ScalarQuantizationChannelConfig(
-                    n_bits=8, quantize_per_tensor=True
+                    n_bits=8,
+                    quantize_per_tensor=True,
+                    report_communication_metrics=True,
                 ),
                 "expected_type": ScalarQuantizationChannel,
             },
@@ -133,10 +134,6 @@ class ScalarQuantizationChannelTest(testutil.BaseFacebookTestCase):
 
         # instantiation
         channel = instantiate(config)
-
-        # attach stats collector
-        stats_collector = ChannelStatsCollector()
-        channel.attach_stats_collector(stats_collector)
 
         # create dummy model
         two_fc = utils.TwoFC()
@@ -155,7 +152,7 @@ class ScalarQuantizationChannelTest(testutil.BaseFacebookTestCase):
         message.update_model_(upload_model)
 
         # test communication stats measurements (here per_tensor int8 quantization)
-        stats = stats_collector.get_channel_stats()
+        stats = channel.stats_collector.get_channel_stats()
         client_to_server_bytes = stats[ChannelDirection.CLIENT_TO_SERVER].mean()
         server_to_client_bytes = stats[ChannelDirection.SERVER_TO_CLIENT].mean()
 

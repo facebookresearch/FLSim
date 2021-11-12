@@ -81,6 +81,7 @@ class SketchChannel(IdentityChannel):
         """
         Raise an error here is we want to measure message size, TODO: fix
         this in a next refactor.
+        TODO (krp@) Add sketched update size measurement
         """
         if self.stats_collector:
             raise NotImplementedError(

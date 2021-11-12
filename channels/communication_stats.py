@@ -12,7 +12,6 @@ class ChannelDirection(Enum):
 
 
 class ChannelStatsCollector:
-    # TODO: refactor ChannelStatsCollector
     def __init__(self):
         self.reset_channel_stats()
 

@@ -40,7 +40,7 @@ class ProductQuantizationChannel(IdentityChannel):
             config_class=ProductQuantizationChannelConfig,
             **kwargs,
         )
-        self.stats_collector = None
+        super().__init__(**kwargs)
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
@@ -51,9 +51,7 @@ class ProductQuantizationChannel(IdentityChannel):
         message.populate(model)
         return message
 
-    def _during_transmission_client_to_server(
-        self, message: ChannelMessage
-    ) -> ChannelMessage:
+    def _calc_message_size_client_to_server(self, message: ChannelMessage):
         """
         We compute the size of the compressed message as follows:
             - for the weights (compressed):
@@ -65,34 +63,28 @@ class ProductQuantizationChannel(IdentityChannel):
             - n_centroids is not necessarily equal to max_num_centroids, hence we
               recover it from the shape of `param["centroids"]`.
         """
+        message_size_bytes = 0
+        for param in message.model_state_dict.values():
+            # param was compressed with PQ
+            if type(param) is dict:
+                block_size = param["centroids"].size(1)
+                n_subvectors = param["assignments"].size(0)
+                n_centroids = param["centroids"].size(0) // self.cfg.num_codebooks
 
-        if self.stats_collector:
-            message_size_bytes = 0
-            for param in message.model_state_dict.values():
-                # param was compressed with PQ
-                if type(param) is dict:
-                    block_size = param["centroids"].size(1)
-                    n_subvectors = param["assignments"].size(0)
-                    n_centroids = param["centroids"].size(0) // self.cfg.num_codebooks
-
-                    assignments_bytes = math.log2(n_centroids) / 8.0 * n_subvectors
-                    centroids_bytes = (
-                        self.cfg.num_codebooks
-                        * n_centroids
-                        * block_size
-                        * ProductQuantizationChannel.BYTES_PER_FP32
-                    )
-                    message_size_bytes += assignments_bytes + centroids_bytes
-                # param is a non-compressed torch.Tensor
-                else:
-                    message_size_bytes += (
-                        ProductQuantizationChannel.BYTES_PER_FP32 * param.numel()
-                    )
-
-            self.stats_collector.collect_channel_stats(
-                message_size_bytes, client_to_server=True
-            )
-        return message
+                assignments_bytes = math.log2(n_centroids) / 8.0 * n_subvectors
+                centroids_bytes = (
+                    self.cfg.num_codebooks
+                    * n_centroids
+                    * block_size
+                    * ProductQuantizationChannel.BYTES_PER_FP32
+                )
+                message_size_bytes += assignments_bytes + centroids_bytes
+            # param is a non-compressed torch.Tensor
+            else:
+                message_size_bytes += (
+                    ProductQuantizationChannel.BYTES_PER_FP32 * param.numel()
+                )
+        return message_size_bytes
 
     def _on_client_before_transmission(self, message: ChannelMessage) -> ChannelMessage:
         """
@@ -152,7 +144,6 @@ class ProductQuantizationChannel(IdentityChannel):
             # param is a non-compressed torch.Tensor
             else:
                 new_state_dict[name] = param.data
-
         message.model_state_dict = new_state_dict
         return message
 

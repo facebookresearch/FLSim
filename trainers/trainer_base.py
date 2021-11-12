@@ -16,7 +16,6 @@ from flsim.active_user_selectors.simple_user_selector import (
 )
 from flsim.channels.base_channel import FLChannelConfig
 from flsim.channels.communication_stats import (
-    ChannelStatsCollector,
     ChannelDirection,
 )
 from flsim.clients.base_client import ClientConfig
@@ -74,9 +73,6 @@ class FLTrainer(abc.ABC):
         self.num_total_users: int = -1
         # Initialize tracker for measuring communication between the clients and
         # the server if communication metrics are enabled
-        if self.cfg.report_communication_metrics:
-            self.stats_collector = ChannelStatsCollector()
-            self.channel.attach_stats_collector(self.stats_collector)
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
@@ -181,8 +177,8 @@ class FLTrainer(abc.ABC):
 
         if (
             metric_reporter is not None
-            # pyre-fixme[16]: `FLTrainer` has no attribute `cfg`.
-            and self.cfg.report_communication_metrics
+            and self.channel.cfg.report_communication_metrics
+            # pyre-fixme[16]: `FLTrainer` has no attribute `cfg`
             and timeline.tick(1.0 / self.cfg.train_metrics_reported_per_epoch)
         ):
             extra_metrics = [
@@ -192,7 +188,7 @@ class FLTrainer(abc.ABC):
                     else "Server to Client Bytes Sent",
                     tracker.mean(),
                 )
-                for name, tracker in self.stats_collector.get_channel_stats().items()
+                for name, tracker in self.channel.stats_collector.get_channel_stats().items()
             ]
             metric_reporter.report_metrics(
                 model=None,
@@ -203,7 +199,7 @@ class FLTrainer(abc.ABC):
                 print_to_channels=True,
                 extra_metrics=extra_metrics,
             )
-            self.stats_collector.reset_channel_stats()
+            self.channel.stats_collector.reset_channel_stats()
 
     def _evaluate(
         self,
@@ -288,6 +284,3 @@ class FLTrainerConfig:
     client: ClientConfig = ClientConfig()
     # config for the channels
     channel: FLChannelConfig = FLChannelConfig()
-    # Whether communication metrics (between server and clients) should be
-    # reported
-    report_communication_metrics: bool = False

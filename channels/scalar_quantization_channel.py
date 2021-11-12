@@ -56,7 +56,7 @@ class ScalarQuantizationChannel(IdentityChannel):
             config_class=ScalarQuantizationChannelConfig,
             **kwargs,
         )
-        self.stats_collector = None
+        super().__init__(**kwargs)
         self.n_bits = self.cfg.n_bits
         self.quantize_per_tensor = self.cfg.quantize_per_tensor
         assert (
@@ -65,6 +65,40 @@ class ScalarQuantizationChannel(IdentityChannel):
         self.quant_min = 0
         self.quant_max = 2 ** self.n_bits - 1
         self.observer, self.quantizer = self._get_observers_and_quantizers()
+
+    def _calc_message_size_client_to_server(self, message: ChannelMessage):
+        """
+        We compute the size of the compressed message as follows:
+            - for the weights (compressed): n_bits / 8 bytes per element
+            - for the biases (not compressed): 4 bytes per element
+            - for the scales (one for each layer or one for each layer channel
+              depending on quantize_per_tensor): 8 bytes / element (fp64)
+            - for the zerp_points (one for each layer or one for each layer channel
+              depending on quantize_per_tensor): 4 bytes / element (int32)
+        """
+        message_size_bytes = 0
+        for param in message.model_state_dict.values():
+            if param.ndim > 1:
+                # integer representation
+                message_size_bytes += param.numel() * self.n_bits / 8
+                # size of scale(s) (fp64) and zero_point(s) (int32)
+                if self.quantize_per_tensor:
+                    message_size_bytes += ScalarQuantizationChannel.BYTES_PER_FP64
+                    message_size_bytes += ScalarQuantizationChannel.BYTES_PER_FP32
+                else:
+                    # pyre-ignore[16]: `torch.Tensor` has no attribute `q_per_channel_scales`
+                    n_scales = param.q_per_channel_scales().numel()
+                    # pyre-ignore[16]: `torch.Tensor` has no attribute `q_per_channel_zero_points`
+                    n_zero_points = param.q_per_channel_zero_points().numel()
+                    message_size_bytes += (
+                        ScalarQuantizationChannel.BYTES_PER_FP64 * n_scales
+                    )
+                    message_size_bytes += (
+                        ScalarQuantizationChannel.BYTES_PER_FP32 * n_zero_points
+                    )
+            else:
+                message_size_bytes += 4 * param.numel()
+        return message_size_bytes
 
     def _get_observers_and_quantizers(self):
         if self.quantize_per_tensor:
@@ -129,47 +163,6 @@ class ScalarQuantizationChannel(IdentityChannel):
                 new_state_dict[name] = param.data
 
         message.model_state_dict = new_state_dict
-        return message
-
-    def _during_transmission_client_to_server(
-        self, message: ChannelMessage
-    ) -> ChannelMessage:
-        """
-        We compute the size of the compressed message as follows:
-            - for the weights (compressed): n_bits / 8 bytes per element
-            - for the biases (not compressed): 4 bytes per element
-            - for the scales (one for each layer or one for each layer channel
-              depending on quantize_per_tensor): 8 bytes / element (fp64)
-            - for the zerp_points (one for each layer or one for each layer channel
-              depending on quantize_per_tensor): 4 bytes / element (int32)
-        """
-        if self.stats_collector:
-            message_size_bytes = 0
-            for param in message.model_state_dict.values():
-                if param.ndim > 1:
-                    # integer representation
-                    message_size_bytes += param.numel() * self.n_bits / 8
-                    # size of scale(s) (fp64) and zero_point(s) (int32)
-                    if self.quantize_per_tensor:
-                        message_size_bytes += ScalarQuantizationChannel.BYTES_PER_FP64
-                        message_size_bytes += ScalarQuantizationChannel.BYTES_PER_FP32
-                    else:
-                        # pyre-ignore[16]: `torch.Tensor` has no attribute `q_per_channel_scales`
-                        n_scales = param.q_per_channel_scales().numel()
-                        # pyre-ignore[16]: `torch.Tensor` has no attribute `q_per_channel_zero_points`
-                        n_zero_points = param.q_per_channel_zero_points().numel()
-                        message_size_bytes += (
-                            ScalarQuantizationChannel.BYTES_PER_FP64 * n_scales
-                        )
-                        message_size_bytes += (
-                            ScalarQuantizationChannel.BYTES_PER_FP32 * n_zero_points
-                        )
-                else:
-                    message_size_bytes += 4 * param.numel()
-
-            self.stats_collector.collect_channel_stats(
-                message_size_bytes, client_to_server=True
-            )
         return message
 
     def _on_server_after_reception(self, message: ChannelMessage) -> ChannelMessage:

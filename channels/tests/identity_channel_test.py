@@ -84,10 +84,6 @@ class IdentityChannelTest(testutil.BaseFacebookTestCase):
         # instantiation
         channel = instantiate(config)
 
-        # attach stats collector
-        stats_collector = ChannelStatsCollector()
-        channel.attach_stats_collector(stats_collector)
-
         # create dummy model
         two_fc = utils.TwoFC()
         base_model = utils.SampleNet(two_fc)
@@ -104,7 +100,7 @@ class IdentityChannelTest(testutil.BaseFacebookTestCase):
     @testutil.data_provider(
         lambda: (
             {
-                "config": FLChannelConfig(),
+                "config": FLChannelConfig(report_communication_metrics=True),
                 "expected_type": IdentityChannel,
             },
         )
@@ -117,10 +113,6 @@ class IdentityChannelTest(testutil.BaseFacebookTestCase):
 
         # instantiation
         channel = instantiate(config)
-
-        # attach stats collector
-        stats_collector = ChannelStatsCollector()
-        channel.attach_stats_collector(stats_collector)
 
         # create dummy model
         two_fc = utils.TwoFC()
@@ -137,7 +129,7 @@ class IdentityChannelTest(testutil.BaseFacebookTestCase):
         message = channel.client_to_server(message)
 
         # test communication stats measurements
-        stats = stats_collector.get_channel_stats()
+        stats = channel.stats_collector.get_channel_stats()
         client_to_server_bytes = stats[ChannelDirection.CLIENT_TO_SERVER].mean()
         server_to_client_bytes = stats[ChannelDirection.SERVER_TO_CLIENT].mean()
         self.assertEqual(client_to_server_bytes, server_to_client_bytes)

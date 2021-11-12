@@ -42,7 +42,7 @@ class HalfPrecisionChannel(IdentityChannel):
             config_class=HalfPrecisionChannelConfig,
             **kwargs,
         )
-        self.stats_collector = None
+        super().__init__(**kwargs)
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):

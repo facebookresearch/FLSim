@@ -5,12 +5,13 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass
+from typing import OrderedDict
 
+from flsim.channels.communication_stats import ChannelStatsCollector
 from flsim.channels.message import ChannelMessage
 from flsim.interfaces.model import IFLModel
 from flsim.utils.config_utils import fullclassname
 from flsim.utils.config_utils import init_self_cfg
-from flsim.utils.model_size_utils import calc_model_size
 
 
 class IFLChannel(abc.ABC):
@@ -21,14 +22,22 @@ class IFLChannel(abc.ABC):
     This is by nature a *bi-directional* channel (server to client and
     client to server).
 
-    Notes:
-        - It is the responsibility of the trainer (see trainer_base) to call
-          ``attach_stats_collector`` to attach its ``ChannelStatsCollector``
-          to the channel.
     """
 
-    def __init__(self):
-        self.stats_collector = None
+    def __init__(self, **kwargs):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=FLChannelConfig,
+            **kwargs,
+        )
+        self.stats_collector = (
+            ChannelStatsCollector() if self.cfg.report_communication_metrics else None
+        )
+
+    @classmethod
+    def _set_defaults_in_cfg(cls, cfg):
+        pass
 
     @abc.abstractmethod
     def create_channel_message(self, model: IFLModel):
@@ -44,7 +53,6 @@ class IFLChannel(abc.ABC):
         Simulates the manipulation and transmission of a `ChannelMessage` from
         the server to a client. Also handles relevant stats accounting.
         """
-
         pass
 
     @abc.abstractmethod
@@ -55,14 +63,6 @@ class IFLChannel(abc.ABC):
         """
 
         pass
-
-    def attach_stats_collector(self, stats_collector):
-        """
-        Allows for measurements of the average message size from client to
-        server and from server to client.
-        """
-
-        self.stats_collector = stats_collector
 
 
 class IdentityChannel(IFLChannel):
@@ -94,17 +94,27 @@ class IdentityChannel(IFLChannel):
     BYTES_PER_INT64 = 8
 
     def __init__(self, **kwargs):
-        init_self_cfg(
-            self,
-            component_class=__class__,
-            config_class=FLChannelConfig,
-            **kwargs,
-        )
-        self.stats_collector = None
+        super().__init__(**kwargs)
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
         pass
+
+    @classmethod
+    def calc_model_size_float_point(cls, state_dict: OrderedDict):
+        """
+        Calculates model size in bytes given a state dict.
+        """
+        model_size_bytes = sum(
+            p.numel() * p.element_size() for (_, p) in state_dict.items()
+        )
+        return model_size_bytes
+
+    def _calc_message_size_client_to_server(self, message: ChannelMessage):
+        return self.calc_model_size_float_point(message.model_state_dict)
+
+    def _calc_message_size_server_to_client(self, message: ChannelMessage):
+        return self.calc_model_size_float_point(message.model_state_dict)
 
     def _on_client_before_transmission(self, message: ChannelMessage) -> ChannelMessage:
         """
@@ -121,7 +131,7 @@ class IdentityChannel(IFLChannel):
         """
 
         if self.stats_collector:
-            message_size_bytes = calc_model_size(message.model_state_dict)
+            message_size_bytes = self._calc_message_size_client_to_server(message)
             self.stats_collector.collect_channel_stats(
                 message_size_bytes, client_to_server=True
             )
@@ -148,7 +158,7 @@ class IdentityChannel(IFLChannel):
         Manipulation to the message in transit from server to client.
         """
         if self.stats_collector:
-            message_size_bytes = calc_model_size(message.model_state_dict)
+            message_size_bytes = self._calc_message_size_server_to_client(message)
             self.stats_collector.collect_channel_stats(
                 message_size_bytes, client_to_server=False
             )
@@ -233,9 +243,6 @@ class ServerChannelEndPoint:
     def receive(self, message: ChannelMessage) -> ChannelMessage:
         return self._channel.client_to_server(message)
 
-    def attach_stats_collector(self, stats_collector):
-        self._channel.attach_stats_collector(stats_collector)
-
 
 class ClientChannelEndPoint:
     """
@@ -255,9 +262,6 @@ class ClientChannelEndPoint:
     def receive(self, message: ChannelMessage) -> ChannelMessage:
         return self._channel.server_to_client(message)
 
-    def attach_stats_collector(self, stats_collector):
-        self._channel.attach_stats_collector(stats_collector)
-
 
 @dataclass
 class FLChannelConfig:
@@ -270,3 +274,6 @@ class FLChannelConfig:
     # Add attributes as needed.
     _target_: str = fullclassname(IdentityChannel)
     _recursive_: bool = False
+    # Whether communication metrics (between server and clients) should be
+    # reported
+    report_communication_metrics: bool = False
