@@ -4,37 +4,35 @@
 from copy import deepcopy
 from typing import Type
 
+import pytest
 from flsim.channels.communication_stats import (
-    ChannelStatsCollector,
     ChannelDirection,
 )
-from flsim.channels.message import Message
 from flsim.channels.product_quantization_channel import (
     ProductQuantizationChannelConfig,
     ProductQuantizationChannel,
 )
+from flsim.common.pytest_helper import assertEqual, assertIsInstance
 from flsim.tests import utils
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
-from libfb.py import testutil
 
 
-class ProductQuantizationChannelTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
-    @testutil.data_provider(
-        lambda: (
+class TestProductQuantizationChannel:
+    @pytest.mark.parametrize(
+        "config",
+        [
             {
-                "config": {
-                    "_target_": ProductQuantizationChannelConfig._target_,
-                    "max_num_centroids": 256,
-                    "num_codebooks": 1,
-                    "max_block_size": 9,
-                },
-                "expected_type": ProductQuantizationChannel,
-            },
-        )
+                "_target_": ProductQuantizationChannelConfig._target_,
+                "max_num_centroids": 256,
+                "num_codebooks": 1,
+                "max_block_size": 9,
+            }
+        ],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [ProductQuantizationChannel],
     )
     def test_pq_instantiation(self, config: Type, expected_type: Type) -> None:
         """
@@ -43,20 +41,22 @@ class ProductQuantizationChannelTest(testutil.BaseFacebookTestCase):
 
         # test instantiation
         channel = instantiate(config)
-        self.assertIsInstance(channel, expected_type)
+        assertIsInstance(channel, expected_type)
 
-    @testutil.data_provider(
-        lambda: (
+    @pytest.mark.parametrize(
+        "config",
+        [
             {
-                "config": {
-                    "_target_": ProductQuantizationChannelConfig._target_,
-                    "max_num_centroids": 4,
-                    "num_codebooks": 1,
-                    "max_block_size": 2,
-                },
-                "expected_type": ProductQuantizationChannel,
+                "_target_": ProductQuantizationChannelConfig._target_,
+                "max_num_centroids": 4,
+                "num_codebooks": 1,
+                "max_block_size": 2,
             },
-        )
+        ],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [ProductQuantizationChannel],
     )
     def test_pq_server_to_client(self, config: Type, expected_type: Type) -> None:
         """
@@ -80,20 +80,22 @@ class ProductQuantizationChannelTest(testutil.BaseFacebookTestCase):
         mismatched = FLModelParamUtils.get_mismatched_param(
             [base_model.fl_get_module(), download_model.fl_get_module()]
         )
-        self.assertEqual(mismatched, "", mismatched)
+        assertEqual(mismatched, "", mismatched)
 
-    @testutil.data_provider(
-        lambda: (
+    @pytest.mark.parametrize(
+        "config",
+        [
             {
-                "config": {
-                    "_target_": ProductQuantizationChannelConfig._target_,
-                    "max_num_centroids": 2,
-                    "num_codebooks": 1,
-                    "max_block_size": 1,
-                },
-                "expected_type": ProductQuantizationChannel,
+                "_target_": ProductQuantizationChannelConfig._target_,
+                "max_num_centroids": 2,
+                "num_codebooks": 1,
+                "max_block_size": 1,
             },
-        )
+        ],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [ProductQuantizationChannel],
     )
     def test_pq_client_to_server(self, config: Type, expected_type: Type) -> None:
         """
@@ -107,7 +109,7 @@ class ProductQuantizationChannelTest(testutil.BaseFacebookTestCase):
 
         # instantiation
         channel = instantiate(config)
-        self.assertIsInstance(channel, expected_type)
+        assertIsInstance(channel, expected_type)
 
         # create dummy model
         two_fc = utils.TwoFC()
@@ -123,22 +125,24 @@ class ProductQuantizationChannelTest(testutil.BaseFacebookTestCase):
         mismatched = FLModelParamUtils.get_mismatched_param(
             [base_model.fl_get_module(), upload_model.fl_get_module()]
         )
-        self.assertEqual(mismatched, "", mismatched)
+        assertEqual(mismatched, "", mismatched)
 
-    @testutil.data_provider(
-        lambda: (
+    @pytest.mark.parametrize(
+        "config",
+        [
             {
-                "config": {
-                    "_target_": ProductQuantizationChannelConfig._target_,
-                    "max_num_centroids": 2,
-                    "num_codebooks": 1,
-                    "max_block_size": 1,
-                    "min_numel_to_quantize": 10,
-                    "report_communication_metrics": True,
-                },
-                "expected_type": ProductQuantizationChannel,
+                "_target_": ProductQuantizationChannelConfig._target_,
+                "max_num_centroids": 2,
+                "num_codebooks": 1,
+                "max_block_size": 1,
+                "min_numel_to_quantize": 10,
+                "report_communication_metrics": True,
             },
-        )
+        ],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [ProductQuantizationChannel],
     )
     def test_pq_stats(self, config: Type, expected_type: Type) -> None:
         """
@@ -184,4 +188,4 @@ class ProductQuantizationChannelTest(testutil.BaseFacebookTestCase):
 
         compressed_bytes = bias_size_bytes + weight_size_bytes + centroids_bytes
 
-        self.assertEqual(client_to_server_bytes, compressed_bytes)
+        assertEqual(client_to_server_bytes, compressed_bytes)

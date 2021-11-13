@@ -5,6 +5,7 @@ from copy import deepcopy
 from typing import OrderedDict
 from typing import Type
 
+import pytest
 import torch
 from flsim.channels.communication_stats import (
     ChannelDirection,
@@ -13,18 +14,15 @@ from flsim.channels.random_mask_channel import (
     RandomMaskChannel,
     RandomMaskChannelConfig,
 )
+from flsim.common.pytest_helper import assertEqual, assertIsInstance, assertAlmostEqual
 from flsim.tests import utils
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.tests.helpers.test_models import FCModel
 from hydra.utils import instantiate
-from libfb.py import testutil
 from torch.nn.utils import prune
 
 
-class RandomMaskChannelTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestRandomMaskChannel:
     @classmethod
     def calc_model_sparsity(cls, state_dict: OrderedDict):
         """
@@ -56,21 +54,23 @@ class RandomMaskChannelTest(testutil.BaseFacebookTestCase):
         for module, name in params_to_prune:
             prune.remove(module, name)
         sparsity = self.calc_model_sparsity(model.state_dict())
-        self.assertAlmostEqual(
+        assertAlmostEqual(
             0.75,
             sparsity,
             delta=0.02,  # Accounts for 2 percentage points difference
         )
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": RandomMaskChannelConfig(
-                    proportion_of_zero_weights=0.6,
-                ),
-                "expected_type": RandomMaskChannel,
-            },
-        )
+    @pytest.mark.parametrize(
+        "config",
+        [
+            RandomMaskChannelConfig(
+                proportion_of_zero_weights=0.6,
+            ),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [RandomMaskChannel],
     )
     def test_random_mask_instantiation(self, config: Type, expected_type: Type) -> None:
         """
@@ -79,15 +79,19 @@ class RandomMaskChannelTest(testutil.BaseFacebookTestCase):
 
         # test instantiation
         channel = instantiate(config)
-        self.assertIsInstance(channel, expected_type)
+        assertIsInstance(channel, expected_type)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": RandomMaskChannelConfig(proportion_of_zero_weights=0.6),
-                "expected_type": RandomMaskChannel,
-            },
-        )
+    @pytest.mark.parametrize(
+        "config",
+        [
+            RandomMaskChannelConfig(
+                proportion_of_zero_weights=0.6,
+            ),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [RandomMaskChannel],
     )
     def test_random_mask_server_to_client(
         self, config: Type, expected_type: Type
@@ -113,15 +117,19 @@ class RandomMaskChannelTest(testutil.BaseFacebookTestCase):
         mismatched = FLModelParamUtils.get_mismatched_param(
             [base_model.fl_get_module(), download_model.fl_get_module()]
         )
-        self.assertEqual(mismatched, "", mismatched)
+        assertEqual(mismatched, "", mismatched)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": RandomMaskChannelConfig(proportion_of_zero_weights=0.6),
-                "expected_type": RandomMaskChannel,
-            },
-        )
+    @pytest.mark.parametrize(
+        "config",
+        [
+            RandomMaskChannelConfig(
+                proportion_of_zero_weights=0.6,
+            ),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [RandomMaskChannel],
     )
     def test_random_mask_client_to_server(
         self, config: Type, expected_type: Type
@@ -149,20 +157,20 @@ class RandomMaskChannelTest(testutil.BaseFacebookTestCase):
         # sparsity ratio should be approximately proportion_of_zero_weights
         # approximately since we round the number of parameters to prune
         # to an integer, see random_mask_channel.py
-        self.assertAlmostEqual(
-            channel.cfg.proportion_of_zero_weights, sparsity, delta=0.05
-        )
+        assertAlmostEqual(channel.cfg.proportion_of_zero_weights, sparsity, delta=0.05)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": RandomMaskChannelConfig(
-                    proportion_of_zero_weights=0.6,
-                    report_communication_metrics=True,
-                ),
-                "expected_type": RandomMaskChannel,
-            },
-        )
+    @pytest.mark.parametrize(
+        "config",
+        [
+            RandomMaskChannelConfig(
+                proportion_of_zero_weights=0.6,
+                report_communication_metrics=True,
+            ),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [RandomMaskChannel],
     )
     def test_random_mask_stats(self, config: Type, expected_type: Type) -> None:
         """
@@ -216,4 +224,4 @@ class RandomMaskChannelTest(testutil.BaseFacebookTestCase):
         # size of the values
         true_size_bytes = true_size_bytes_weights + true_size_bytes_biases
 
-        self.assertEqual(client_to_server_bytes, true_size_bytes)
+        assertEqual(client_to_server_bytes, true_size_bytes)

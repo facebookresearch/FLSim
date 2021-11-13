@@ -4,32 +4,28 @@
 from copy import deepcopy
 from typing import Type
 
+import pytest
 from flsim.channels.communication_stats import (
-    ChannelStatsCollector,
     ChannelDirection,
 )
 from flsim.channels.half_precision_channel import (
     HalfPrecisionChannelConfig,
     HalfPrecisionChannel,
 )
-from flsim.channels.message import Message
+from flsim.common.pytest_helper import assertEqual, assertIsInstance
 from flsim.tests import utils
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
-from libfb.py import testutil
 
 
-class HalfPrecisionChannelTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": HalfPrecisionChannelConfig(),
-                "expected_type": HalfPrecisionChannel,
-            },
-        )
+class TestHalfPrecisionChannel:
+    @pytest.mark.parametrize(
+        "config",
+        [HalfPrecisionChannelConfig()],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [HalfPrecisionChannel],
     )
     def test_fp16_instantiation(self, config: Type, expected_type: Type) -> None:
         """
@@ -38,15 +34,15 @@ class HalfPrecisionChannelTest(testutil.BaseFacebookTestCase):
 
         # instantiation
         channel = instantiate(config)
-        self.assertIsInstance(channel, expected_type)
+        assertIsInstance(channel, expected_type)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": HalfPrecisionChannelConfig(),
-                "expected_type": HalfPrecisionChannel,
-            },
-        )
+    @pytest.mark.parametrize(
+        "config",
+        [HalfPrecisionChannelConfig()],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [HalfPrecisionChannel],
     )
     def test_fp16_server_to_client(self, config: Type, expected_type: Type) -> None:
         """
@@ -70,15 +66,15 @@ class HalfPrecisionChannelTest(testutil.BaseFacebookTestCase):
         mismatched = FLModelParamUtils.get_mismatched_param(
             [base_model.fl_get_module(), download_model.fl_get_module()]
         )
-        self.assertEqual(mismatched, "", mismatched)
+        assertEqual(mismatched, "", mismatched)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": HalfPrecisionChannelConfig(),
-                "expected_type": HalfPrecisionChannel,
-            },
-        )
+    @pytest.mark.parametrize(
+        "config",
+        [HalfPrecisionChannelConfig()],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [HalfPrecisionChannel],
     )
     def test_fp16_client_to_server(self, config: Type, expected_type: Type) -> None:
         """
@@ -104,15 +100,15 @@ class HalfPrecisionChannelTest(testutil.BaseFacebookTestCase):
             rel_epsilon=1e-8,
             abs_epsilon=1e-3,
         )
-        self.assertEqual(mismatched, "", mismatched)
+        assertEqual(mismatched, "", mismatched)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": HalfPrecisionChannelConfig(report_communication_metrics=True),
-                "expected_type": HalfPrecisionChannel,
-            },
-        )
+    @pytest.mark.parametrize(
+        "config",
+        [HalfPrecisionChannelConfig(report_communication_metrics=True)],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [HalfPrecisionChannel],
     )
     def test_fp16_stats(self, config: Type, expected_type: Type) -> None:
         """
@@ -122,7 +118,7 @@ class HalfPrecisionChannelTest(testutil.BaseFacebookTestCase):
 
         # instantiation
         channel = instantiate(config)
-        self.assertIsInstance(channel, expected_type)
+        assertIsInstance(channel, expected_type)
 
         # create dummy model
         two_fc = utils.TwoFC()
@@ -144,4 +140,4 @@ class HalfPrecisionChannelTest(testutil.BaseFacebookTestCase):
         stats = channel.stats_collector.get_channel_stats()
         client_to_server_bytes = stats[ChannelDirection.CLIENT_TO_SERVER].mean()
         server_to_client_bytes = stats[ChannelDirection.SERVER_TO_CLIENT].mean()
-        self.assertEqual(2 * client_to_server_bytes, server_to_client_bytes)
+        assertEqual(2 * client_to_server_bytes, server_to_client_bytes)

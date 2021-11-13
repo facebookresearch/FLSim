@@ -4,6 +4,7 @@
 from copy import deepcopy
 from typing import Type
 
+import pytest
 from flsim.channels.communication_stats import (
     ChannelDirection,
 )
@@ -11,26 +12,25 @@ from flsim.channels.scalar_quantization_channel import (
     ScalarQuantizationChannelConfig,
     ScalarQuantizationChannel,
 )
+from flsim.common.pytest_helper import assertEqual, assertIsInstance
 from flsim.tests import utils
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
-from libfb.py import testutil
 
 
-class ScalarQuantizationChannelTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": ScalarQuantizationChannelConfig(
-                    n_bits=8,
-                    quantize_per_tensor=True,
-                ),
-                "expected_type": ScalarQuantizationChannel,
-            },
-        )
+class TestScalarQuantizationChannel:
+    @pytest.mark.parametrize(
+        "config",
+        [
+            ScalarQuantizationChannelConfig(
+                n_bits=8,
+                quantize_per_tensor=True,
+            ),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [ScalarQuantizationChannel],
     )
     def test_int8_instantiation(self, config: Type, expected_type: Type) -> None:
         """
@@ -39,17 +39,17 @@ class ScalarQuantizationChannelTest(testutil.BaseFacebookTestCase):
 
         # test instantiation
         channel = instantiate(config)
-        self.assertIsInstance(channel, expected_type)
+        assertIsInstance(channel, expected_type)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": ScalarQuantizationChannelConfig(
-                    n_bits=8, quantize_per_tensor=True
-                ),
-                "expected_type": ScalarQuantizationChannel,
-            },
-        )
+    @pytest.mark.parametrize(
+        "config",
+        [
+            ScalarQuantizationChannelConfig(n_bits=8, quantize_per_tensor=True),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [ScalarQuantizationChannel],
     )
     def test_int8_server_to_client(self, config: Type, expected_type: Type) -> None:
         """
@@ -73,17 +73,17 @@ class ScalarQuantizationChannelTest(testutil.BaseFacebookTestCase):
         mismatched = FLModelParamUtils.get_mismatched_param(
             [base_model.fl_get_module(), download_model.fl_get_module()]
         )
-        self.assertEqual(mismatched, "", mismatched)
+        assertEqual(mismatched, "", mismatched)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": ScalarQuantizationChannelConfig(
-                    n_bits=8, quantize_per_tensor=True
-                ),
-                "expected_type": ScalarQuantizationChannel,
-            },
-        )
+    @pytest.mark.parametrize(
+        "config",
+        [
+            ScalarQuantizationChannelConfig(n_bits=8, quantize_per_tensor=True),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [ScalarQuantizationChannel],
     )
     def test_int8_client_to_server(self, config: Type, expected_type: Type) -> None:
         """
@@ -94,7 +94,7 @@ class ScalarQuantizationChannelTest(testutil.BaseFacebookTestCase):
 
         # instantiation
         channel = instantiate(config)
-        self.assertIsInstance(channel, expected_type)
+        assertIsInstance(channel, expected_type)
 
         # create dummy model
         two_fc = utils.TwoFC()
@@ -110,19 +110,19 @@ class ScalarQuantizationChannelTest(testutil.BaseFacebookTestCase):
             rel_epsilon=1e-8,
             abs_epsilon=1e-2,
         )
-        self.assertEqual(mismatched, "", mismatched)
+        assertEqual(mismatched, "", mismatched)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": ScalarQuantizationChannelConfig(
-                    n_bits=8,
-                    quantize_per_tensor=True,
-                    report_communication_metrics=True,
-                ),
-                "expected_type": ScalarQuantizationChannel,
-            },
-        )
+    @pytest.mark.parametrize(
+        "config",
+        [
+            ScalarQuantizationChannelConfig(
+                n_bits=8, quantize_per_tensor=True, report_communication_metrics=True
+            ),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [ScalarQuantizationChannel],
     )
     def test_int8_stats(self, config: Type, expected_type: Type) -> None:
         """
@@ -169,17 +169,17 @@ class ScalarQuantizationChannelTest(testutil.BaseFacebookTestCase):
             client_to_server_bytes - bias_size_bytes - scale_zero_point_bytes
         )
         float_weights_bytes = server_to_client_bytes - bias_size_bytes
-        self.assertEqual(4 * int8_weight_bytes, float_weights_bytes)
+        assertEqual(4 * int8_weight_bytes, float_weights_bytes)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": ScalarQuantizationChannelConfig(
-                    n_bits=4, quantize_per_tensor=False
-                ),
-                "expected_type": ScalarQuantizationChannel,
-            },
-        )
+    @pytest.mark.parametrize(
+        "config",
+        [
+            ScalarQuantizationChannelConfig(n_bits=4, quantize_per_tensor=False),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [ScalarQuantizationChannel],
     )
     def test_quantize_constant(self, config: Type, expected_type: Type) -> None:
         """
@@ -206,4 +206,4 @@ class ScalarQuantizationChannelTest(testutil.BaseFacebookTestCase):
         mismatched = FLModelParamUtils.get_mismatched_param(
             [base_model.fl_get_module(), upload_model.fl_get_module()]
         )
-        self.assertEqual(mismatched, "", mismatched)
+        assertEqual(mismatched, "", mismatched)

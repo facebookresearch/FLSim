@@ -4,28 +4,25 @@
 from copy import deepcopy
 from typing import Type
 
+import pytest
 from flsim.channels.base_channel import FLChannelConfig, IdentityChannel
 from flsim.channels.communication_stats import (
-    ChannelStatsCollector,
     ChannelDirection,
 )
+from flsim.common.pytest_helper import assertEqual, assertIsInstance
 from flsim.tests import utils
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
-from libfb.py import testutil
 
 
-class IdentityChannelTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": FLChannelConfig(),
-                "expected_type": IdentityChannel,
-            },
-        )
+class TestIdentityChannel:
+    @pytest.mark.parametrize(
+        "config",
+        [FLChannelConfig()],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [IdentityChannel],
     )
     def test_identity_instantiation(self, config: Type, expected_type: Type) -> None:
         """
@@ -34,15 +31,15 @@ class IdentityChannelTest(testutil.BaseFacebookTestCase):
 
         # test instantiation
         channel = instantiate(config)
-        self.assertIsInstance(channel, expected_type)
+        assertIsInstance(channel, expected_type)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": FLChannelConfig(),
-                "expected_type": IdentityChannel,
-            },
-        )
+    @pytest.mark.parametrize(
+        "config",
+        [FLChannelConfig()],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [IdentityChannel],
     )
     def test_identity_server_to_client(self, config: Type, expected_type: Type) -> None:
         """
@@ -65,15 +62,15 @@ class IdentityChannelTest(testutil.BaseFacebookTestCase):
         mismatched = FLModelParamUtils.get_mismatched_param(
             [base_model.fl_get_module(), download_model.fl_get_module()]
         )
-        self.assertEqual(mismatched, "", mismatched)
+        assertEqual(mismatched, "", mismatched)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": FLChannelConfig(),
-                "expected_type": IdentityChannel,
-            },
-        )
+    @pytest.mark.parametrize(
+        "config",
+        [FLChannelConfig()],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [IdentityChannel],
     )
     def test_identity_client_to_server(self, config: Type, expected_type: Type) -> None:
         """
@@ -95,15 +92,15 @@ class IdentityChannelTest(testutil.BaseFacebookTestCase):
         mismatched = FLModelParamUtils.get_mismatched_param(
             [base_model.fl_get_module(), upload_model.fl_get_module()]
         )
-        self.assertEqual(mismatched, "", mismatched)
+        assertEqual(mismatched, "", mismatched)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": FLChannelConfig(report_communication_metrics=True),
-                "expected_type": IdentityChannel,
-            },
-        )
+    @pytest.mark.parametrize(
+        "config",
+        [FLChannelConfig(report_communication_metrics=True)],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [IdentityChannel],
     )
     def test_identity_stats(self, config: Type, expected_type: Type) -> None:
         """
@@ -132,4 +129,4 @@ class IdentityChannelTest(testutil.BaseFacebookTestCase):
         stats = channel.stats_collector.get_channel_stats()
         client_to_server_bytes = stats[ChannelDirection.CLIENT_TO_SERVER].mean()
         server_to_client_bytes = stats[ChannelDirection.SERVER_TO_CLIENT].mean()
-        self.assertEqual(client_to_server_bytes, server_to_client_bytes)
+        assertEqual(client_to_server_bytes, server_to_client_bytes)

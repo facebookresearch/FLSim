@@ -3,22 +3,24 @@
 
 from typing import Type
 
+import pytest
 import torch
-from flsim.channels.message import Message
 from flsim.channels.sketch_channel import (
     SketchChannelConfig,
     SketchChannel,
 )
+from flsim.common.pytest_helper import (
+    assertEqual,
+    assertIsInstance,
+    assertRaises,
+    assertTrue,
+)
 from flsim.tests import utils
 from flsim.utils.count_sketch import CountSketch
 from hydra.utils import instantiate
-from libfb.py import testutil
 
 
-class CountSketchTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestCountSketch:
     def test_count_sketch_creation(self) -> None:
         """
         Tests instantiation of the count sketch channel.
@@ -28,12 +30,12 @@ class CountSketchTest(testutil.BaseFacebookTestCase):
         bad_hash = torch.randint(0, 10, (2, 1))
 
         cs = CountSketch(width=10, depth=10, h=good_hash, g=good_hash)
-        self.assertIsInstance(cs, CountSketch)
+        assertIsInstance(cs, CountSketch)
 
-        with self.assertRaises(AssertionError):
+        with assertRaises(AssertionError):
             _ = CountSketch(width=10, depth=5, h=bad_hash)
 
-        with self.assertRaises(AssertionError):
+        with assertRaises(AssertionError):
             _ = CountSketch(width=10, depth=5, g=bad_hash)
 
     def test_count_sketch_update_query(self) -> None:
@@ -45,9 +47,9 @@ class CountSketchTest(testutil.BaseFacebookTestCase):
         cs = CountSketch(width=10001, depth=11, prime=2 ** 31 - 1, independence=4)
         # test simple update and query
         cs.update(torch.tensor([0]), torch.tensor([2.0]))
-        self.assertTrue(torch.isclose(cs.query(torch.tensor([0])), torch.tensor((2.0))))
-        self.assertTrue(torch.isclose(cs.query(torch.tensor([1])), torch.tensor((0.0))))
-        self.assertEqual(torch.sum(torch.abs(cs.buckets)).item(), 2 * 11)
+        assertTrue(torch.isclose(cs.query(torch.tensor([0])), torch.tensor((2.0))))
+        assertTrue(torch.isclose(cs.query(torch.tensor([1])), torch.tensor((0.0))))
+        assertEqual(torch.sum(torch.abs(cs.buckets)).item(), 2 * 11)
 
     def test_count_sketch_model(self) -> None:
         """
@@ -67,11 +69,11 @@ class CountSketchTest(testutil.BaseFacebookTestCase):
         for (cs_name, cs_param), (model_name, model_param) in zip(
             list(cs.param_sizes.items()), list(model.fl_get_module().named_parameters())
         ):
-            self.assertEqual(cs_name, model_name)
-            self.assertEqual(cs_param, model_param.size())
+            assertEqual(cs_name, model_name)
+            assertEqual(cs_param, model_param.size())
 
         for (_, cs_param) in cs.unsketch_model().items():
-            self.assertTrue(
+            assertTrue(
                 False
                 not in torch.isclose(
                     cs_param, torch.full_like(cs_param, fill_value=0.2)
@@ -79,19 +81,14 @@ class CountSketchTest(testutil.BaseFacebookTestCase):
             )
 
 
-class SketchChannelTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": SketchChannelConfig(
-                    num_col=1000, num_hash=7, prime=2 ** 13 - 1
-                ),
-                "expected_type": SketchChannel,
-            },
-        )
+class TestSketchChannelTest:
+    @pytest.mark.parametrize(
+        "config",
+        [SketchChannelConfig(num_col=1000, num_hash=7, prime=2 ** 13 - 1)],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [SketchChannel],
     )
     def test_sketch_channel(self, config: Type, expected_type: Type) -> None:
         """
@@ -100,7 +97,7 @@ class SketchChannelTest(testutil.BaseFacebookTestCase):
         """
 
         channel = instantiate(config)
-        self.assertIsInstance(channel, expected_type)
+        assertIsInstance(channel, expected_type)
 
         two_fc = utils.TwoFC()
         two_fc.fill_all(0.2)
@@ -109,17 +106,17 @@ class SketchChannelTest(testutil.BaseFacebookTestCase):
         message = channel.create_channel_message(model)
         message = channel.client_to_server(message)
         cs = message.count_sketch
-        self.assertIsInstance(cs, CountSketch)
+        assertIsInstance(cs, CountSketch)
 
         # same test as the count_sketch test
         for (cs_name, cs_param), (model_name, model_param) in zip(
             list(cs.param_sizes.items()), list(model.fl_get_module().named_parameters())
         ):
-            self.assertEqual(cs_name, model_name)
-            self.assertEqual(cs_param, model_param.size())
+            assertEqual(cs_name, model_name)
+            assertEqual(cs_param, model_param.size())
 
         for (_, cs_param) in cs.unsketch_model().items():
-            self.assertTrue(
+            assertTrue(
                 False
                 not in torch.isclose(
                     cs_param, torch.full_like(cs_param, fill_value=0.2)
