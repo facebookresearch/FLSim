@@ -5,7 +5,15 @@ import copy
 from typing import Any, List, Dict
 
 import numpy as np
+import pytest
 import torch
+from flsim.common.pytest_helper import (
+    assertTrue,
+    assertEqual,
+    assertLess,
+    assertAlmostEqual,
+    assertListEqual,
+)
 from flsim.common.timeline import Timeline
 from flsim.common.timeout_simulator import GaussianTimeOutSimulatorConfig
 from flsim.interfaces.metrics_reporter import TrainingStage, Channel
@@ -45,8 +53,8 @@ from flsim.utils.tests.helpers.async_trainer_test_utils import (
     get_unequal_split_data,
     run_fl_training_with_event_generator,
     run_fl_training,
-    test_fl_nonfl_same,
-    test_fl_nonfl_same_equal_data_split,
+    assert_fl_nonfl_same,
+    assert_fl_nonfl_same_equal_data_split,
 )
 from flsim.utils.timing.training_duration_distribution import (
     PerExampleGaussianDurationDistributionConfig,
@@ -54,7 +62,6 @@ from flsim.utils.timing.training_duration_distribution import (
 from flsim.utils.timing.training_duration_distribution import (
     PerUserUniformDurationDistributionConfig,
 )
-from libfb.py import testutil
 
 
 class TestMetricsReporter(MetricsReporterWithMockedChannels):
@@ -132,14 +139,12 @@ class ConcurrencyMetricsReporter(FLMetricsReporter):
         return super().report_metrics(reset, stage, extra_metrics, **kwargs)
 
 
-class AsyncTrainerTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
+class TestAsyncTrainer:
 
     # TODO: add test_one_user_sequential_user_same
     # TODO: add test where each user has unequal amount of data, both SGD and adam
 
-    def _test_fl_nonfl_same_unequal_data_split(
+    def _assert_fl_nonfl_same_unequal_data_split(
         self,
         fl_batch_size: int,
         num_examples: int,
@@ -166,8 +171,8 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
             model=global_model,
             one_batch_per_user_only=one_batch_per_user_only,
         )
-        self.assertEqual(
-            test_fl_nonfl_same(
+        assertEqual(
+            assert_fl_nonfl_same(
                 global_model=global_model,
                 fl_data_provider=fl_data_provider,
                 nonfl_data_loader=nonfl_data_loader,
@@ -181,7 +186,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
             "",
         )
 
-    def test_fl_nonfl_same_one_user_sgd(self):
+    def assert_fl_nonfl_same_one_user_sgd(self):
         """
         Given:
             data_for_fl={user1:batchA, batchB, batchC, ...}
@@ -202,8 +207,8 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
             global_lr = get_safe_global_lr(
                 fl_batch_size=fl_batch_size, max_examples_per_user=num_examples
             )
-            self.assertEqual(
-                test_fl_nonfl_same_equal_data_split(
+            assertEqual(
+                assert_fl_nonfl_same_equal_data_split(
                     num_examples=num_examples,
                     num_fl_users=1,
                     fl_batch_size=fl_batch_size,
@@ -217,7 +222,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
                 "",
             )
 
-    def test_fl_nonfl_same_multiple_users_sgd(self):
+    def assert_fl_nonfl_same_multiple_users_sgd(self):
         """
         Given:
             data_for_fl={user1:batch1A, batch1B..., user2: batch2A, batch2B,...}
@@ -242,8 +247,8 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
                 fl_batch_size=fl_batch_size,
                 max_examples_per_user=equal_split_examples_per_user,
             )
-            self.assertEqual(
-                test_fl_nonfl_same_equal_data_split(
+            assertEqual(
+                assert_fl_nonfl_same_equal_data_split(
                     num_examples=num_examples,
                     num_fl_users=num_fl_users,
                     fl_batch_size=fl_batch_size,
@@ -270,7 +275,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
                 fl_batch_size=fl_batch_size,
                 max_examples_per_user=unequal_split_max_examples_per_user,
             )
-            self._test_fl_nonfl_same_unequal_data_split(
+            self._assert_fl_nonfl_same_unequal_data_split(
                 num_examples=num_examples,
                 num_fl_users=2,
                 max_examples_per_user=unequal_split_max_examples_per_user,
@@ -283,7 +288,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
                 aggregator_config=FedAvgWithLRAsyncAggregatorConfig(lr=global_lr),
             )
 
-    def test_fl_nonfl_same_one_user_adam(self):
+    def assert_fl_nonfl_same_one_user_adam(self):
         """
         Given:
             data_for_fl={user1:batchA, batchB, batchC, ...}
@@ -301,8 +306,8 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
         for fl_batch_size in [32, 128]:
             # random learning rate between 0 and 0.01
             global_lr = np.random.random_sample() * 0.01
-            self.assertEqual(
-                test_fl_nonfl_same_equal_data_split(
+            assertEqual(
+                assert_fl_nonfl_same_equal_data_split(
                     num_examples=32,
                     num_fl_users=1,
                     fl_batch_size=fl_batch_size,
@@ -318,7 +323,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
                 "",
             )
 
-    def test_fl_nonfl_same_multiple_users_adam(self):
+    def assert_fl_nonfl_same_multiple_users_adam(self):
         """
         Given:
             data_for_fl={user1:batch1A, batch1B..., user2: batch2A, batch2B,...}
@@ -336,8 +341,8 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
         for fl_batch_size in [8, 128]:
             # random learning rate between 0 and 0.001
             global_lr = np.random.random_sample() * 0.001
-            self.assertEqual(
-                test_fl_nonfl_same_equal_data_split(
+            assertEqual(
+                assert_fl_nonfl_same_equal_data_split(
                     num_examples=32,
                     num_fl_users=4,
                     fl_batch_size=fl_batch_size,
@@ -438,7 +443,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
 
         base_trained_model = get_base_optimizer_and_trained_model()
         lrnorm_trained_model = get_lrnorm_optimizer_and_trained_model()
-        self.assertEqual(
+        assertEqual(
             verify_models_equivalent_after_training(
                 base_trained_model,
                 lrnorm_trained_model,
@@ -527,7 +532,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
                 num_total_users=fl_data_provider.num_users(),
                 distributed_world_size=1,
             )
-            self.assertEqual(
+            assertEqual(
                 metric_reporter.num_examples_list, expected_num_examples * num_epochs
             )
 
@@ -715,7 +720,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
                 rel_epsilon=1e-4,
                 abs_epsilon=1e-6,
             )
-            self.assertEqual(error_msg, "")
+            assertEqual(error_msg, "")
 
     def test_async_training_with_timeout(self):
         """
@@ -772,7 +777,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
         )
         total_examples_trained = len(metrics_reporter.losses)
         total_time = timeout_limit * num_users
-        self.assertTrue(total_examples_trained <= total_time)
+        assertTrue(total_examples_trained <= total_time)
 
     def test_max_staleness_cutoff(self):
         """
@@ -818,7 +823,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
             num_total_users=num_users,
             distributed_world_size=1,
         )
-        self.assertLess(async_trainer.global_round, num_users)
+        assertLess(async_trainer.global_round, num_users)
 
         # train sequentially then all clients can participate
         async_trainer = create_async_trainer(
@@ -848,7 +853,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
             num_total_users=num_users,
             distributed_world_size=1,
         )
-        self.assertTrue(async_trainer.global_round - 1 == num_users)
+        assertTrue(async_trainer.global_round - 1 == num_users)
 
     def test_number_of_steps(self):
         """This test checks that async training takes the same number of optimizer.step()
@@ -882,7 +887,7 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
                 # Async FL training is sequential since mean_training_time is 0
                 num_optimizer_steps = num_epochs * num_fl_users * batches_per_user
                 # ConstantGradientFLModel has a property that its bias term = #of times optimizer.step() is called
-                self.assertTrue(
+                assertTrue(
                     np.isclose(
                         fl_model.fl_get_module().bias.detach().item(),
                         num_optimizer_steps,
@@ -930,15 +935,12 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
                 report_train_metrics_after_aggregation=True,
                 eval_epoch_frequency=0.001,  # report every global model update
             )
-            self.assertEqual(best_eval_results, metric_reporter.best_eval_result)
+            assertEqual(best_eval_results, metric_reporter.best_eval_result)
             # TODO: also check that best_model matches metric_reporter.best_eval_model
             # after fixing code
 
-    @testutil.data_provider(
-        lambda: (
-            {"num_users": 100, "training_rate": 10, "num_epochs": 2},
-            {"num_users": 50, "training_rate": 10, "num_epochs": 2},
-        )
+    @pytest.mark.parametrize(
+        "num_users,training_rate,num_epochs", [(100, 10, 2), (50, 10, 2)]
     )
     def test_constant_concurrency(self, num_users, training_rate, num_epochs):
         """
@@ -993,16 +995,16 @@ class AsyncTrainerTest(testutil.BaseFacebookTestCase):
         # steady state and is similar to training rate
         steady_state_seqnum = int(0.9 * len(metrics_reporter.concurrency_metrics))
         for c in metrics_reporter.concurrency_metrics[steady_state_seqnum:]:
-            self.assertAlmostEqual(c, training_rate, delta=1.0)
+            assertAlmostEqual(c, training_rate, delta=1.0)
         # invariant 2
-        self.assertAlmostEqual(
+        assertAlmostEqual(
             np.mean(metrics_reporter.concurrency_metrics[steady_state_seqnum:]),
             training_rate,
             delta=1.0,
         )
         # invariant 3
-        self.assertEqual(len(metrics_reporter.eval_rounds), num_epochs)
-        self.assertListEqual(
+        assertEqual(len(metrics_reporter.eval_rounds), num_epochs)
+        assertListEqual(
             metrics_reporter.eval_rounds,
             [(i * num_users) for i in range(1, num_epochs + 1)],
         )
