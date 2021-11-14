@@ -6,6 +6,10 @@ from typing import Tuple
 
 import numpy as np
 import torch
+from flsim.common.pytest_helper import (
+    assertEqual,
+    assertEmpty,
+)
 from flsim.data.data_provider import FLDataProviderFromList, IFLDataProvider
 from flsim.data.data_sharder import FLDataSharder, ShardingStrategyType
 from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
@@ -43,10 +47,9 @@ from flsim.utils.tests.helpers.async_trainer_test_utils import (
 )
 from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
 from hydra.utils import instantiate
-from libfb.py import testutil
 
 
-class AsyncTrainerWeightsTest(testutil.BaseFacebookTestCase):
+class TestAsyncTrainerWeights:
     def _get_fl_local_lr_and_example_weights_config(
         self,
         example_weight_config: AsyncExampleWeightConfig,
@@ -140,7 +143,7 @@ class AsyncTrainerWeightsTest(testutil.BaseFacebookTestCase):
             training_duration_sd=0,
             example_weight_config=example_weight_config,
         )
-        self.assertEqual(
+        assertEqual(
             verify_models_equivalent_after_training(
                 fl_trained_model,
                 nonfl_trained_model,
@@ -237,8 +240,8 @@ class AsyncTrainerWeightsTest(testutil.BaseFacebookTestCase):
                 training_duration_sd=0,
             )
             trained_models.append(fl_trained_model)
-        self.assertEqual(len(trained_models), 2, "Expected to train two models")
-        self.assertEqual(
+        assertEqual(len(trained_models), 2, "Expected to train two models")
+        assertEqual(
             verify_models_equivalent_after_training(
                 trained_models[0],
                 trained_models[1],
@@ -316,7 +319,7 @@ class AsyncTrainerWeightsTest(testutil.BaseFacebookTestCase):
             rel_epsilon=1e-4,
             abs_epsilon=1e-6,
         )
-        self.assertEqual(error_msg, "")
+        assertEqual(error_msg, "")
 
     def test_threshold_staleness_weights(self):
         r"""
@@ -397,7 +400,7 @@ class AsyncTrainerWeightsTest(testutil.BaseFacebookTestCase):
             training_duration_sd=0,
             staleness_weight_config=ConstantStalenessWeightConfig(),
         )
-        self.assertEqual(
+        assertEqual(
             verify_models_equivalent_after_training(
                 fl_trained_model_with_staleness,
                 fl_trained_model_sequential,
@@ -515,7 +518,7 @@ class AsyncTrainerWeightsTest(testutil.BaseFacebookTestCase):
             ),
         )
 
-        self.assertEqual(
+        assertEqual(
             verify_models_equivalent_after_training(
                 poly_staleness_wt_model,
                 equal_staleness_wt_model,
@@ -598,4 +601,4 @@ class AsyncTrainerWeightsTest(testutil.BaseFacebookTestCase):
             rel_epsilon=1e-4,
             abs_epsilon=1e-6,
         )
-        self.assertEmpty(error_msg, msg=error_msg)
+        assertEmpty(error_msg, msg=error_msg)
