@@ -7,7 +7,9 @@ from dataclasses import dataclass
 from typing import List
 
 import numpy as np
+import pytest
 import torch
+from flsim.common.pytest_helper import assertTrue, assertEqual, assertEmpty
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.async_aggregators import (
     AsyncAggregationType,
@@ -22,7 +24,6 @@ from flsim.tests.utils import (
 )
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
-from libfb.py import testutil
 
 
 @dataclass
@@ -32,7 +33,7 @@ class MockClientModel:
     weight: float
 
 
-class AsyncAggregatorTest(testutil.BaseFacebookTestCase):
+class TestAsyncAggregator:
     def _test_one_step(
         self,
         param_after_local_training: float,
@@ -82,7 +83,7 @@ class AsyncAggregatorTest(testutil.BaseFacebookTestCase):
                 1 - weight
             ) * param_after_global_training + weight * param_after_local_training
 
-        self.assertTrue(
+        assertTrue(
             torch.allclose(
                 global_model.fl_get_module().x.data,
                 torch.Tensor([global_model_expected]),
@@ -251,7 +252,7 @@ class AsyncAggregatorTest(testutil.BaseFacebookTestCase):
         error_msg = self._symmetry_test(
             num_users=num_users, hybrid_config=hybrid_config
         )
-        self.assertEmpty(error_msg, msg=error_msg)
+        assertEmpty(error_msg, msg=error_msg)
 
     def test_hybrid_async_equivalence(self):
         """
@@ -272,7 +273,7 @@ class AsyncAggregatorTest(testutil.BaseFacebookTestCase):
         error_msg = self._equivalence_test(
             num_users=num_users, hybrid_config=hybrid_config, async_config=async_config
         )
-        self.assertEmpty(error_msg, msg=error_msg)
+        assertEmpty(error_msg, msg=error_msg)
 
     def test_global_update(self):
         """
@@ -296,7 +297,7 @@ class AsyncAggregatorTest(testutil.BaseFacebookTestCase):
                 )
                 # client_num is 0th index hence we need the + 1
                 should_update_global_model = (client_num + 1) % buffer_size == 0
-                self.assertEqual(is_global_model_updated, should_update_global_model)
+                assertEqual(is_global_model_updated, should_update_global_model)
 
     def train_async_with_zero_weight(
         self,
@@ -351,12 +352,9 @@ class AsyncAggregatorTest(testutil.BaseFacebookTestCase):
         print_debug("After third loop")
         return aggregator.global_model
 
-    @testutil.data_provider(
-        lambda: (
-            {"num_total_users": 1, "num_epochs": 2, "momentum": 0.5},
-            {"num_total_users": 10, "num_epochs": 10, "momentum": 0.5},
-            {"num_total_users": 10, "num_epochs": 10, "momentum": 0},
-        )
+    @pytest.mark.parametrize(
+        "num_total_users,num_epochs, momentum",
+        [(1, 2, 0.5), (10, 10, 0.5), (10, 10, 0)],
     )
     def test_momentum_implementation_zero_weight(
         self, num_total_users, num_epochs, momentum
@@ -404,14 +402,11 @@ class AsyncAggregatorTest(testutil.BaseFacebookTestCase):
             rel_epsilon=1e-6,
             abs_epsilon=1e-6,
         )
-        self.assertEqual(error_msg, "")
+        assertEqual(error_msg, "")
 
-    @testutil.data_provider(
-        lambda: (
-            {"num_total_users": 1, "num_epochs": 2, "momentum": 0.5, "lr": 10},
-            {"num_total_users": 10, "num_epochs": 10, "momentum": 0.5, "lr": 10},
-            {"num_total_users": 10, "num_epochs": 10, "momentum": 0, "lr": 10},
-        )
+    @pytest.mark.parametrize(
+        "num_total_users,num_epochs, momentum, lr",
+        [(1, 2, 0.5, 10), (10, 10, 0.5, 10), (10, 10, 0, 10)],
     )
     def test_momentum_implementation_one_weight(
         self, num_total_users, num_epochs, momentum, lr
@@ -465,4 +460,4 @@ class AsyncAggregatorTest(testutil.BaseFacebookTestCase):
             rel_epsilon=1e-6,
             abs_epsilon=1e-6,
         )
-        self.assertEqual(error_msg, "")
+        assertEqual(error_msg, "")
