@@ -76,11 +76,11 @@ def assertFalse(o: object, e: object = None) -> None:
     assert not o, e
 
 
-def assertEmpty(o, msg: object = None) -> None:
+def assertEmpty(o: Sized, msg: object = None) -> None:
     assert len(o) == 0, msg
 
 
-def assertNotEmpty(o, msg: object = None) -> None:
+def assertNotEmpty(o: Sized, msg: object = None) -> None:
     assert len(o) > 0, msg
 
 
@@ -99,7 +99,3 @@ class assertRaises(object):
         if exc_type is None:
             raise AssertionError(f"{self.expected_exc} was not raised")
         return isinstance(exc_value, self.expected_exc)
-
-
-def assertEmpty(o: Sized, msg: str) -> None:
-    assert len(o) == 0, msg
