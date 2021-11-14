@@ -7,7 +7,7 @@ There are a list of helper utilities missing in PyTest.
 We define some of the helpful utilities in this one file
 so that all FL-sim PyTests can reuse them easily.
 """
-from typing import Any, Sized
+from typing import Any, Sized, List
 
 
 def assertIsInstance(o: object, t: type) -> None:
@@ -52,6 +52,10 @@ def assertNotEqual(object1: object, object2: object, e: object = None) -> None:
     assert object1 != object2, e
 
 
+def assertLess(object1, object2) -> None:
+    assert object1 < object2
+
+
 def assertLessEqual(object1, object2) -> None:
     assert object1 <= object2
 
@@ -78,6 +82,10 @@ def assertEmpty(o, msg: object = None) -> None:
 
 def assertNotEmpty(o, msg: object = None) -> None:
     assert len(o) > 0, msg
+
+
+def assertListEqual(l1: List, l2: List) -> None:
+    assert l1 == l2
 
 
 class assertRaises(object):
