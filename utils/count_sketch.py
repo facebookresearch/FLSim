@@ -232,6 +232,12 @@ class CountSketch:
         estimates = torch.sum(self.buckets ** 2)
         return torch.sqrt(torch.median(estimates))
 
+    def get_size_in_bytes(self):
+        """
+        Calculate CountSketch size in bytes.
+        """
+        return self.buckets.numel() * self.buckets.element_size()
+
     def to(self, device):
         """
         Moves the CountSketch to device. Up to the user to make sure the device is valid.

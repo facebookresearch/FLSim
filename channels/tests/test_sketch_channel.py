@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
+from copy import deepcopy
 from typing import Type
 
 import pytest
 import torch
+from flsim.channels.communication_stats import ChannelDirection
 from flsim.channels.sketch_channel import (
     SketchChannelConfig,
     SketchChannel,
 )
 from flsim.common.pytest_helper import (
+    assertAlmostEqual,
     assertEqual,
     assertIsInstance,
     assertRaises,
@@ -80,6 +83,13 @@ class TestCountSketch:
                 )
             )
 
+    def test_count_sketch_size(self) -> None:
+        width = 1000
+        depth = 10
+        cs = CountSketch(width=width, depth=depth)
+        size = cs.get_size_in_bytes()
+        assertAlmostEqual(size, width * depth * 4, delta=1)
+
 
 class TestSketchChannelTest:
     @pytest.mark.parametrize(
@@ -122,3 +132,45 @@ class TestSketchChannelTest:
                     cs_param, torch.full_like(cs_param, fill_value=0.2)
                 )
             )
+
+    @pytest.mark.parametrize(
+        "config",
+        [
+            SketchChannelConfig(
+                num_col=1000,
+                num_hash=7,
+                prime=2 ** 13 - 1,
+                report_communication_metrics=True,
+            )
+        ],
+    )
+    def test_sketch_stats(self, config: Type) -> None:
+        """
+        Tests stats measurement. We manually compute bytes sent from client
+        to the server and verify that it matches the bytes computed by the
+        channel.
+        """
+
+        # instantiation
+        channel = instantiate(config)
+
+        # create dummy model
+        two_fc = utils.TwoFC()
+        base_model = utils.SampleNet(two_fc)
+        upload_model = deepcopy(base_model)
+
+        # client -> server
+        message = channel.create_channel_message(upload_model)
+        message = channel.client_to_server(message)
+        message.update_model_(upload_model)
+
+        # test communication stats measurements
+        stats = channel.stats_collector.get_channel_stats()
+        client_to_server_bytes = stats[ChannelDirection.CLIENT_TO_SERVER].mean()
+
+        # the sketch has `num_col` elements per hash. Assuming fp32 elements.
+        computed_sketch_size_bytes = (
+            config.num_col * config.num_hash * channel.BYTES_PER_FP32
+        )
+
+        assertEqual(client_to_server_bytes, computed_sketch_size_bytes)

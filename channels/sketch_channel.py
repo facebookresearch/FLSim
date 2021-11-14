@@ -32,12 +32,11 @@ class SketchChannel(IdentityChannel):
             config_class=SketchChannelConfig,
             **kwargs,
         )
+        super().__init__(**kwargs)
         self.num_col = self.cfg.num_col
         self.num_hash = self.cfg.num_hash
         self.prime = self.cfg.prime
         self.independence = self.cfg.independence
-
-        self.stats_collector = None
         self.h = torch.randint(
             low=1, high=self.cfg.prime, size=(self.cfg.num_hash, self.cfg.independence)
         )
@@ -53,6 +52,9 @@ class SketchChannel(IdentityChannel):
         message = ChannelMessage()
         message.populate(model)
         return message
+
+    def _calc_message_size_client_to_server(self, message: ChannelMessage):
+        return message.count_sketch.get_size_in_bytes()
 
     def _on_client_before_transmission(self, message: ChannelMessage) -> ChannelMessage:
         """
@@ -78,16 +80,11 @@ class SketchChannel(IdentityChannel):
     def _during_transmission_client_to_server(
         self, message: ChannelMessage
     ) -> ChannelMessage:
-        """
-        Raise an error here is we want to measure message size, TODO: fix
-        this in a next refactor.
-        TODO (krp@) Add sketched update size measurement
-        """
         if self.stats_collector:
-            raise NotImplementedError(
-                "Channel size measurement not implemented for CountSketch"
+            message_size_bytes = self._calc_message_size_client_to_server(message)
+            self.stats_collector.collect_channel_stats(
+                message_size_bytes, client_to_server=True
             )
-
         return message
 
 
