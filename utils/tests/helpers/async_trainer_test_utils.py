@@ -163,7 +163,7 @@ def get_nonfl_optimizer(
     return optimizer
 
 
-def test_fl_nonfl_same(
+def assert_fl_nonfl_same(
     global_model: IFLModel,
     fl_data_provider: IFLDataProvider,
     nonfl_data_loader: torch.utils.data.DataLoader,
@@ -477,7 +477,7 @@ def get_equal_split_data(
     )
 
 
-def test_fl_nonfl_same_equal_data_split(
+def assert_fl_nonfl_same_equal_data_split(
     fl_batch_size: int,
     num_examples: int,
     num_fl_users: int,
@@ -503,7 +503,7 @@ def test_fl_nonfl_same_equal_data_split(
         model=global_model,
         one_batch_per_user_only=one_batch_per_user_only,
     )
-    return test_fl_nonfl_same(
+    return assert_fl_nonfl_same(
         global_model=global_model,
         fl_data_provider=fl_data_provider,
         nonfl_data_loader=nonfl_data_loader,
