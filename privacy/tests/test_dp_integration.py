@@ -15,19 +15,16 @@ from flsim.clients.dp_client import DPClientConfig
 from flsim.common.pytest_helper import assertEqual, assertEmpty, assertNotEmpty
 from flsim.optimizers.async_aggregators import FedAvgWithLRHybridAggregatorConfig
 from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
-from flsim.optimizers.sync_aggregators import FedAvgSyncAggregatorConfig
 from flsim.privacy.common import PrivacySetting
 from flsim.reducers.base_round_reducer import ReductionType
-from flsim.reducers.dp_round_reducer import DPRoundReducerConfig
 from flsim.reducers.weighted_dp_round_reducer import WeightedDPRoundReducerConfig
+from flsim.servers.aggregator import AggregationType
+from flsim.servers.sync_dp_servers import SyncDPSGDServerConfig
+from flsim.servers.sync_servers import SyncServerConfig
 from flsim.tests.utils import (
     MetricsReporterWithMockedChannels,
     FakeMetricReporter,
     verify_models_equivalent_after_training,
-)
-from flsim.trainers.private_sync_trainer import (
-    PrivateSyncTrainer,
-    PrivateSyncTrainerConfig,
 )
 from flsim.trainers.sync_trainer import SyncTrainer, SyncTrainerConfig
 from flsim.utils.async_trainer.async_staleness_weights import (
@@ -173,73 +170,54 @@ class TestDifferentialPrivacyIntegration:
         train_metrics_reported_per_epoch = kwargs.pop(
             "train_metrics_reported_per_epoch", 1
         )
-        reduction_type = kwargs.pop("reduction_type", ReductionType.AVERAGE)
+        aggregation_type = kwargs.pop("aggregation_type", AggregationType.AVERAGE)
 
-        if dp_config is not None:
-            sync_trainer = PrivateSyncTrainer(
-                model=global_fl_model,
-                cuda_enabled=False,
-                **OmegaConf.structured(
-                    PrivateSyncTrainerConfig(
-                        aggregator=FedAvgSyncAggregatorConfig(),
-                        users_per_round=users_per_round,
-                        epochs=epochs,
-                        always_keep_trained_model=False,
-                        train_metrics_reported_per_epoch=train_metrics_reported_per_epoch,
-                        report_train_metrics=True,
-                        eval_epoch_frequency=eval_epoch_frequency,
-                        do_eval=True,
-                        active_user_selector=SequentialActiveUserSelectorConfig(),
-                        report_train_metrics_after_aggregation=True,
-                        client=DPClientConfig(
-                            epochs=1,
-                            optimizer=LocalOptimizerSGDConfig(lr=lr, momentum=momentum),
-                            privacy_setting=PrivacySetting(
-                                alphas=dp_config["alphas"],
-                                noise_multiplier=dp_config[
-                                    "sample_dp_noise_multiplier"
-                                ],
-                                clipping_value=dp_config["sample_dp_clipping_value"],
-                                target_delta=dp_config["delta"],
-                                noise_seed=noise_func_seed,
-                            ),
-                        ),
-                        reducer=DPRoundReducerConfig(
-                            reduction_type=reduction_type,
-                            privacy_setting=PrivacySetting(
-                                alphas=dp_config["alphas"],
-                                noise_multiplier=dp_config["user_dp_noise_multiplier"],
-                                clipping_value=dp_config["user_dp_clipping_value"],
-                                target_delta=dp_config["delta"],
-                                noise_seed=noise_func_seed,
-                            ),
+        sync_trainer = SyncTrainer(
+            model=global_fl_model,
+            cuda_enabled=False,
+            **OmegaConf.structured(
+                SyncTrainerConfig(
+                    users_per_round=users_per_round,
+                    epochs=epochs,
+                    always_keep_trained_model=False,
+                    train_metrics_reported_per_epoch=train_metrics_reported_per_epoch,
+                    report_train_metrics=True,
+                    eval_epoch_frequency=eval_epoch_frequency,
+                    do_eval=True,
+                    report_train_metrics_after_aggregation=True,
+                    client=DPClientConfig(
+                        epochs=1,
+                        optimizer=LocalOptimizerSGDConfig(lr=lr, momentum=momentum),
+                        privacy_setting=PrivacySetting(
+                            alphas=dp_config["alphas"],
+                            noise_multiplier=dp_config["sample_dp_noise_multiplier"],
+                            clipping_value=dp_config["sample_dp_clipping_value"],
+                            target_delta=dp_config["delta"],
+                            noise_seed=noise_func_seed,
                         ),
                     )
-                ),
-            )
-        else:
-            sync_trainer = SyncTrainer(
-                model=global_fl_model,
-                cuda_enabled=False,
-                **OmegaConf.structured(
-                    SyncTrainerConfig(
-                        client=ClientConfig(
-                            epochs=1,
-                            optimizer=LocalOptimizerSGDConfig(lr=lr, momentum=momentum),
-                        ),
-                        aggregator=FedAvgSyncAggregatorConfig(),
-                        users_per_round=users_per_round,
-                        epochs=epochs,
-                        always_keep_trained_model=False,
-                        train_metrics_reported_per_epoch=train_metrics_reported_per_epoch,
-                        report_train_metrics=False,
-                        eval_epoch_frequency=eval_epoch_frequency,
-                        do_eval=True,
+                    if dp_config is not None
+                    else ClientConfig(
+                        epochs=1,
+                        optimizer=LocalOptimizerSGDConfig(lr=lr, momentum=momentum),
+                    ),
+                    server=SyncDPSGDServerConfig(
                         active_user_selector=SequentialActiveUserSelectorConfig(),
-                        report_train_metrics_after_aggregation=True,
+                        privacy_setting=PrivacySetting(
+                            alphas=dp_config["alphas"],
+                            noise_multiplier=dp_config["user_dp_noise_multiplier"],
+                            clipping_value=dp_config["user_dp_clipping_value"],
+                            target_delta=dp_config["delta"],
+                            noise_seed=noise_func_seed,
+                        ),
+                        aggregation_type=aggregation_type,
                     )
-                ),
-            )
+                    if dp_config is not None
+                    else SyncServerConfig(),
+                )
+            ),
+        )
+
         global_fl_model, _eval_metric = sync_trainer.train(
             data_provider,
             metrics_reporter,
@@ -252,43 +230,37 @@ class TestDifferentialPrivacyIntegration:
     def test_dp_turned_off_by_params(self) -> None:
         """
         Tests DP and no-DP produce the same exact model, when DP parameters are off.
-        Basically, tests the equivalence of the following 2 scenarios, with N users:
-
-        1. Calling SyncTrainer (this is "no DP")
-        2. Calling PrivateSyncTrainer, and DP (this is "DP") when parameters are off.
-            To make the dp_config ineffective (OFF), we need to set clipping value to 'inf'.
+        Basically, tests the equivalence of calling SyncServer and SyncDPServer with noise = 0 and clip = inf
         """
         lr = 0.1
         momentum = 0.0
 
         # first, call SyncTrainer (DP is off)
         torch.manual_seed(1)
-        fl_model_with_sync_trainer = self._train_fl_model(
-            lr=lr, momentum=momentum, one_user=False
+        fl_model_with_vanilla_server = self._train_fl_model(
+            lr=lr, momentum=momentum, one_user=False, dp_config=None
         )
-        # Next, call PrivateSyncTrainer, but set DP parameters off.
+        # set DP parameters off.
         off_dp_config = {
             "alphas": [10, 100],
-            "sample_dp_noise_multiplier": 0.0,  # any arbitrary number, when clipping is inf
+            "sample_dp_noise_multiplier": 0.0,
             "sample_dp_clipping_value": float("inf"),
-            "user_dp_noise_multiplier": 0.0,  # any arbitrary number, when clipping is inf
+            "user_dp_noise_multiplier": 0.0,
             "user_dp_clipping_value": float("inf"),
             "delta": 0.00001,
         }
         torch.manual_seed(1)
-        fl_model_with_private_sync_trainer = self._train_fl_model(
+        fl_model_with_dp_server = self._train_fl_model(
             lr=lr, momentum=momentum, one_user=False, dp_config=off_dp_config
         )
-        assertEqual(
-            FLModelParamUtils.get_mismatched_param(
-                [
-                    fl_model_with_sync_trainer.fl_get_module(),
-                    fl_model_with_private_sync_trainer.fl_get_module(),
-                ],
-                1e-6,
-            ),
-            "",
+        error_msg = verify_models_equivalent_after_training(
+            fl_model_with_vanilla_server,
+            fl_model_with_dp_server,
+            model_init=None,
+            rel_epsilon=1e-6,
+            abs_epsilon=1e-6,
         )
+        assertEmpty(error_msg, msg=error_msg)
 
     def test_dp_ineffective(self) -> None:
         """
@@ -307,12 +279,13 @@ class TestDifferentialPrivacyIntegration:
         lr = 0.1
         momentum = 0.0
 
-        # first, call SyncTrainer (DP is off)
         torch.manual_seed(1)
-        fl_model_with_sync_trainer = self._train_fl_model(
-            lr=lr, momentum=momentum, one_user=False
+        # Call vanilla sync server
+        fl_model_with_vanilla_server = self._train_fl_model(
+            lr=lr, momentum=momentum, one_user=False, dp_config=None
         )
-        # Next, call PrivateSyncTrainer, but set DP parameters ineffective.
+
+        # Next call set DP parameters ineffective.
         ineffective_dp_config = {
             "alphas": [10, 100],
             "sample_dp_noise_multiplier": 0.0,
@@ -322,22 +295,21 @@ class TestDifferentialPrivacyIntegration:
             "delta": 0.00001,
         }
         torch.manual_seed(1)
-        fl_model_with_private_sync_trainer = self._train_fl_model(
+        fl_model_with_dp_server = self._train_fl_model(
             lr=lr,
             momentum=momentum,
             one_user=False,
             dp_config=ineffective_dp_config,
         )
-        assertEqual(
-            FLModelParamUtils.get_mismatched_param(
-                [
-                    fl_model_with_sync_trainer.fl_get_module(),
-                    fl_model_with_private_sync_trainer.fl_get_module(),
-                ],
-                1e-6,
-            ),
-            "",
+
+        error_msg = verify_models_equivalent_after_training(
+            fl_model_with_vanilla_server,
+            fl_model_with_dp_server,
+            model_init=None,
+            rel_epsilon=1e-6,
+            abs_epsilon=1e-6,
         )
+        assertEmpty(error_msg, msg=error_msg)
 
     def test_frameworks_one_client_sample_dp_off(self) -> None:
         """
@@ -429,12 +401,12 @@ class TestDifferentialPrivacyIntegration:
             "alphas": alphas,
             "sample_dp_noise_multiplier": 0.7,
             "sample_dp_clipping_value": 1.0,
-            "user_dp_noise_multiplier": 5.0,  # will be ignored when user_dp_clipping_value = inf
-            "user_dp_clipping_value": float("inf"),  # user-level dp is off
+            "user_dp_noise_multiplier": 0.0,
+            "user_dp_clipping_value": float("inf"),
             "delta": 0.00001,
         }
         torch.manual_seed(1)
-        dp_model_sample_leve_dp_on = self._train_fl_model(
+        dp_model_sample_level_dp_on = self._train_fl_model(
             lr=lr,
             momentum=momentum,
             one_user=True,
@@ -445,14 +417,14 @@ class TestDifferentialPrivacyIntegration:
 
         dp_config_sample_dp_off = {
             "alphas": alphas,
-            "sample_dp_noise_multiplier": 3.0,  # will be ignored when sample_dp_clipping_value = inf
-            "sample_dp_clipping_value": float("inf"),  # sample-level dp is off
+            "sample_dp_noise_multiplier": 0,
+            "sample_dp_clipping_value": float("inf"),
             "user_dp_noise_multiplier": 0.7,
             "user_dp_clipping_value": 1.0,
             "delta": 0.00001,
         }
         torch.manual_seed(1)
-        dp_model_user_leve_dp_on = self._train_fl_model(
+        dp_model_user_level_dp_on = self._train_fl_model(
             lr=lr,
             momentum=momentum,
             one_user=True,
@@ -461,16 +433,14 @@ class TestDifferentialPrivacyIntegration:
             noise_func_seed=1234,
         )
 
-        assertEqual(
-            verify_models_equivalent_after_training(
-                dp_model_sample_leve_dp_on,
-                dp_model_user_leve_dp_on,
-                None,
-                rel_epsilon=1e-6,
-                abs_epsilon=1e-6,
-            ),
-            "",
+        error_msg = verify_models_equivalent_after_training(
+            dp_model_sample_level_dp_on,
+            dp_model_user_level_dp_on,
+            model_init=None,
+            rel_epsilon=1e-6,
+            abs_epsilon=1e-6,
         )
+        assertEmpty(error_msg, msg=error_msg)
 
     def test_user_dp_equivalent_sample_dp(self) -> None:
         """
@@ -501,16 +471,14 @@ class TestDifferentialPrivacyIntegration:
         torch.manual_seed(1)
         no_dp_model = self._train_fl_model(lr=lr, momentum=momentum, one_user=False)
 
-        assertEqual(
-            verify_models_equivalent_after_training(
-                no_dp_model_one_user,
-                no_dp_model,
-                None,
-                rel_epsilon=1e-6,
-                abs_epsilon=1e-6,
-            ),
-            "",
+        error_msg = verify_models_equivalent_after_training(
+            no_dp_model_one_user,
+            no_dp_model,
+            model_init=None,
+            rel_epsilon=1e-6,
+            abs_epsilon=1e-6,
         )
+        assertEmpty(error_msg, msg=error_msg)
 
         # Condition 2
         alphas = [1 + x / 10.0 for x in range(1, 100)] + [
@@ -520,8 +488,8 @@ class TestDifferentialPrivacyIntegration:
             "alphas": alphas,
             "sample_dp_noise_multiplier": 0.0,
             "sample_dp_clipping_value": 0.8,
-            "user_dp_noise_multiplier": 2.0,  # will be ignored when user_dp_clipping_value = inf
-            "user_dp_clipping_value": float("inf"),  # user-level dp is off
+            "user_dp_noise_multiplier": 0,
+            "user_dp_clipping_value": 0.8,
             "delta": 0.00001,
         }
         torch.manual_seed(1)
@@ -530,8 +498,8 @@ class TestDifferentialPrivacyIntegration:
         )
         dp_config_sample_dp_off = {
             "alphas": alphas,
-            "sample_dp_noise_multiplier": 1.0,  # will be ignored when sample_noise_multiplier = 0
-            "sample_dp_clipping_value": float("inf"),  # sample-level dp is off
+            "sample_dp_noise_multiplier": 0.0,
+            "sample_dp_clipping_value": 0.8,
             "user_dp_noise_multiplier": 0.0,
             "user_dp_clipping_value": 0.8,
             "delta": 0.00001,
@@ -543,24 +511,23 @@ class TestDifferentialPrivacyIntegration:
             one_user=False,
             dp_config=dp_config_sample_dp_off,
         )
-        assertEqual(
-            verify_models_equivalent_after_training(
-                dp_model_one_user_sample_dp,
-                dp_model_user_dp,
-                None,
-                rel_epsilon=1e-6,
-                abs_epsilon=1e-6,
-            ),
-            "",
+
+        error_msg = verify_models_equivalent_after_training(
+            dp_model_one_user_sample_dp,
+            dp_model_user_dp,
+            model_init=None,
+            rel_epsilon=1e-6,
+            abs_epsilon=1e-6,
         )
+        assertEmpty(error_msg, msg=error_msg)
 
         # Condition 3
         dp_config_user_dp_off = {
             "alphas": alphas,
             "sample_dp_noise_multiplier": 1,
             "sample_dp_clipping_value": 0.5,
-            "user_dp_noise_multiplier": 2.0,  # will be ignored when user_dp_clipping_value = inf
-            "user_dp_clipping_value": float("inf"),  # user-level dp is off
+            "user_dp_noise_multiplier": 0.0,
+            "user_dp_clipping_value": 0.5,
             "delta": 0.00001,
         }
         torch.manual_seed(1)
@@ -573,8 +540,8 @@ class TestDifferentialPrivacyIntegration:
         )
         dp_config_sample_dp_off = {
             "alphas": alphas,
-            "sample_dp_noise_multiplier": 1.0,  # will be ignored when sample_noise_multiplier = 0
-            "sample_dp_clipping_value": float("inf"),  # sample-level dp is off
+            "sample_dp_noise_multiplier": 0.0,
+            "sample_dp_clipping_value": 0.5,
             "user_dp_noise_multiplier": 1,
             "user_dp_clipping_value": 0.5,
             "delta": 0.00001,
@@ -587,16 +554,14 @@ class TestDifferentialPrivacyIntegration:
             dp_config=dp_config_sample_dp_off,
             noise_func_seed=1000,
         )
-        assertEqual(
-            verify_models_equivalent_after_training(
-                dp_model_one_user_sample_dp,
-                dp_model_user_dp,
-                None,
-                rel_epsilon=1e-6,
-                abs_epsilon=1e-6,
-            ),
-            "",
+        error_msg = verify_models_equivalent_after_training(
+            dp_model_one_user_sample_dp,
+            dp_model_user_dp,
+            None,
+            rel_epsilon=1e-6,
+            abs_epsilon=1e-6,
         )
+        assertEmpty(error_msg, msg=error_msg)
 
     def test_private_trainer_reporting(self) -> None:
         lr = 1.0
@@ -606,7 +571,7 @@ class TestDifferentialPrivacyIntegration:
         ]
         dp_config = {
             "alphas": alphas,
-            "sample_dp_noise_multiplier": 1.0,
+            "sample_dp_noise_multiplier": 0.0,
             "sample_dp_clipping_value": 2.0,
             "user_dp_noise_multiplier": 1.0,
             "user_dp_clipping_value": 2.0,

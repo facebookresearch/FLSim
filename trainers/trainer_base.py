@@ -67,7 +67,6 @@ class FLTrainer(abc.ABC):
         self.cuda_enabled = cuda_enabled
 
         self._timeout_simulator = instantiate(self.cfg.timeout_simulator)
-        self.active_user_selector = instantiate(self.cfg.active_user_selector)
         self.channel = instantiate(self.cfg.channel)
         self.data_provider = None
         self.num_total_users: int = -1
@@ -78,8 +77,6 @@ class FLTrainer(abc.ABC):
     def _set_defaults_in_cfg(cls, cfg):
         if OmegaConf.is_missing(cfg.timeout_simulator, "_target_"):
             cfg.timeout_simulator = NeverTimeOutSimulatorConfig()
-        if OmegaConf.is_missing(cfg.active_user_selector, "_target_"):
-            cfg.active_user_selector = UniformlyRandomActiveUserSelectorConfig()
         if OmegaConf.is_missing(cfg.client, "_target_"):
             cfg.client = ClientConfig()
         if OmegaConf.is_missing(cfg.channel, "_target_"):
@@ -275,7 +272,6 @@ class FLTrainerConfig:
     train_metrics_reported_per_epoch: int = 1
     # perform eval to do model selection in every eval_epoch_frequency epochs
     eval_epoch_frequency: float = 1.0
-    active_user_selector: ActiveUserSelectorConfig = ActiveUserSelectorConfig()
     # Whether metrics on training data should be computed and reported.
     report_train_metrics: bool = True
     report_train_metrics_after_aggregation: bool = False

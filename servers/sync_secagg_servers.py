@@ -12,7 +12,7 @@ from flsim.active_user_selectors.simple_user_selector import (
     UniformlyRandomActiveUserSelectorConfig,
 )
 from flsim.channels.base_channel import IFLChannel
-from flsim.channels.message import SyncServerMessage
+from flsim.channels.message import Message
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
 from flsim.secure_aggregation.secure_aggregator import (
@@ -92,13 +92,17 @@ class SyncSecAggServer(ISyncServer):
         self._aggregator.zero_weights()
         self._optimizer.zero_grad()
 
-    def receive_update_from_client(self, message: SyncServerMessage):
+    def receive_update_from_client(self, message: Message):
         self._aggregator.apply_weight_to_update(
-            delta=message.delta, weight=message.weight
+            delta=message.model.fl_get_module(), weight=message.weight
         )
-        self._secure_aggregator.params_to_fixedpoint(message.delta)
-        self._secure_aggregator.apply_noise_mask(message.delta.named_parameters())
-        self._aggregator.add_update(delta=message.delta, weight=message.weight)
+        self._secure_aggregator.params_to_fixedpoint(message.model.fl_get_module())
+        self._secure_aggregator.apply_noise_mask(
+            message.model.fl_get_module().named_parameters()
+        )
+        self._aggregator.add_update(
+            delta=message.model.fl_get_module(), weight=message.weight
+        )
 
     def step(self):
         aggregated_model = self._aggregator.aggregate()

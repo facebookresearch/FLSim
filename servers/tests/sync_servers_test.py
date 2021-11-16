@@ -8,7 +8,7 @@ import numpy as np
 from flsim.active_user_selectors.simple_user_selector import (
     UniformlyRandomActiveUserSelectorConfig,
 )
-from flsim.channels.message import SyncServerMessage
+from flsim.channels.message import Message
 from flsim.common.pytest_helper import assertEqual, assertEmpty
 from flsim.servers.aggregator import AggregationType
 from flsim.servers.sync_servers import (
@@ -68,7 +68,7 @@ class SyncServerTest(testutil.BaseFacebookTestCase):
         optimizer.zero_grad()
         for delta, weight in zip(client_updates.deltas, client_updates.weights):
             server.receive_update_from_client(
-                SyncServerMessage(delta=create_model_with_value(delta), weight=weight)
+                Message(model=SampleNet(create_model_with_value(delta)), weight=weight)
             )
 
         FLModelParamUtils.set_gradient(
@@ -144,8 +144,8 @@ class SyncServerTest(testutil.BaseFacebookTestCase):
             server.init_round()
             for delta, weight in zip(client_updates.deltas, client_updates.weights):
                 server.receive_update_from_client(
-                    SyncServerMessage(
-                        delta=create_model_with_value(delta), weight=weight
+                    Message(
+                        model=SampleNet(create_model_with_value(delta)), weight=weight
                     )
                 )
             server.step()

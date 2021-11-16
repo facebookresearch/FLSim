@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
-from flsim.channels.message import SyncServerMessage
+from flsim.channels.message import Message
 from flsim.secure_aggregation.secure_aggregator import FixedPointConfig
 from flsim.servers.sync_secagg_servers import SyncSecAggServerConfig
 from flsim.tests.utils import (
@@ -53,12 +53,12 @@ class SyncSecAggServerTest(testutil.BaseFacebookTestCase):
         m1_param = 7.2345
         m1_w = 3.0
         model1 = create_model_with_value(m1_param)
-        server.receive_update_from_client(SyncServerMessage(model1, weight=m1_w))
+        server.receive_update_from_client(Message(SampleNet(model1), weight=m1_w))
 
         m2_param = -3.45612
         m2_w = 7.0
         model2 = create_model_with_value(m2_param)
-        server.receive_update_from_client(SyncServerMessage(model2, weight=m2_w))
+        server.receive_update_from_client(Message(SampleNet(model2), weight=m2_w))
 
         expected_param = float(
             round(m1_param * scaling_factor * m1_w + m2_param * scaling_factor * m2_w)
@@ -96,7 +96,7 @@ class SyncSecAggServerTest(testutil.BaseFacebookTestCase):
 
         server.init_round()
         for client in clients:
-            server.receive_update_from_client(SyncServerMessage(client, weight=1.0))
+            server.receive_update_from_client(Message(SampleNet(client), weight=1.0))
 
         expected_param = float(round(global_param - client_param, ndigits=1))
 
@@ -131,7 +131,7 @@ class SyncSecAggServerTest(testutil.BaseFacebookTestCase):
 
         server.init_round()
         for client in clients:
-            server.receive_update_from_client(SyncServerMessage(client, weight=1.0))
+            server.receive_update_from_client(Message(SampleNet(client), weight=1.0))
 
         # update is 5.877. In current fixedpoint setup, it is 127, as 587.7 > 127
         # when we reduce, we convert from fixedpoint to floating point, so 127 -> 1.27

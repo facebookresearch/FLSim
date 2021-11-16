@@ -39,7 +39,9 @@ class PrivateSyncTrainer(SyncTrainer):
             config_class=PrivateSyncTrainerConfig,
             **kwargs,
         )
-
+        raise ValueError(
+            "PrivateSyncTrainer is deprecated. Please use SyncTrainer with SyncDPServerConfig for user-level dp or with DPClientConfig for sample-level DP"
+        )
         super().__init__(model=model, cuda_enabled=cuda_enabled, **kwargs)
 
     @classmethod
@@ -62,6 +64,7 @@ class PrivateSyncTrainer(SyncTrainer):
             total_number_of_users=num_total_users,
             channel=self.channel,
         )
+        # pyre-ignore[16]
         self.aggregator.init_round(dp_round_reducer)
         return super().train(
             data_provider,
@@ -116,6 +119,7 @@ class PrivateSyncTrainer(SyncTrainer):
         )
 
         # calculate user level dp privacy loss statistics.
+        # pyre-ignore[16]
         dp_round_reducer = self.aggregator.reducer
         aggr_eps = dp_round_reducer.privacy_budget.epsilon
 

@@ -77,13 +77,3 @@ class Message:
 
     # add any meta information here
     weight: float = field(default_factory=float)
-
-
-@dataclass(frozen=True)
-class SyncServerMessage:
-    """
-    TODO@john, adapt this with the new Message framework
-    """
-
-    delta: nn.Module
-    weight: float

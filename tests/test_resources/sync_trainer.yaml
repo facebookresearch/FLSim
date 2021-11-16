@@ -1,8 +1,7 @@
 defaults:
     - trainer/base_sync_trainer
-    - /aggregator@trainer.aggregator: base_fed_avg_sync_aggregator
     - /optimizer@trainer.client.optimizer: base_optimizer_sgd
-    - /active_user_selector@trainer.active_user_selector: base_sequential_active_user_selector
+    - /active_user_selector@trainer.server.active_user_selector: base_sequential_active_user_selector
     - _self_
 
 trainer:

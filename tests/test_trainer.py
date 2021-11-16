@@ -7,7 +7,6 @@ import math
 from typing import List
 
 import flsim.configs  # noqa
-import hydra
 import pkg_resources
 import torch
 from flsim.active_user_selectors.simple_user_selector import (
@@ -28,11 +27,11 @@ from flsim.optimizers.local_optimizers import (
     LocalOptimizerFedProxConfig,
 )
 from flsim.optimizers.optimizer_scheduler import ArmijoLineSearchSchedulerConfig
-from flsim.optimizers.sync_aggregators import (
-    SyncAggregatorConfig,
-    FedAdamSyncAggregatorConfig,
-    FedAvgWithLRSyncAggregatorConfig,
-    FedAvgSyncAggregatorConfig,
+from flsim.servers.sync_servers import (
+    SyncServerConfig,
+    OptimizerType,
+    FedAvgWithLROptimizerConfig,
+    FedAdamOptimizerConfig,
 )
 from flsim.tests.utils import (
     FakeMetricReporter,
@@ -43,7 +42,6 @@ from flsim.tests.utils import (
 )
 from flsim.tests.utils import SampleNetHive
 from flsim.trainers.async_trainer import AsyncTrainer, AsyncTrainerConfig
-from flsim.trainers.private_sync_trainer import PrivateSyncTrainer
 from flsim.trainers.sync_trainer import SyncTrainer, SyncTrainerConfig
 from flsim.utils.config_utils import fl_config_from_json
 from flsim.utils.fl.common import FLModelParamUtils
@@ -84,7 +82,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             {"json_file_name": ASYNC_TRAINER_JSON, "trainer_class": AsyncTrainer},
             {
                 "json_file_name": SYNC_TRAINER_WITH_DP_JSON,
-                "trainer_class": PrivateSyncTrainer,
+                "trainer_class": SyncTrainer,
             },
             {
                 "json_file_name": SYNC_TRAINER_WITH_SECAGG_JSON,
@@ -113,7 +111,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             {"yaml_file_name": ASYNC_TRAINER_YAML, "trainer_class": AsyncTrainer},
             {
                 "yaml_file_name": SYNC_TRAINER_WITH_DP_YAML,
-                "trainer_class": PrivateSyncTrainer,
+                "trainer_class": SyncTrainer,
             },
             {
                 "yaml_file_name": SYNC_TRAINER_WITH_SECAGG_YAML,
@@ -133,32 +131,6 @@ class TrainerTest(testutil.BaseFacebookTestCase):
                 cuda_enabled=False,
             )
         self.assertIsInstance(trainer, trainer_class)
-
-    def test_dp_reducer_creation_from_json_config_fails_from_sync_trainer(self):
-        # TODO: remove this and corresponding json and TARGETS after T84246363
-        file_path = pkg_resources.resource_filename(__name__, SYNC_TRAINER_WRONG_JSON)
-        with open(file_path, "r") as parameters_file:
-            json_cfg = json.load(parameters_file)
-        with self.assertRaises(
-            (
-                AssertionError,  # with Hydra 1.1
-                hydra.errors.HydraException,  # with Hydra 1.0
-            ),
-        ):
-            cfg = fl_config_from_json(json_cfg)
-            instantiate(cfg.trainer, model=DummyAlphabetFLModel(), cuda_enabled=False)
-
-    def test_dp_reducer_creation_from_yaml_config_fails_from_sync_trainer(self):
-        # TODO: remove this and corresponding json and TARGETS after T84246363
-        with self.assertRaises(
-            (
-                AssertionError,  # with Hydra 1.1
-                hydra.errors.HydraException,  # with Hydra 1.0
-            ),
-        ):
-            with initialize(config_path=CONFIG_PATH):
-                cfg = compose(config_name=SYNC_TRAINER_WRONG_YAML)
-            instantiate(cfg.trainer, model=DummyAlphabetFLModel(), cuda_enabled=False)
 
     def test_async_trainer_with_dp_creation_from_json_config(self):
         trainer = None
@@ -271,25 +243,25 @@ class TrainerTest(testutil.BaseFacebookTestCase):
     @testutil.data_provider(
         lambda: (
             {
-                "aggregator_config": FedAdamSyncAggregatorConfig(beta1=0.1),
+                "config": SyncServerConfig(
+                    optimizer=FedAvgWithLROptimizerConfig(lr=1.0, momentum=0.0)
+                ),
                 "trainer_type": SyncTrainer,
             },
             {
-                "aggregator_config": FedAdamAsyncAggregatorConfig(beta1=0.1),
+                "config": FedAdamAsyncAggregatorConfig(beta1=0.1),
                 "trainer_type": AsyncTrainer,
             },
         )
     )
-    def test_aggregator_optimizer_creation_from_config(
-        self, aggregator_config, trainer_type
-    ):
+    def test_server_optimizer_creation_from_config(self, config, trainer_type):
         """
         Test if trainer can instanciate correct aggregator config
         """
         config = (
-            SyncTrainerConfig(aggregator=aggregator_config)
+            SyncTrainerConfig(server=config)
             if trainer_type == SyncTrainer
-            else AsyncTrainerConfig(aggregator=aggregator_config)
+            else AsyncTrainerConfig(aggregator=config)
         )
         trainer = instantiate(config, model=DummyAlphabetFLModel(), cuda_enabled=False)
         self.assertTrue(isinstance(trainer, trainer_type))
@@ -650,7 +622,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         num_fl_users: int,
         epochs: int,
         local_lr: float,
-        global_aggregator_config: SyncAggregatorConfig,
+        server_config: SyncServerConfig,
     ):
         """
         Given:
@@ -687,13 +659,14 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         self.assertEqual(data_provider.num_users(), data_loader.num_total_users)
 
         torch.manual_seed(1)
+
         sync_trainer = create_sync_trainer(
             model=global_model,
             local_lr=local_lr,
             users_per_round=1,
             epochs=epochs,
             do_eval=False,
-            aggregator_config=global_aggregator_config,
+            server_config=server_config,
         )
         fl_model, _ = sync_trainer.train(
             data_provider,
@@ -708,48 +681,27 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             dummy_dataset, batch_size=batch_size, shuffle=False
         )
         nonfl_model = copy.deepcopy(global_model_init_copy)
-        agg_type = global_aggregator_config._target_
-        if "FedAvgWithLR" in agg_type:
-            optimizer = torch.optim.SGD(
-                nonfl_model.fl_get_module().parameters(),
-                # pyre-fixme[16]: `SyncAggregatorConfig` has no attribute `lr`.
-                lr=global_aggregator_config.lr,
-                # pyre-fixme[16]: `SyncAggregatorConfig` has no attribute `momentum`.
-                momentum=global_aggregator_config.momentum,
-            )
-        elif "FedAdam" in agg_type:
-            optimizer = torch.optim.Adam(
-                nonfl_model.fl_get_module().parameters(),
-                lr=global_aggregator_config.lr,
-                # pyre-fixme[16]: `SyncAggregatorConfig` has no attribute
-                #  `weight_decay`.
-                weight_decay=global_aggregator_config.weight_decay,
-                # pyre-fixme[16]: `SyncAggregatorConfig` has no attribute `beta1`.
-                # pyre-fixme[16]: `SyncAggregatorConfig` has no attribute `beta2`.
-                betas=(global_aggregator_config.beta1, global_aggregator_config.beta2),
-                # pyre-fixme[16]: `SyncAggregatorConfig` has no attribute `eps`.
-                eps=global_aggregator_config.eps,
-            )
-        else:
-            self.assertTrue(False, f"Unknown aggregator {agg_type}")
+
+        optimizer = OptimizerType.create_optimizer(
+            model=nonfl_model.fl_get_module(),
+            config=server_config.optimizer,
+        )
+
         FLTestUtils.run_nonfl_training(
             model=nonfl_model,
-            # pyre-fixme[61]: `optimizer` may not be initialized here.
             optimizer=optimizer,
             data_loader=data_loader,
             epochs=epochs,
         )
 
-        self.assertEqual(
-            verify_models_equivalent_after_training(
-                fl_model,
-                nonfl_model,
-                global_model_init_copy,
-                rel_epsilon=1e-4,
-                abs_epsilon=1e-6,
-            ),
-            "",
+        error_msg = verify_models_equivalent_after_training(
+            fl_model,
+            nonfl_model,
+            global_model_init_copy,
+            rel_epsilon=1e-4,
+            abs_epsilon=1e-6,
         )
+        self.assertEmpty(error_msg, msg=error_msg)
 
     def test_fl_nonfl_equivalent_global_optimizer_sgd(self):
         """
@@ -767,8 +719,9 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             num_fl_users=2,
             epochs=5,
             local_lr=1.0,
-            global_aggregator_config=FedAvgWithLRSyncAggregatorConfig(
-                lr=1.0, momentum=0.0
+            server_config=SyncServerConfig(
+                optimizer=FedAvgWithLROptimizerConfig(lr=1.0, momentum=0.0),
+                active_user_selector=SequentialActiveUserSelectorConfig(),
             ),
         )
 
@@ -788,7 +741,10 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             num_fl_users=2,
             epochs=5,
             local_lr=1.0,
-            global_aggregator_config=FedAdamSyncAggregatorConfig(lr=0.001, eps=1e-2),
+            server_config=SyncServerConfig(
+                optimizer=FedAdamOptimizerConfig(lr=0.001, eps=1e-2),
+                active_user_selector=SequentialActiveUserSelectorConfig(),
+            ),
         )
 
     def test_client_overselection(self):
@@ -1017,7 +973,6 @@ class TrainerTest(testutil.BaseFacebookTestCase):
                     always_keep_trained_model=False,
                     train_metrics_reported_per_epoch=1,
                     eval_epoch_frequency=1,
-                    active_user_selector=SequentialActiveUserSelectorConfig(),
                     report_train_metrics=False,
                     report_train_metrics_after_aggregation=True,
                     client=ClientConfig(
@@ -1027,7 +982,10 @@ class TrainerTest(testutil.BaseFacebookTestCase):
                         ),
                         max_clip_norm_normalized=None,
                     ),
-                    aggregator=FedAvgSyncAggregatorConfig(),
+                    server=SyncServerConfig(
+                        optimizer=FedAvgWithLROptimizerConfig(lr=1.0, momentum=0.0),
+                        active_user_selector=SequentialActiveUserSelectorConfig(),
+                    ),
                     report_client_metrics=True,
                     report_client_metrics_after_epoch=True,
                     client_metrics_reported_per_epoch=3,

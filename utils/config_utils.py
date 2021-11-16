@@ -207,3 +207,7 @@ def maybe_parse_json_config():
             cfg = fl_config_from_json(json_config["config"])
     # else:  assume yaml config, and let hydra handle config construction
     return cfg
+
+
+def is_target(config, cls):
+    return config._target_ == cls._target_

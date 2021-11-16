@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import torch
-from flsim.channels.message import SyncServerMessage
+from flsim.channels.message import Message
 from flsim.privacy.common import PrivacySetting
 from flsim.privacy.privacy_engine import GaussianPrivacyEngine
 from flsim.servers.aggregator import AggregationType
@@ -37,7 +37,7 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
         clipping_value,
         noise_multiplier,
     ):
-        return instantiate(
+        server = instantiate(
             SyncDPSGDServerConfig(
                 aggregation_type=AggregationType.AVERAGE,
                 optimizer=FedAvgOptimizerConfig(lr=1.0),
@@ -48,9 +48,11 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
                 ),
             ),
             global_model=server_model,
-            num_total_users=num_rounds * num_clients,
-            users_per_round=num_clients,
         )
+        server.select_clients_for_training(
+            num_total_users=num_rounds * num_clients, users_per_round=num_clients
+        )
+        return server
 
     @testutil.data_provider(
         lambda: (
@@ -78,10 +80,8 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
         for round_num in range(num_rounds):
             server.init_round()
             for _ in range(num_clients):
-                delta = create_model_with_value(delta_param)
-                server.receive_update_from_client(
-                    SyncServerMessage(delta=delta, weight=1.0)
-                )
+                delta = SampleNet(create_model_with_value(delta_param))
+                server.receive_update_from_client(Message(model=delta, weight=1.0))
             server.step()
             error_msg = model_parameters_equal_to_value(
                 server_model, expected_value * (round_num + 1)
@@ -126,10 +126,8 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
         for round_num in range(num_rounds):
             server.init_round()
             for _ in range(num_clients):
-                delta = create_model_with_value(1.0)
-                server.receive_update_from_client(
-                    SyncServerMessage(delta=delta, weight=1.0)
-                )
+                delta = SampleNet(create_model_with_value(1.0))
+                server.receive_update_from_client(Message(model=delta, weight=1.0))
             server.step()
 
             expected_value = float(
@@ -171,14 +169,18 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
             dp_server.init_round()
             for _ in range(num_clients):
                 dp_server.receive_update_from_client(
-                    SyncServerMessage(
-                        delta=create_model_with_value(global_value - client_value),
+                    Message(
+                        model=SampleNet(
+                            create_model_with_value(global_value - client_value)
+                        ),
                         weight=1.0,
                     )
                 )
                 no_dp_server.receive_update_from_client(
-                    SyncServerMessage(
-                        delta=create_model_with_value(global_value - client_value),
+                    Message(
+                        model=SampleNet(
+                            create_model_with_value(global_value - client_value)
+                        ),
                         weight=1.0,
                     )
                 )
@@ -224,9 +226,7 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
         server.init_round()
         for _ in range(num_clients):
             delta = create_model_with_value(global_value - client_value)
-            server.receive_update_from_client(
-                SyncServerMessage(delta=delta, weight=1.0)
-            )
+            server.receive_update_from_client(Message(model=SampleNet(delta), weight=1))
         server.step()
 
         error_msg = model_parameters_equal_to_value(server_model, expected_value)

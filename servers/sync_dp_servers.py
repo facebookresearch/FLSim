@@ -12,10 +12,10 @@ from flsim.active_user_selectors.simple_user_selector import (
     UniformlyRandomActiveUserSelectorConfig,
 )
 from flsim.channels.base_channel import IFLChannel
-from flsim.channels.message import SyncServerMessage
+from flsim.channels.message import Message
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
-from flsim.privacy.common import PrivacySetting
+from flsim.privacy.common import PrivacySetting, PrivacyBudget
 from flsim.privacy.privacy_engine import IPrivacyEngine
 from flsim.privacy.privacy_engine_factory import PrivacyEngineFactory, NoiseType
 from flsim.privacy.user_update_clip import UserUpdateClipper
@@ -50,8 +50,6 @@ class SyncDPSGDServer(ISyncServer):
         self,
         *,
         global_model: IFLModel,
-        users_per_round: int,
-        num_total_users: int,
         channel: Optional[IFLChannel] = None,
         **kwargs,
     ):
@@ -65,6 +63,7 @@ class SyncDPSGDServer(ISyncServer):
             self.cfg.aggregation_type == AggregationType.AVERAGE  # pyre-ignore[16]
         ), "DP training must be done with simple averaging and uniform weights."
 
+        self.privacy_budget = PrivacyBudget()
         self._clipping_value = self.cfg.privacy_setting.clipping_value
         self._optimizer: torch.optim.Optimizer = OptimizerType.create_optimizer(
             model=global_model.fl_get_module(), config=self.cfg.optimizer
@@ -76,13 +75,7 @@ class SyncDPSGDServer(ISyncServer):
             aggregation_type=self.cfg.aggregation_type,
             only_federated_params=self.cfg.only_federated_params,
         )
-        self._privacy_engine: IPrivacyEngine = PrivacyEngineFactory.create(
-            self.cfg.privacy_setting,
-            users_per_round,
-            num_total_users,
-            noise_type=NoiseType.GAUSSIAN,
-        )
-        self._privacy_engine.attach(self._global_model.fl_get_module())
+        self._privacy_engine: Optional[IPrivacyEngine] = None
         self._active_user_selector = instantiate(self.cfg.active_user_selector)
 
     @classmethod
@@ -101,6 +94,15 @@ class SyncDPSGDServer(ISyncServer):
         data_provider: Optional[IFLDataProvider] = None,
         epoch: Optional[int] = None,
     ):
+        if self._privacy_engine is None:
+            self._privacy_engine: IPrivacyEngine = PrivacyEngineFactory.create(
+                # pyre-ignore[16]
+                self.cfg.privacy_setting,
+                users_per_round,
+                num_total_users,
+                noise_type=NoiseType.GAUSSIAN,
+            )
+            self._privacy_engine.attach(self._global_model.fl_get_module())
         return self._active_user_selector.get_user_indices(
             num_total_users=num_total_users,
             users_per_round=users_per_round,
@@ -112,12 +114,19 @@ class SyncDPSGDServer(ISyncServer):
     def init_round(self):
         self._aggregator.zero_weights()
         self._optimizer.zero_grad()
+        self._privacy_engine.attach(self._global_model.fl_get_module())
 
-    def receive_update_from_client(self, message: SyncServerMessage):
-        self._user_update_clipper.clip(message.delta, max_norm=self._clipping_value)
-        self._aggregator.add_update(delta=message.delta, weight=message.weight)
+    def receive_update_from_client(self, message: Message):
+        self._user_update_clipper.clip(
+            message.model.fl_get_module(), max_norm=self._clipping_value
+        )
+        self._aggregator.add_update(
+            delta=message.model.fl_get_module(), weight=message.weight
+        )
 
     def step(self):
+        assert self._privacy_engine is not None, "PrivacyEngine is not intialized"
+
         aggregated_model = self._aggregator.aggregate(distributed_op=OperationType.SUM)
 
         if FLDistributedUtils.is_master_worker():
@@ -136,6 +145,7 @@ class SyncDPSGDServer(ISyncServer):
             reference_gradient=aggregated_model,
         )
         self._optimizer.step()
+        self.privacy_budget = self._privacy_engine.get_privacy_spent()
 
 
 @dataclass

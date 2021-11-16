@@ -16,10 +16,7 @@ from flsim.optimizers.optimizer_scheduler import (
     OptimizerSchedulerConfig,
     ConstantLRSchedulerConfig,
 )
-from flsim.optimizers.sync_aggregators import (
-    SyncAggregatorConfig,
-    FedAvgSyncAggregatorConfig,
-)
+from flsim.servers.sync_servers import SyncServerConfig
 from flsim.trainers.sync_trainer import SyncTrainer, SyncTrainerConfig
 from omegaconf import OmegaConf
 
@@ -27,7 +24,9 @@ from omegaconf import OmegaConf
 # in argument defaults (B008, https://github.com/PyCQA/flake8-bugbear#list-of-warnings)
 NEVER_TIMEOUT_CONFIG = NeverTimeOutSimulatorConfig()
 CONSTANT_LR_SCHEDULER_CONFIG = ConstantLRSchedulerConfig()
-FED_AVG_SYNC_AGG_CONFIG = FedAvgSyncAggregatorConfig()
+FED_AVG_SYNC_SERVER_CONFIG = SyncServerConfig(
+    active_user_selector=SequentialActiveUserSelectorConfig()
+)
 
 
 def create_sync_trainer(
@@ -37,7 +36,7 @@ def create_sync_trainer(
     epochs: int,
     user_epochs_per_round: int = 1,
     do_eval: bool = True,
-    aggregator_config: SyncAggregatorConfig = FED_AVG_SYNC_AGG_CONFIG,
+    server_config: SyncServerConfig = FED_AVG_SYNC_SERVER_CONFIG,
     timeout_simulator_config: TimeOutSimulatorConfig = NEVER_TIMEOUT_CONFIG,
     local_lr_scheduler: OptimizerSchedulerConfig = CONSTANT_LR_SCHEDULER_CONFIG,
     report_train_metrics: bool = False,
@@ -57,7 +56,6 @@ def create_sync_trainer(
                 timeout_simulator=timeout_simulator_config,
                 train_metrics_reported_per_epoch=1,
                 eval_epoch_frequency=1,
-                active_user_selector=SequentialActiveUserSelectorConfig(),
                 report_train_metrics=report_train_metrics,
                 report_train_metrics_after_aggregation=False,
                 client=ClientConfig(
@@ -69,7 +67,7 @@ def create_sync_trainer(
                     shuffle_batch_order=False,
                 ),
                 channel=FLChannelConfig(),
-                aggregator=aggregator_config,
+                server=server_config,
                 users_per_round=users_per_round,
                 dropout_rate=dropout_rate,
             )

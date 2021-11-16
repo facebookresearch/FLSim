@@ -1,22 +1,18 @@
 defaults:
-    - trainer/base_private_sync_trainer
-    - /aggregator@trainer.aggregator: base_fed_avg_sync_aggregator
-    - /reducer@trainer.reducer: base_dp_reducer
+    - trainer/base_sync_trainer
+    - /server@trainer.server: base_sync_dp_server
     - /optimizer@trainer.client.optimizer: base_optimizer_sgd
-    - /active_user_selector@trainer.active_user_selector: base_sequential_active_user_selector
+    - /active_user_selector@trainer.server.active_user_selector: base_sequential_active_user_selector
     - _self_
 
 trainer:
-    reducer:
-        reduction_type: SUM
+    server:
+        aggregation_type: AVERAGE
         privacy_setting:
             alphas: [2, 3, 4, 6, 7, 8, 9, 10, 20, 30 , 40 , 60]
             noise_multiplier: 1.0
             clipping_value: 10000.0
             target_delta: 1e-6
-    aggregator:
-        num_users_per_round: 10
-        total_number_of_users: 10000
     client:
         epochs: 10
         optimizer:

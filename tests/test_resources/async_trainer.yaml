@@ -3,7 +3,6 @@ defaults:
     - /aggregator@trainer.aggregator: base_fed_avg_with_lr_async_aggregator
     - /reducer@trainer.aggregator.reducer: base_weighted_dp_reducer
     - /optimizer@trainer.client.optimizer: base_optimizer_sgd
-    - /active_user_selector@trainer.active_user_selector: base_sequential_active_user_selector
     - /training_event_generator@trainer.training_event_generator: base_async_training_event_generator
     - /training_start_time_distribution@trainer.training_event_generator.training_start_time_distribution: base_poisson_training_start_time_distribution
     - /duration_distribution_generator@trainer.training_event_generator.duration_distribution_generator: base_per_example_gaussian_duration_distribution

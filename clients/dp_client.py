@@ -18,6 +18,7 @@ from flsim.interfaces.model import IFLModel
 from flsim.privacy.common import PrivacyBudget, PrivacySetting
 from flsim.utils.config_utils import fullclassname
 from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.cuda import ICudaStateManager, DEFAULT_CUDA_MANAGER
 from opacus import PrivacyEngine
 
 
@@ -30,6 +31,7 @@ class DPClient(Client):
         timeout_simulator: Optional[TimeOutSimulator] = None,
         store_last_updated_model: Optional[bool] = False,
         name: Optional[str] = None,
+        cuda_manager: ICudaStateManager = DEFAULT_CUDA_MANAGER,
         **kwargs,
     ):
         init_self_cfg(
@@ -45,6 +47,7 @@ class DPClient(Client):
             timeout_simulator=timeout_simulator,
             store_last_updated_model=store_last_updated_model,
             name=name,
+            cuda_manager=cuda_manager,
             **kwargs,
         )
         self.dataset_length = -1

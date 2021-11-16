@@ -3,10 +3,10 @@
 
 import torch
 from flsim.common.pytest_helper import assertEqual, assertNotEqual
-from flsim.optimizers.sync_aggregators import FedAvgSyncAggregatorConfig
-from flsim.reducers.base_round_reducer import ReductionType, RoundReducerConfig
-from flsim.reducers.secure_round_reducer import SecureRoundReducerConfig
 from flsim.secure_aggregation.secure_aggregator import FixedPointConfig
+from flsim.servers.aggregator import AggregationType
+from flsim.servers.sync_secagg_servers import SyncSecAggServerConfig
+from flsim.servers.sync_servers import SyncServerConfig
 from flsim.tests.utils import (
     FakeMetricReporter,
 )
@@ -57,17 +57,12 @@ class TestSecureAggregationIntegration:
             epochs=1,
             user_epochs_per_round=1,
             do_eval=True,
-            aggregator_config=FedAvgSyncAggregatorConfig(
-                reducer=SecureRoundReducerConfig(
-                    reduction_type=ReductionType.AVERAGE,
-                    fixedpoint=fixedpoint,
-                ),
+            server_config=SyncSecAggServerConfig(
+                aggregation_type=AggregationType.AVERAGE, fixedpoint=fixedpoint
             )
             if sec_agg_enable
-            else FedAvgSyncAggregatorConfig(
-                reducer=RoundReducerConfig(
-                    reduction_type=ReductionType.AVERAGE,
-                ),
+            else SyncServerConfig(
+                aggregation_type=AggregationType.AVERAGE,
             ),
         )
         metrics_reporter = FakeMetricReporter()
@@ -79,36 +74,6 @@ class TestSecureAggregationIntegration:
         )
 
         return global_fl_model
-
-    def test_secagg_equivalent_no_secagg_config_empty(self) -> None:
-        """
-        Tests calling SyncTrainer with SecureRoundReducer (but None fixedpoint config)
-        and calling SyncTrainer with RoundReducer is equivalent
-        Basically, tests the equivalence of the following 2 scenarios:
-
-        1. Calling SyncTrainer with SecureRoundReducer (but None fixedpoint config)
-        2. Calling SyncTrainer with RoundReducer
-        """
-
-        # First, call SyncTrainer with SecureRoundReducer
-        torch.manual_seed(1)
-        fl_model_with_secure_round_reducer = self._train_fl_model(
-            sec_agg_enable=True,
-            fixedpoint=None,
-        )
-        # Next, call SyncTrainer (with RoundReducer)
-        torch.manual_seed(1)
-        fl_model_with_round_reducer = self._train_fl_model()
-        assertEqual(
-            FLModelParamUtils.get_mismatched_param(
-                [
-                    fl_model_with_round_reducer.fl_get_module(),
-                    fl_model_with_secure_round_reducer.fl_get_module(),
-                ],
-                1e-6,
-            ),
-            "",
-        )
 
     def test_secagg_not_equivalent_no_secagg(self) -> None:
         """

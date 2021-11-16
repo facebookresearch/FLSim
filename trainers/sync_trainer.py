@@ -10,19 +10,23 @@ from time import time
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import torch
+from flsim.channels.message import Message
 from flsim.clients.base_client import Client
+from flsim.clients.dp_client import DPClientConfig, DPClient
 from flsim.common.timeline import Timeline
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.metrics_reporter import IFLMetricsReporter, Metric, TrainingStage
 from flsim.interfaces.model import IFLModel
-from flsim.optimizers.sync_aggregators import (
-    SyncAggregator,
-    SyncAggregatorConfig,
-    FedAvgSyncAggregatorConfig,
+from flsim.servers.sync_dp_servers import SyncDPSGDServerConfig
+from flsim.servers.sync_servers import (
+    ISyncServer,
+    SyncServerConfig,
+    FedAvgOptimizerConfig,
 )
 from flsim.trainers.trainer_base import FLTrainer, FLTrainerConfig
 from flsim.utils.config_utils import fullclassname
 from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import is_target
 from flsim.utils.distributed.fl_distributed import FLDistributedUtils
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.fl.stats import RandomVariableStatsTracker
@@ -55,9 +59,9 @@ class SyncTrainer(FLTrainer):
         )
 
         super().__init__(model=model, cuda_enabled=cuda_enabled, **kwargs)
-        self.aggregator: SyncAggregator = instantiate(
-            # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
-            self.cfg.aggregator,
+        self.server: ISyncServer = instantiate(
+            # pyre-ignore[16]
+            self.cfg.server,
             global_model=model,
             channel=self.channel,
         )
@@ -65,14 +69,22 @@ class SyncTrainer(FLTrainer):
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
-        if OmegaConf.is_missing(cfg.aggregator, "_target_"):
-            cfg.aggregator = FedAvgSyncAggregatorConfig()
+        if OmegaConf.is_missing(cfg.server, "_target_"):
+            cfg.server = SyncServerConfig(optimizer=FedAvgOptimizerConfig())
 
     def global_model(self) -> IFLModel:
         """This function makes it explicit that self.global_model() is owned
         by the aggregator, not by SyncTrainer
         """
-        return self.aggregator.global_model
+        return self.server.global_model
+
+    @property
+    def is_user_level_dp(self):
+        return is_target(self.cfg.server, SyncDPSGDServerConfig)
+
+    @property
+    def is_sample_level_dp(self):
+        return is_target(self.cfg.client, DPClientConfig)
 
     def create_or_get_client_for_data(self, dataset_id: int, datasets: Any):
         """This function is used to create clients in a round. Thus, it
@@ -80,16 +92,28 @@ class SyncTrainer(FLTrainer):
         <code>OmegaConf.structured</code> instead of <code>hydra.instantiate</code>
         to minimize the overhead of hydra object creation.
         """
-        self.clients[dataset_id] = Client(
-            # pyre-ignore [16]: `SyncTrainer` has no attribute `cfg`
-            **OmegaConf.structured(self.cfg.client),
-            dataset=datasets[dataset_id],
-            name=f"client_{dataset_id}",
-            timeout_simulator=self._timeout_simulator,
-            store_last_updated_model=self.cfg.report_client_metrics,
-            channel=self.channel,
-            cuda_manager=self._cuda_state_manager,
-        )
+        if self.is_sample_level_dp:
+            client = DPClient(
+                # pyre-ignore[16]
+                **OmegaConf.structured(self.cfg.client),
+                dataset=datasets[dataset_id],
+                name=f"client_{dataset_id}",
+                timeout_simulator=self._timeout_simulator,
+                store_last_updated_model=self.cfg.report_client_metrics,
+                channel=self.channel,
+                cuda_manager=self._cuda_state_manager,
+            )
+        else:
+            client = Client(
+                **OmegaConf.structured(self.cfg.client),
+                dataset=datasets[dataset_id],
+                name=f"client_{dataset_id}",
+                timeout_simulator=self._timeout_simulator,
+                store_last_updated_model=self.cfg.report_client_metrics,
+                channel=self.channel,
+                cuda_manager=self._cuda_state_manager,
+            )
+        self.clients[dataset_id] = client
         return self.clients[dataset_id]
 
     def train(
@@ -319,11 +343,10 @@ class SyncTrainer(FLTrainer):
     ) -> List[Client]:
         # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
         num_users_overselected = math.ceil(users_per_round / self.cfg.dropout_rate)
-        user_indices_overselected = self.active_user_selector.get_user_indices(
+        user_indices_overselected = self.server.select_clients_for_training(
             num_total_users=num_users,
             users_per_round=num_users_overselected,
             data_provider=data_provider,
-            global_model=global_model,
             epoch=epoch,
         )
         clients_triggered = [
@@ -352,14 +375,14 @@ class SyncTrainer(FLTrainer):
         metric_reporter: the metric reporter to pass to other methods
         """
         t = time()
-        self.aggregator.init_round()
+        self.server.init_round()
         self.logger.info(f"Round initialization took {time() - t} s.")
 
         def update(client):
             client_delta, weight = client.generate_local_update(
                 self.global_model(), metric_reporter
             )
-            self.aggregator.collect_client_update(client_delta, weight)
+            self.server.receive_update_from_client(Message(client_delta, weight))
 
         # TODO MM add multi-processing here for now we will do sequential
         # with Pool(100) as workers:
@@ -370,7 +393,7 @@ class SyncTrainer(FLTrainer):
         self.logger.info(f"Collecting round's clients took {time() - t} s.")
 
         t = time()
-        self.aggregator.step()
+        self.server.step()
         self.logger.info(f"Finalizing round took {time() - t} s.")
 
         # TODO MM on adding asyn-trainer change api to get timeline
@@ -428,13 +451,40 @@ class SyncTrainer(FLTrainer):
         metric_reporter: Optional[IFLMetricsReporter],
     ) -> List[Metric]:
         """
-        Calculates the metrics to be reported.
+        Calculates post-server aggregation metrics.
         """
         # TODO do multiprocessing
         # lines below internally change the state of metric reporter,
         # no need to create extra reportable metrics.
         [c.eval(model=model, metric_reporter=metric_reporter) for c in clients]
-        return []
+
+        metrics = []
+        if not self.is_user_level_dp:
+            return metrics
+
+        # calculate sample level dp privacy loss statistics.
+        all_client_eps = torch.Tensor(
+            [c.privacy_budget.epsilon for c in clients]  # pyre-ignore
+        )
+        mean_client_eps = all_client_eps.mean()
+        max_client_eps = all_client_eps.max()
+        min_client_eps = all_client_eps.min()
+        p50_client_eps = torch.median(all_client_eps)
+        sample_dp_metrics = Metric.from_args(
+            mean=mean_client_eps,
+            min=min_client_eps,
+            max=max_client_eps,
+            median=p50_client_eps,
+        )
+
+        # calculate user level dp privacy loss statistics.
+        # pyre-ignore[16]
+        user_eps = self.server.privacy_budget.epsilon
+
+        return metrics + [
+            Metric("sample level dp (eps)", sample_dp_metrics),
+            Metric("user level dp (eps)", user_eps),
+        ]
 
     def calc_post_epoch_client_metrics(
         self,
@@ -576,7 +626,7 @@ def force_print(is_distributed: bool, *args, **kwargs) -> None:
 @dataclass
 class SyncTrainerConfig(FLTrainerConfig):
     _target_: str = fullclassname(SyncTrainer)
-    aggregator: SyncAggregatorConfig = SyncAggregatorConfig()
+    server: SyncServerConfig = SyncServerConfig()
     users_per_round: int = 10
     # overselect users_per_round / dropout_rate users, only use first
     # users_per_round updates

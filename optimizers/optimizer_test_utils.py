@@ -181,20 +181,6 @@ class OptimizerTestUtil:
             ), "eps for adam optimizer should be 1e-8"
 
     @classmethod
-    def verify_sync_trainer_aggregator(
-        cls, trainer: SyncTrainer, dict_config: Dict[str, Any]
-    ):
-        assert isinstance(
-            trainer.aggregator, SyncAggregator
-        ), "aggregator should be an instance of SyncAggregator for SyncTrainer"
-        if (
-            "fed_avg" in dict_config["_base_"]
-            and "with_lr" not in dict_config["_base_"]
-        ):
-            assert isinstance(trainer.aggregator, FedAvgSyncAggregator)
-        cls._verify_trainer_common_aggregators(trainer.aggregator, dict_config)
-
-    @classmethod
     def verify_async_trainer_aggregator(
         cls, trainer: AsyncTrainer, dict_config: Dict[str, Any]
     ):
