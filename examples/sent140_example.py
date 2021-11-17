@@ -86,7 +86,6 @@ class Sent140Dataset(Dataset):
         self.targets = {}
 
         self.num_classes = 2
-        self.max_seq_len = max_seq_len
 
         # Populate self.data and self.targets
         for user_id, user_data in self.dataset["user_data"].items():
