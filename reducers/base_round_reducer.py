@@ -20,7 +20,7 @@ from itertools import chain
 from typing import Optional, Tuple
 
 import torch
-from flsim.channels.base_channel import IdentityChannel, IFLChannel
+from flsim.channels.base_channel import IdentityChannel
 from flsim.common.logger import Logger
 from flsim.interfaces.model import IFLModel
 from flsim.utils.config_utils import fullclassname
