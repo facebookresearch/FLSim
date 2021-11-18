@@ -16,11 +16,11 @@ With this tutorial, you will learn the following key components of FLSim:
 import flsim.configs  # noqa
 import hydra
 import torch
-from flsim.baselines.data_providers import FLVisionDataLoader, LEAFDataProvider
-from flsim.baselines.models.cnn import SimpleConvNet
-from flsim.baselines.models.cv_model import FLModel
 from flsim.data.data_sharder import FLDataSharder, ShardingStrategyType
+from flsim.examples.data.data_providers import FLVisionDataLoader, LEAFDataProvider
 from flsim.examples.metrics_reporter.fl_metrics_reporter import MetricsReporter
+from flsim.examples.models.cnn import SimpleConvNet
+from flsim.examples.models.cv_model import FLModel
 from flsim.interfaces.metrics_reporter import Channel
 from flsim.utils.config_utils import maybe_parse_json_config
 from hydra.utils import instantiate

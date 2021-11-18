@@ -22,9 +22,9 @@ import flsim.configs  # noqa
 import hydra  # @manual
 import torch
 import torch.nn as nn
-from flsim.baselines.data_providers import LEAFDataLoader, LEAFDataProvider
-from flsim.baselines.models.cv_model import FLModel
+from flsim.examples.data.data_providers import LEAFDataLoader, LEAFDataProvider
 from flsim.examples.metrics_reporter.fl_metrics_reporter import MetricsReporter
+from flsim.examples.models.cv_model import FLModel
 from flsim.interfaces.metrics_reporter import Channel
 from flsim.utils.config_utils import maybe_parse_json_config
 from hydra.utils import instantiate
