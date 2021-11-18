@@ -3,8 +3,9 @@
     "_base_": "base_sync_trainer",
       "server": {
         "_base_": "base_sync_server",
-        "optimizer": {
-          "type": "fed_avg"
+        "server_optimizer": {
+          "_base_": "base_fed_adam",
+          "beta1": 0.1
         },
         "active_user_selector": {
           "_base_": "base_uniformly_random_active_user_selector"

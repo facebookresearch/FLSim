@@ -7,7 +7,6 @@ from .sync_dp_servers import SyncDPSGDServerConfig
 from .sync_secagg_servers import SyncSecAggServerConfig
 from .sync_servers import SyncServerConfig
 
-
 ConfigStore.instance().store(
     name="base_sync_server",
     node=SyncServerConfig,

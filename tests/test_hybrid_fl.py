@@ -17,11 +17,13 @@ from flsim.optimizers.async_aggregators import (
     FedAvgWithLRHybridAggregatorConfig,
     create_optimizer_for_async_aggregator,
 )
-from flsim.servers.sync_servers import (
-    OptimizerType,
-    SyncServerConfig,
-    FedAvgWithLROptimizerConfig,
+from flsim.optimizers.server_optimizers import (
     FedAdamOptimizerConfig,
+    FedAvgWithLROptimizerConfig,
+    OptimizerType,
+)
+from flsim.servers.sync_servers import (
+    SyncServerConfig,
 )
 from flsim.tests.utils import (
     MetricsReporterWithMockedChannels,
@@ -29,6 +31,7 @@ from flsim.tests.utils import (
 )
 from flsim.trainers.async_trainer import AsyncTrainerConfig
 from flsim.trainers.sync_trainer import SyncTrainerConfig
+from flsim.utils.config_utils import is_target
 from flsim.utils.sample_model import DummyAlphabetFLModel
 from flsim.utils.tests.helpers.async_trainer_test_utils import (
     create_async_trainer,
@@ -124,7 +127,7 @@ class HybridFLTestUtils:
             elif isinstance(server_config, SyncServerConfig):
                 optimizer = OptimizerType.create_optimizer(
                     model=global_model.fl_get_module(),
-                    config=server_config.optimizer,
+                    config=server_config.server_optimizer,
                 )
             else:
                 raise AssertionError(f"Incompatible server config:{server_config}")
@@ -144,7 +147,6 @@ class HybridFLTestUtils:
     ) -> Union[FedAdamHybridAggregatorConfig, FedAvgWithLRHybridAggregatorConfig]:
         if isinstance(aggregator_config, AsyncAggregatorConfig):
             if "FedAdam" in aggregator_config._target_:
-
                 hybrid_aggregator = FedAdamHybridAggregatorConfig(
                     lr=hybrid_lr,
                     # pyre-ignore[16]
@@ -162,20 +164,20 @@ class HybridFLTestUtils:
                 )
             return hybrid_aggregator
         elif isinstance(aggregator_config, SyncServerConfig):
-            if OptimizerType.fed_adam == aggregator_config.optimizer.type:
+            if is_target(aggregator_config.server_optimizer, FedAdamOptimizerConfig):
                 hybrid_aggregator = FedAdamHybridAggregatorConfig(
                     lr=hybrid_lr,
                     # pyre-ignore[16]
-                    weight_decay=aggregator_config.optimizer.weight_decay,
+                    weight_decay=aggregator_config.server_optimizer.weight_decay,
                     # pyre-ignore[16]
-                    eps=aggregator_config.optimizer.eps,
+                    eps=aggregator_config.server_optimizer.eps,
                     buffer_size=buffer_size,
                 )
             else:
                 hybrid_aggregator = FedAvgWithLRHybridAggregatorConfig(
                     lr=hybrid_lr,
                     # pyre-ignore[16]
-                    momentum=aggregator_config.optimizer.momentum,
+                    momentum=aggregator_config.server_optimizer.momentum,
                     buffer_size=buffer_size,
                 )
             return hybrid_aggregator
@@ -565,7 +567,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
         for batch_size in self.batch_sizes:
             global_lr = get_safe_global_lr(batch_size, examples_per_user)
             base_aggregator_config = SyncServerConfig(
-                optimizer=FedAvgWithLROptimizerConfig(lr=global_lr, momentum=0.0)
+                server_optimizer=FedAvgWithLROptimizerConfig(lr=global_lr, momentum=0.0)
             )
             error = HybridFLTestUtils.compare_hybrid_fl_same(
                 trainer_to_compare_hybrid_fl_with=TrainerType.NONFL,
@@ -610,7 +612,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
         local_lr = 1.0
         global_lr = np.random.sample() * 0.01
         base_aggregator_config = SyncServerConfig(
-            optimizer=FedAdamOptimizerConfig(lr=global_lr, eps=1e-2)
+            server_optimizer=FedAdamOptimizerConfig(lr=global_lr, eps=1e-2)
         )
         buffer_size = 1
         error = HybridFLTestUtils.compare_hybrid_fl_same(
@@ -661,7 +663,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
         local_lr = 1.0
         global_lr = 1.0
         base_aggregator_config = SyncServerConfig(
-            optimizer=FedAvgWithLROptimizerConfig(lr=global_lr, momentum=0.0)
+            server_optimizer=FedAvgWithLROptimizerConfig(lr=global_lr, momentum=0.0)
         )
         buffer_size = num_fl_users
         for batch_size in self.batch_sizes:
@@ -719,7 +721,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
         local_lr = 1.0
         global_lr = np.random.sample() * 0.01
         base_aggregator_config = SyncServerConfig(
-            optimizer=FedAdamOptimizerConfig(lr=global_lr, eps=1e-2)
+            server_optimizer=FedAdamOptimizerConfig(lr=global_lr, eps=1e-2)
         )
         buffer_size = num_fl_users
         error = HybridFLTestUtils.compare_hybrid_fl_same(

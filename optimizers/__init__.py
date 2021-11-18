@@ -16,6 +16,13 @@ from .optimizer_scheduler import (
     LRBatchSizeNormalizerSchedulerConfig,
     ArmijoLineSearchSchedulerConfig,
 )
+from .server_optimizers import (
+    FedAdamOptimizerConfig,
+    FedAvgOptimizerConfig,
+    FedAvgWithLROptimizerConfig,
+    FedLAMBOptimizerConfig,
+    FedLARSOptimizerConfig,
+)
 from .sketch_aggregator import SketchAggregatorConfig
 from .sync_aggregators import (
     FedAvgSyncAggregatorConfig,
@@ -130,4 +137,37 @@ ConfigStore.instance().store(
     name="base_sketch_aggregator",
     node=SketchAggregatorConfig,
     group="aggregator",
+)
+
+ConfigStore.instance().store(
+    name="base_fed_adam",
+    node=FedAdamOptimizerConfig,
+    group="server_optimizer",
+)
+
+
+ConfigStore.instance().store(
+    name="base_fed_avg",
+    node=FedAvgOptimizerConfig,
+    group="server_optimizer",
+)
+
+
+ConfigStore.instance().store(
+    name="base_fed_avg_with_lr",
+    node=FedAvgWithLROptimizerConfig,
+    group="server_optimizer",
+)
+
+
+ConfigStore.instance().store(
+    name="base_fed_lars",
+    node=FedLARSOptimizerConfig,
+    group="server_optimizer",
+)
+
+ConfigStore.instance().store(
+    name="base_fed_lamb",
+    node=FedLAMBOptimizerConfig,
+    group="server_optimizer",
 )

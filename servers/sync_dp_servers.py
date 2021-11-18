@@ -6,15 +6,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-import torch
 from flsim.active_user_selectors.simple_user_selector import (
-    ActiveUserSelectorConfig,
     UniformlyRandomActiveUserSelectorConfig,
 )
 from flsim.channels.base_channel import IFLChannel
 from flsim.channels.message import Message
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
+from flsim.optimizers.server_optimizers import (
+    FedAvgOptimizerConfig,
+)
 from flsim.privacy.common import PrivacySetting, PrivacyBudget
 from flsim.privacy.privacy_engine import IPrivacyEngine
 from flsim.privacy.privacy_engine_factory import PrivacyEngineFactory, NoiseType
@@ -23,9 +24,6 @@ from flsim.servers.aggregator import AggregationType, Aggregator
 from flsim.servers.sync_servers import (
     ISyncServer,
     SyncServerConfig,
-    OptimizerType,
-    FedAvgOptimizerConfig,
-    OptimizerConfig,
 )
 from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.distributed.fl_distributed import OperationType, FLDistributedUtils
@@ -65,8 +63,9 @@ class SyncDPSGDServer(ISyncServer):
 
         self.privacy_budget = PrivacyBudget()
         self._clipping_value = self.cfg.privacy_setting.clipping_value
-        self._optimizer: torch.optim.Optimizer = OptimizerType.create_optimizer(
-            model=global_model.fl_get_module(), config=self.cfg.optimizer
+        self._optimizer = instantiate(
+            config=self.cfg.server_optimizer,
+            model=global_model.fl_get_module(),
         )
         self._global_model: IFLModel = global_model
         self._user_update_clipper: UserUpdateClipper = UserUpdateClipper()
@@ -82,6 +81,8 @@ class SyncDPSGDServer(ISyncServer):
     def _set_defaults_in_cfg(cls, cfg):
         if OmegaConf.is_missing(cfg.active_user_selector, "_target_"):
             cfg.active_user_selector = UniformlyRandomActiveUserSelectorConfig()
+        if OmegaConf.is_missing(cfg.server_optimizer, "_target_"):
+            cfg.server_optimizer = FedAvgOptimizerConfig()
 
     @property
     def global_model(self):
@@ -152,6 +153,4 @@ class SyncDPSGDServer(ISyncServer):
 class SyncDPSGDServerConfig(SyncServerConfig):
     _target_: str = fullclassname(SyncDPSGDServer)
     aggregation_type: AggregationType = AggregationType.AVERAGE
-    optimizer: OptimizerConfig = FedAvgOptimizerConfig()
     privacy_setting: PrivacySetting = PrivacySetting()
-    active_user_selector: ActiveUserSelectorConfig = ActiveUserSelectorConfig()

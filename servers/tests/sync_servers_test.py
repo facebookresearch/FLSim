@@ -10,16 +10,16 @@ from flsim.active_user_selectors.simple_user_selector import (
 )
 from flsim.channels.message import Message
 from flsim.common.pytest_helper import assertEqual, assertEmpty
-from flsim.servers.aggregator import AggregationType
-from flsim.servers.sync_servers import (
-    SyncServerConfig,
+from flsim.optimizers.server_optimizers import (
     FedAvgOptimizerConfig,
     FedAdamOptimizerConfig,
     FedAvgWithLROptimizerConfig,
-    OptimizerType,
     FedLARSOptimizerConfig,
     FedLAMBOptimizerConfig,
+    OptimizerType,
 )
+from flsim.servers.aggregator import AggregationType
+from flsim.servers.sync_servers import SyncServerConfig
 from flsim.tests.utils import (
     create_model_with_value,
     model_parameters_equal_to_value,
@@ -83,11 +83,11 @@ class SyncServerTest(testutil.BaseFacebookTestCase):
         server_model = SampleNet(create_model_with_value(0))
         optim_model = create_model_with_value(0)
         server = instantiate(
-            SyncServerConfig(aggregation_type=agg_type, optimizer=opt_config),
+            SyncServerConfig(aggregation_type=agg_type, server_optimizer=opt_config),
             global_model=server_model,
         )
-        optimizer = OptimizerType.create_optimizer(optim_model, opt_config)
 
+        optimizer = OptimizerType.create_optimizer(optim_model, opt_config)
         client_updates = self._create_client_updates(
             num_clients, aggregation_type=agg_type
         )
@@ -131,7 +131,8 @@ class SyncServerTest(testutil.BaseFacebookTestCase):
         server_model = SampleNet(create_model_with_value(0))
         server = instantiate(
             SyncServerConfig(
-                aggregation_type=aggregation_type, optimizer=FedAvgOptimizerConfig()
+                aggregation_type=aggregation_type,
+                server_optimizer=FedAvgOptimizerConfig(),
             ),
             global_model=server_model,
         )

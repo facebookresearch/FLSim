@@ -27,11 +27,12 @@ from flsim.optimizers.local_optimizers import (
     LocalOptimizerFedProxConfig,
 )
 from flsim.optimizers.optimizer_scheduler import ArmijoLineSearchSchedulerConfig
+from flsim.optimizers.server_optimizers import (
+    FedAdamOptimizerConfig,
+    FedAvgWithLROptimizerConfig,
+)
 from flsim.servers.sync_servers import (
     SyncServerConfig,
-    OptimizerType,
-    FedAvgWithLROptimizerConfig,
-    FedAdamOptimizerConfig,
 )
 from flsim.tests.utils import (
     FakeMetricReporter,
@@ -104,6 +105,18 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             cuda_enabled=False,
         )
         self.assertIsInstance(trainer, trainer_class)
+
+    def test_trainer_sync_server_creation_from_json_config(self):
+        file_path = pkg_resources.resource_filename(__name__, SYNC_TRAINER_JSON)
+        with open(file_path, "r") as parameters_file:
+            json_cfg = json.load(parameters_file)
+        cfg = fl_config_from_json(json_cfg)
+        trainer = instantiate(
+            cfg.trainer,
+            model=DummyAlphabetFLModel(),
+            cuda_enabled=False,
+        )
+        self.assertIsInstance(trainer.server._optimizer, torch.optim.Adam)
 
     @testutil.data_provider(
         lambda: (
@@ -244,7 +257,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         lambda: (
             {
                 "config": SyncServerConfig(
-                    optimizer=FedAvgWithLROptimizerConfig(lr=1.0, momentum=0.0)
+                    server_optimizer=FedAvgWithLROptimizerConfig(lr=1.0, momentum=0.0)
                 ),
                 "trainer_type": SyncTrainer,
             },
@@ -682,9 +695,9 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         )
         nonfl_model = copy.deepcopy(global_model_init_copy)
 
-        optimizer = OptimizerType.create_optimizer(
+        optimizer = instantiate(
+            config=server_config.server_optimizer,
             model=nonfl_model.fl_get_module(),
-            config=server_config.optimizer,
         )
 
         FLTestUtils.run_nonfl_training(
@@ -720,7 +733,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             epochs=5,
             local_lr=1.0,
             server_config=SyncServerConfig(
-                optimizer=FedAvgWithLROptimizerConfig(lr=1.0, momentum=0.0),
+                server_optimizer=FedAvgWithLROptimizerConfig(lr=1.0, momentum=0.0),
                 active_user_selector=SequentialActiveUserSelectorConfig(),
             ),
         )
@@ -742,7 +755,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             epochs=5,
             local_lr=1.0,
             server_config=SyncServerConfig(
-                optimizer=FedAdamOptimizerConfig(lr=0.001, eps=1e-2),
+                server_optimizer=FedAdamOptimizerConfig(lr=0.001, eps=1e-2),
                 active_user_selector=SequentialActiveUserSelectorConfig(),
             ),
         )
@@ -983,7 +996,9 @@ class TrainerTest(testutil.BaseFacebookTestCase):
                         max_clip_norm_normalized=None,
                     ),
                     server=SyncServerConfig(
-                        optimizer=FedAvgWithLROptimizerConfig(lr=1.0, momentum=0.0),
+                        server_optimizer=FedAvgWithLROptimizerConfig(
+                            lr=1.0, momentum=0.0
+                        ),
                         active_user_selector=SequentialActiveUserSelectorConfig(),
                     ),
                     report_client_metrics=True,

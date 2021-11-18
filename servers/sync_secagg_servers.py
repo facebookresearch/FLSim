@@ -6,7 +6,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-import torch
 from flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorConfig,
     UniformlyRandomActiveUserSelectorConfig,
@@ -15,6 +14,9 @@ from flsim.channels.base_channel import IFLChannel
 from flsim.channels.message import Message
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
+from flsim.optimizers.server_optimizers import (
+    FedAvgOptimizerConfig,
+)
 from flsim.secure_aggregation.secure_aggregator import (
     FixedPointConfig,
     SecureAggregator,
@@ -24,7 +26,6 @@ from flsim.servers.aggregator import AggregationType, Aggregator
 from flsim.servers.sync_servers import (
     ISyncServer,
     SyncServerConfig,
-    OptimizerType,
 )
 from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.fl.common import FLModelParamUtils
@@ -46,9 +47,10 @@ class SyncSecAggServer(ISyncServer):
             config_class=SyncSecAggServerConfig,
             **kwargs,
         )
-        self._optimizer: torch.optim.Optimizer = OptimizerType.create_optimizer(
+        self._optimizer = instantiate(
+            # pyre-fixme[16]: `SyncServer` has no attribute `cfg`.
+            config=self.cfg.server_optimizer,
             model=global_model.fl_get_module(),
-            config=self.cfg.optimizer,  # pyre-ignore[16]
         )
         self._global_model: IFLModel = global_model
         self._aggregator: Aggregator = Aggregator(
@@ -68,6 +70,8 @@ class SyncSecAggServer(ISyncServer):
     def _set_defaults_in_cfg(cls, cfg):
         if OmegaConf.is_missing(cfg.active_user_selector, "_target_"):
             cfg.active_user_selector = UniformlyRandomActiveUserSelectorConfig()
+        if OmegaConf.is_missing(cfg.server_optimizer, "_target_"):
+            cfg.server_optimizer = FedAvgOptimizerConfig()
 
     @property
     def global_model(self):

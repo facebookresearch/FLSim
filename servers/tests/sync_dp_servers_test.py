@@ -40,7 +40,7 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
         server = instantiate(
             SyncDPSGDServerConfig(
                 aggregation_type=AggregationType.AVERAGE,
-                optimizer=FedAvgOptimizerConfig(lr=1.0),
+                server_optimizer=FedAvgOptimizerConfig(),
                 privacy_setting=PrivacySetting(
                     clipping_value=clipping_value,
                     noise_multiplier=noise_multiplier,
@@ -159,7 +159,7 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
         no_dp_server = instantiate(
             SyncServerConfig(
                 aggregation_type=AggregationType.AVERAGE,
-                optimizer=FedAvgOptimizerConfig(lr=1.0),
+                server_optimizer=FedAvgOptimizerConfig(),
             ),
             global_model=no_dp_model,
         )

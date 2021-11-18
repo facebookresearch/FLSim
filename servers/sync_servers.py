@@ -5,11 +5,8 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass
-from enum import Enum
 from typing import Optional, List
 
-import torch
-import torch.nn as nn
 from flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorConfig,
     UniformlyRandomActiveUserSelectorConfig,
@@ -18,74 +15,16 @@ from flsim.channels.base_channel import IFLChannel
 from flsim.channels.message import Message
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
-from flsim.optimizers.layerwise_optimizers import LAMB, LARS
+from flsim.optimizers.server_optimizers import (
+    ServerOptimizerConfig,
+    FedAvgOptimizerConfig,
+    OptimizerType,
+)
 from flsim.servers.aggregator import AggregationType, Aggregator
 from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
-
-
-class OptimizerType(Enum):
-    fed_avg: str = "FedAvg"
-    fed_avg_with_lr: str = "FedAvgWithLR"
-    fed_adam: str = "FedAdam"
-    fed_lamb: str = "FedLAMB"
-    fed_lars: str = "FedLARS"
-    fed_prox: str = "FedProx"
-
-    @staticmethod
-    def create_optimizer(
-        model: nn.Module, config: OptimizerConfig
-    ) -> torch.optim.Optimizer:
-        if config.type == OptimizerType.fed_avg_with_lr:
-            return torch.optim.SGD(
-                model.parameters(),
-                lr=config.lr,
-                # pyre-ignore[16] Undefined attribute
-                momentum=config.momentum,
-            )
-        elif config.type == OptimizerType.fed_adam:
-            return torch.optim.Adam(
-                model.parameters(),
-                lr=config.lr,
-                # pyre-ignore[16] Undefined attribute
-                weight_decay=config.weight_decay,
-                # pyre-ignore[16] Undefined attribute
-                betas=(config.beta1, config.beta2),
-                # pyre-ignore[16] Undefined attribute
-                eps=config.eps,
-            )
-        elif config.type == OptimizerType.fed_lars:
-            # pyre-ignore[7]
-            return LARS(
-                model.parameters(),
-                lr=config.lr,
-                # pyre-ignore[16] Undefined attribute
-                beta=config.beta,
-                weight_decay=config.weight_decay,
-            )
-
-        elif config.type == OptimizerType.fed_lamb:
-            # pyre-ignore[7]
-            return LAMB(
-                model.parameters(),
-                lr=config.lr,
-                beta1=config.beta1,
-                beta2=config.beta2,
-                weight_decay=config.weight_decay,
-                eps=config.eps,
-            )
-        elif config.type == OptimizerType.fed_avg:
-            return torch.optim.SGD(
-                model.parameters(),
-                lr=1.0,
-                momentum=0,
-            )
-        else:
-            raise ValueError(
-                f"Optimizer type {config.type} not found. Please update OptimizerType.create_optimizer"
-            )
 
 
 class ISyncServer(abc.ABC):
@@ -168,10 +107,10 @@ class SyncServer(ISyncServer):
             config_class=SyncServerConfig,
             **kwargs,
         )
-        self._optimizer: torch.optim.Optimizer = OptimizerType.create_optimizer(
-            model=global_model.fl_get_module(),
+        self._optimizer = OptimizerType.create_optimizer(
             # pyre-fixme[16]: `SyncServer` has no attribute `cfg`.
-            config=self.cfg.optimizer,
+            config=self.cfg.server_optimizer,
+            model=global_model.fl_get_module(),
         )
         self._global_model: IFLModel = global_model
         self._aggregator: Aggregator = Aggregator(
@@ -185,6 +124,8 @@ class SyncServer(ISyncServer):
     def _set_defaults_in_cfg(cls, cfg):
         if OmegaConf.is_missing(cfg.active_user_selector, "_target_"):
             cfg.active_user_selector = UniformlyRandomActiveUserSelectorConfig()
+        if OmegaConf.is_missing(cfg.server_optimizer, "_target_"):
+            cfg.server_optimizer = FedAvgOptimizerConfig()
 
     @property
     def global_model(self):
@@ -227,56 +168,10 @@ class SyncServer(ISyncServer):
 
 
 @dataclass
-class OptimizerConfig:
-    type: OptimizerType = OptimizerType.fed_avg
-    lr: float = 1.0
-
-
-@dataclass
-class FedAvgOptimizerConfig(OptimizerConfig):
-    type: OptimizerType = OptimizerType.fed_avg
-
-
-@dataclass
-class FedAvgWithLROptimizerConfig(OptimizerConfig):
-    type: OptimizerType = OptimizerType.fed_avg_with_lr
-    lr: float = 0.001
-    momentum: float = 0.0
-
-
-@dataclass
-class FedAdamOptimizerConfig(OptimizerConfig):
-    type: OptimizerType = OptimizerType.fed_adam
-    lr: float = 0.001
-    weight_decay: float = 0.00001
-    beta1: float = 0.9
-    beta2: float = 0.999
-    eps: float = 1e-8
-
-
-@dataclass
-class FedLARSOptimizerConfig(OptimizerConfig):
-    type: OptimizerType = OptimizerType.fed_lars
-    lr: float = 0.001
-    weight_decay: float = 0.00001
-    beta: float = 0.9
-
-
-@dataclass
-class FedLAMBOptimizerConfig(OptimizerConfig):
-    type: OptimizerType = OptimizerType.fed_lamb
-    lr: float = 0.001
-    weight_decay: float = 0.00001
-    beta1: float = 0.9
-    beta2: float = 0.999
-    eps: float = 1e-8
-
-
-@dataclass
 class SyncServerConfig:
     _target_: str = fullclassname(SyncServer)
     _recursive_: bool = False
     only_federated_params: bool = True
     aggregation_type: AggregationType = AggregationType.WEIGHTED_AVERAGE
-    optimizer: OptimizerConfig = FedAvgOptimizerConfig()
+    server_optimizer: ServerOptimizerConfig = ServerOptimizerConfig()
     active_user_selector: ActiveUserSelectorConfig = ActiveUserSelectorConfig()
