@@ -182,64 +182,6 @@ class IdentityChannel(IFLChannel):
 
         return message
 
-    def get_client_channel_endpoint(self) -> ClientChannelEndPoint:
-        """
-        From the perspective of a client, this simulates a *single direction*
-        channel with only one public method regarding message transmission:
-        receive (from the server). Under the hood, receive will call the method
-        ``client_to_server``.
-        """
-
-        return ClientChannelEndPoint(self)
-
-    def get_server_channel_endpoint(self) -> ServerChannelEndPoint:
-        """
-        From the perspective of the server, this simulates a *single direction*
-        channel with only one public method regarding message transmission:
-        receive (from a client). Under the hood, receive will call the method
-        ``client_to_server``.
-        """
-
-        return ServerChannelEndPoint(self)
-
-
-class ServerChannelEndPoint:
-    """
-    From the perspective of the server, this simulates a *single direction*
-    channel with only one public method: receive (from a client). Under
-    the hood, receive will call the method ``client_to_server``.
-
-    The goal is to avoid confusion between the ``server_to_client``
-    and ``client_to_server`` methods by having two distinct end points,
-    ClientChannelEndPoint and ServerChannelEndPoint with a single
-    method regarding message transmission: receive.
-    """
-
-    def __init__(self, channel: IFLChannel):
-        self._channel = channel
-
-    def receive(self, message):
-        return self._channel.client_to_server(message)
-
-
-class ClientChannelEndPoint:
-    """
-    From the perspective of a client, this simulates a *single direction*
-    channel with only one public method: receive (from the server). Under
-    the hood, receive will call the method ``client_to_server``.
-
-    The goal is to avoid confusion between the ``server_to_client``
-    and ``client_to_server`` methods by having two distinct end points,
-    ClientChannelEndPoint and ServerChannelEndPoint with a single
-    method regarding message transmission: receive.
-    """
-
-    def __init__(self, channel: IFLChannel):
-        self._channel = channel
-
-    def receive(self, message):
-        return self._channel.server_to_client(message)
-
 
 @dataclass
 class FLChannelConfig:

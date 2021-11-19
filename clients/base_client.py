@@ -20,6 +20,7 @@ from typing import Any, List, Optional, Tuple, Iterable
 
 import torch
 from flsim.channels.base_channel import IdentityChannel
+from flsim.channels.message import Message
 from flsim.common.logger import Logger
 from flsim.common.timeout_simulator import (
     NeverTimeOutSimulator,
@@ -182,9 +183,11 @@ class Client:
         # keep a reference to global model
         self.ref_model = model
 
-        # Fixing this in the next diff
+        # need to deepcopy the model because it's a reference to the global model
+        # modifying model will moidify the global model
+        message = self.channel.server_to_client(Message(model=deepcopy(model)))
 
-        return deepcopy(model)
+        return message.model
 
     def prepare_for_training(
         self, model: IFLModel
