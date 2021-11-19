@@ -8,8 +8,9 @@ import pytest
 import torch
 from flsim.common.pytest_helper import assertEqual
 from flsim.data.csv_dataset import FLCSVDataset
-from flsim.data.data_sharder import FLDataSharder
+from flsim.data.data_sharder import ColumnSharderConfig
 from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
+from hydra.utils import instantiate
 
 
 @pytest.fixture(scope="class")
@@ -36,9 +37,7 @@ class TestDatasetDataLoaderWithBatch:
         file_path = pkg_resources.resource_filename(__name__, self.test_csv_path)
         dataset = TestDataset(file_path)
 
-        fl_data_sharder = FLDataSharder(
-            "column", None, None, "userid", None  # sharding_strategy  # userid column
-        )
+        fl_data_sharder = instantiate(ColumnSharderConfig(sharding_col="userid"))
         data_loader = FLDatasetDataLoaderWithBatch(
             dataset,
             dataset,

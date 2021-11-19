@@ -16,7 +16,7 @@ With this tutorial, you will learn the following key components of FLSim:
 import flsim.configs  # noqa
 import hydra
 import torch
-from flsim.data.data_sharder import FLDataSharder, ShardingStrategyType
+from flsim.data.data_sharder import SequentialSharder
 from flsim.examples.data.data_providers import FLVisionDataLoader, LEAFDataProvider
 from flsim.examples.metrics_reporter.fl_metrics_reporter import MetricsReporter
 from flsim.examples.models.cnn import SimpleConvNet
@@ -48,9 +48,7 @@ def build_data_provider(local_batch_size, examples_per_user, drop_last=False):
     test_dataset = CIFAR10(
         root="../cifar10", train=False, download=True, transform=transform
     )
-    sharder = FLDataSharder(
-        ShardingStrategyType.SEQUENTIAL, shard_size_for_sequential=examples_per_user
-    )
+    sharder = SequentialSharder(examples_per_shard=examples_per_user)
     fl_data_loader = FLVisionDataLoader(
         train_dataset, test_dataset, test_dataset, sharder, local_batch_size, drop_last
     )

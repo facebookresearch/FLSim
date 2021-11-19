@@ -7,7 +7,7 @@ from typing import Tuple
 
 import torch
 from flsim.data.data_provider import FLDataProviderFromList
-from flsim.data.data_sharder import FLDataSharder, ShardingStrategyType
+from flsim.data.data_sharder import SequentialSharder, PowerLawSharder
 from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
 from flsim.interfaces.model import IFLModel
 from flsim.utils.sample_model import TestDataSetting
@@ -66,9 +66,7 @@ class DummyAlphabetDataset(Dataset):
         """
         Creates a data provider and data loader of type IFLDataProvider for a dataset
         """
-        fl_data_sharder = FLDataSharder(
-            ShardingStrategyType.SEQUENTIAL, shard_size_for_sequential=examples_per_user
-        )
+        fl_data_sharder = SequentialSharder(examples_per_shard=examples_per_user)
         fl_data_loader = FLDatasetDataLoaderWithBatch(
             dataset,
             dataset,
@@ -99,9 +97,7 @@ class DummyAlphabetDataset(Dataset):
         examples per user following the power law distribution with order alpha
         """
         dataset = DummyAlphabetDataset(num_examples)
-        fl_data_sharder = FLDataSharder(
-            ShardingStrategyType.POWER_LAW, num_shards=num_fl_users, alpha=alpha
-        )
+        fl_data_sharder = PowerLawSharder(num_shards=num_fl_users, alpha=alpha)
         fl_data_loader = FLDatasetDataLoaderWithBatch(
             dataset,
             dataset,
@@ -183,9 +179,7 @@ class NonOverlappingDataset(Dataset):
         """
         Creates a data provider and data loader of type IFLDataProvider for a dataset
         """
-        fl_data_sharder = FLDataSharder(
-            ShardingStrategyType.SEQUENTIAL, shard_size_for_sequential=examples_per_user
-        )
+        fl_data_sharder = SequentialSharder(examples_per_shard=examples_per_user)
         fl_data_loader = FLDatasetDataLoaderWithBatch(
             dataset,
             dataset,
@@ -255,9 +249,7 @@ class RandomDataset(Dataset):
         """
         Creates a data provider and data loader of type IFLDataProvider for a dataset
         """
-        fl_data_sharder = FLDataSharder(
-            ShardingStrategyType.SEQUENTIAL, shard_size_for_sequential=examples_per_user
-        )
+        fl_data_sharder = SequentialSharder(examples_per_shard=examples_per_user)
         fl_data_loader = FLDatasetDataLoaderWithBatch(
             dataset,
             dataset,

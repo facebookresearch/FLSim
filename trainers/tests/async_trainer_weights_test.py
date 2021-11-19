@@ -11,7 +11,7 @@ from flsim.common.pytest_helper import (
     assertEmpty,
 )
 from flsim.data.data_provider import FLDataProviderFromList, IFLDataProvider
-from flsim.data.data_sharder import FLDataSharder, ShardingStrategyType
+from flsim.data.data_sharder import RoundRobinSharder
 from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.async_aggregators import (
@@ -180,9 +180,7 @@ class TestAsyncTrainerWeights:
         self, num_examples: int, num_fl_users: int, fl_batch_size: int, model: IFLModel
     ) -> IFLDataProvider:
         dummy_dataset = DummyAlphabetDataset(num_examples)
-        fl_data_sharder = FLDataSharder(
-            sharding_strategy=ShardingStrategyType.ROUND_ROBIN, num_shards=num_fl_users
-        )
+        fl_data_sharder = RoundRobinSharder(num_shards=num_fl_users)
         fl_data_loader = FLDatasetDataLoaderWithBatch(
             dummy_dataset,
             dummy_dataset,

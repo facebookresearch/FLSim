@@ -6,11 +6,14 @@ import random
 import string
 
 import torch
-from flsim.common.pytest_helper import assertEqual, assertTrue, assertIsInstance
+from flsim.common.pytest_helper import assertEqual, assertTrue
 from flsim.data.data_sharder import (
-    FLDataSharder,
-    ShardingStrategyFactory,
-    ShardingStrategyType,
+    RandomSharderConfig,
+    SequentialSharderConfig,
+    RoundRobinSharderConfig,
+    ColumnSharderConfig,
+    BroadcastSharderConfig,
+    PowerLawSharderConfig,
 )
 from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
 from flsim.utils.sample_model import TestDataSetting
@@ -18,6 +21,7 @@ from flsim.utils.tests.helpers.test_data_utils import (
     DummyAlphabetDataset,
     Utils,
 )
+from hydra.utils import instantiate
 
 
 class MockData:
@@ -40,128 +44,59 @@ class MockData:
         ]
 
 
-def provide_configs():
-    return {
-        FLDataSharder.RandomSharding: FLDataSharder.Config(
-            sharding_strategy=ShardingStrategyType.RANDOM,
-            num_shards=TestDataSetting.NUM_SHARDS,
-            sharding_colindex=None,
-            sharding_col_name=None,
-            shard_size_for_sequential=None,
-            alpha=None,
-        ),
-        FLDataSharder.BroadcastSharding: FLDataSharder.Config(
-            sharding_strategy=ShardingStrategyType.BROADCAST,
-            num_shards=TestDataSetting.NUM_SHARDS,
-            sharding_colindex=None,
-            sharding_col_name=None,
-            shard_size_for_sequential=None,
-            alpha=None,
-        ),
-        FLDataSharder.ColumnSharding: FLDataSharder.Config(
-            sharding_strategy=ShardingStrategyType.COLUMN,
-            num_shards=None,
-            sharding_colindex=None,
-            sharding_col_name=TestDataSetting.USER_ID_COL_NAME,
-            shard_size_for_sequential=None,
-            alpha=None,
-        ),
-        FLDataSharder.RoundRobinSharding: FLDataSharder.Config(
-            sharding_strategy=ShardingStrategyType.ROUND_ROBIN,
-            num_shards=TestDataSetting.NUM_SHARDS,
-            sharding_colindex=None,
-            sharding_col_name=None,
-            shard_size_for_sequential=None,
-            alpha=None,
-        ),
-        FLDataSharder.SequentialSharding: FLDataSharder.Config(
-            sharding_strategy=ShardingStrategyType.SEQUENTIAL,
-            num_shards=None,
-            sharding_colindex=None,
-            sharding_col_name=None,
-            shard_size_for_sequential=2,
-            alpha=None,
-        ),
-        FLDataSharder.PowerLawSharding: FLDataSharder.Config(
-            sharding_strategy=ShardingStrategyType.POWER_LAW,
-            num_shards=5,
-            sharding_colindex=None,
-            sharding_col_name=None,
-            shard_size_for_sequential=None,
-            alpha=0.2,
-        ),
-    }
-
-
 class TestDataSharder:
-    def test_sharder_strategy_factory(self) -> None:
-        for sharder_type, config in provide_configs().items():
-            sharder = ShardingStrategyFactory.create(config)
-            assertIsInstance(sharder, sharder_type)
-
     def test_random_sharder(self) -> None:
         """Only tests random sharding strategy in this test case. All the other
         strategies are tested in test_shard_rows().
         """
-        random_sharder_config = provide_configs()[FLDataSharder.RandomSharding]
         random.seed(1)
-        random_sharder = ShardingStrategyFactory.create(random_sharder_config)
-        for i in range(random_sharder_config.num_shards + 1):
+        random_sharder = instantiate(
+            RandomSharderConfig(num_shards=TestDataSetting.NUM_SHARDS)
+        )
+        for i in range(random_sharder.cfg.num_shards + 1):
             shard = random_sharder.shard_for_row(
                 MockData.provide_data()[i % sum(1 for row in MockData.provide_data())]
             )
             if i == 0:
                 assertEqual(shard, [6])
-            elif i == random_sharder_config.num_shards:
+            elif i == random_sharder.cfg.num_shards:
                 assertEqual(shard, [3])
 
     def test_shard_rows_random(self) -> None:
-        random_sharder_config = provide_configs()[FLDataSharder.RandomSharding]
-        random_fl_sharder = FLDataSharder(
-            sharding_strategy=random_sharder_config.sharding_strategy,
-            num_shards=random_sharder_config.num_shards,
+        random_sharder = instantiate(
+            RandomSharderConfig(num_shards=TestDataSetting.NUM_SHARDS)
         )
         random_sharded_rows = list(
-            random_fl_sharder.shard_rows(
+            random_sharder.shard_rows(
                 MockData.provide_data()[
                     : min(
-                        int(random_sharder_config.num_shards * 1.2 + 1),
+                        int(random_sharder.cfg.num_shards * 1.2 + 1),
                         sum(1 for row in MockData.provide_data()),
                     )
                 ]
             )
         )
-        assertEqual(len(random_sharded_rows), random_sharder_config.num_shards)
+        assertEqual(len(random_sharded_rows), random_sharder.cfg.num_shards)
 
     def test_shard_rows_power_law(self) -> None:
-        power_sharder_config = provide_configs()[FLDataSharder.PowerLawSharding]
-        power_fl_sharder = FLDataSharder(
-            sharding_strategy=power_sharder_config.sharding_strategy,
-            num_shards=power_sharder_config.num_shards,
-            alpha=power_sharder_config.alpha,
-        )
+        power_law_sharder = instantiate(PowerLawSharderConfig(num_shards=2, alpha=0.2))
         power_law_sharded_rows = list(
-            power_fl_sharder.shard_rows(MockData.provide_data())
+            power_law_sharder.shard_rows(MockData.provide_data())
         )
         num_examples_per_user = [len(p) for _, p in power_law_sharded_rows]
-        assertEqual(len(num_examples_per_user), power_sharder_config.num_shards)
+        assertEqual(len(num_examples_per_user), power_law_sharder.cfg.num_shards)
         # assert that top user will have more than 20% of the examples
         assertTrue(max(num_examples_per_user) / sum(num_examples_per_user) > 0.20)
 
     def test_shard_rows_broadcast(self) -> None:
-        broadcast_sharder_config = provide_configs()[FLDataSharder.BroadcastSharding]
-        broadcast_fl_sharder = FLDataSharder(
-            broadcast_sharder_config.sharding_strategy,
-            broadcast_sharder_config.num_shards,
-            broadcast_sharder_config.sharding_colindex,
-            broadcast_sharder_config.sharding_col_name,
-            broadcast_sharder_config.alpha,
+        broadcast_sharder = instantiate(
+            BroadcastSharderConfig(num_shards=TestDataSetting.NUM_SHARDS)
         )
         # all rows from dataset should be replicated to all shards
         assertEqual(
             [
                 user_data
-                for _, user_data in broadcast_fl_sharder.shard_rows(
+                for _, user_data in broadcast_sharder.shard_rows(
                     MockData.provide_data()
                 )
             ],
@@ -172,85 +107,58 @@ class TestDataSharder:
         )
 
     def test_shard_rows_column(self) -> None:
-        column_sharder_config = provide_configs()[FLDataSharder.ColumnSharding]
-        column_fl_sharder = FLDataSharder(
-            column_sharder_config.sharding_strategy,
-            column_sharder_config.num_shards,
-            column_sharder_config.sharding_colindex,
-            column_sharder_config.sharding_col_name,
-            column_sharder_config.alpha,
+        column_sharder = instantiate(
+            ColumnSharderConfig(sharding_col=TestDataSetting.USER_ID_COL_NAME)
         )
         # each data row should be assigned to a unique shard, since column
         # sharding is based on user id here and each mocked user id is unique
         assertEqual(
             [
                 user_data
-                for _, user_data in column_fl_sharder.shard_rows(
-                    MockData.provide_data()
-                )
+                for _, user_data in column_sharder.shard_rows(MockData.provide_data())
             ],
             [[one_data_row] for one_data_row in MockData.provide_data()],
         )
 
     def test_shard_rows_round_robin(self) -> None:
-        roundrobin_sharder_config = provide_configs()[FLDataSharder.RoundRobinSharding]
-        roundrobin_fl_sharder = FLDataSharder(
-            roundrobin_sharder_config.sharding_strategy,
-            roundrobin_sharder_config.num_shards,
-            roundrobin_sharder_config.sharding_colindex,
-            roundrobin_sharder_config.sharding_col_name,
-            roundrobin_sharder_config.alpha,
+        round_robin_sharder = instantiate(
+            RoundRobinSharderConfig(num_shards=TestDataSetting.NUM_SHARDS)
         )
-        sharded_rows_from_roundrobin = [
+        sharded_rows_from_round_robin = [
             user_data
-            for _, user_data in roundrobin_fl_sharder.shard_rows(
-                MockData.provide_data()
-            )
+            for _, user_data in round_robin_sharder.shard_rows(MockData.provide_data())
         ]
         # there are 26 data rows here and it should be sharded with round-
         # robin fashion with 10 shards. e.g. 1th, 11th, 21th data row
         # should be in the same shard.
-        for shard_index in range(TestDataSetting.NUM_SHARDS):
+        for shard_index in range(round_robin_sharder.cfg.num_shards):
             assertEqual(
-                sharded_rows_from_roundrobin[shard_index],
+                sharded_rows_from_round_robin[shard_index],
                 [
                     one_data_row
                     for row_index, one_data_row in enumerate(MockData.provide_data())
-                    if row_index % TestDataSetting.NUM_SHARDS == shard_index
+                    if row_index % round_robin_sharder.cfg.num_shards == shard_index
                 ],
             )
 
     def test_shard_rows_sequential(self) -> None:
-        sequential_sharder_config = provide_configs()[FLDataSharder.SequentialSharding]
-        sequential_fl_sharder = FLDataSharder(
-            sequential_sharder_config.sharding_strategy,
-            sequential_sharder_config.num_shards,
-            sequential_sharder_config.sharding_colindex,
-            sequential_sharder_config.sharding_col_name,
-            sequential_sharder_config.shard_size_for_sequential,
-            sequential_sharder_config.alpha,
-        )
+        sequential_sharder = instantiate(SequentialSharderConfig(examples_per_shard=2))
         sharded_rows_from_sequential = [
             user_data
-            for _, user_data in sequential_fl_sharder.shard_rows(
-                MockData.provide_data()
-            )
+            for _, user_data in sequential_sharder.shard_rows(MockData.provide_data())
         ]
         assertEqual(
             len(sharded_rows_from_sequential),
-            len(string.ascii_lowercase)
-            / sequential_sharder_config.shard_size_for_sequential,
+            len(string.ascii_lowercase) / sequential_sharder.cfg.examples_per_shard,
         )
         dataset = MockData.provide_data()
         for shard_index, data_for_a_shard in enumerate(sharded_rows_from_sequential):
-            start_index = (
-                shard_index * sequential_sharder_config.shard_size_for_sequential
-            )
+            start_index = shard_index * sequential_sharder.cfg.examples_per_shard
             assertEqual(
                 data_for_a_shard,
                 dataset[
                     start_index : start_index
-                    + sequential_sharder_config.shard_size_for_sequential
+                    + sequential_sharder.cfg.examples_per_shard
                 ],
             )
 
@@ -262,7 +170,9 @@ class TestDataSharder:
 
         # mock world_size parallel creation of fl_train_set
         for rank in range(world_size):
-            fl_data_sharder = FLDataSharder("sequential", None, None, None, shard_size)
+            fl_data_sharder = instantiate(
+                SequentialSharderConfig(examples_per_shard=shard_size)
+            )
             data_loader = FLDatasetDataLoaderWithBatch(
                 MockData.provide_data(),
                 MockData.provide_data(),
@@ -275,7 +185,8 @@ class TestDataSharder:
             train_set = data_loader.fl_train_set(rank=rank, world_size=world_size)
             assertEqual(data_loader.num_total_users, math.ceil(26 / shard_size))
             number_of_users_on_worker = 2 if rank in (0, 1, 2) else 1
-            # pyre-fixme[6]
+            # pyre-fixme[6]: Expected `Sized` for 1st param but got
+            #  `Iterable[typing.Iterable[typing.Any]]`.
             train_set_size = len(train_set)
             assertEqual(train_set_size, number_of_users_on_worker)
 
@@ -284,7 +195,9 @@ class TestDataSharder:
         shard_size = 4
         local_batch_size = 2
 
-        fl_data_sharder = FLDataSharder("sequential", None, None, None, shard_size)
+        fl_data_sharder = instantiate(
+            SequentialSharderConfig(examples_per_shard=shard_size)
+        )
         dummy_dataset = DummyAlphabetDataset()
         data_loader = FLDatasetDataLoaderWithBatch(
             dummy_dataset,

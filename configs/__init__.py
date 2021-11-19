@@ -8,5 +8,6 @@
 # of all the config store definitions. Similarly, importing data module
 # will import all necessary dataloader configs.
 
+import flsim.data  # noqa
 import flsim.fb.data  # noqa
 import flsim.trainers  # noqa

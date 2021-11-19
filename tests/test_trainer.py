@@ -15,7 +15,7 @@ from flsim.active_user_selectors.simple_user_selector import (
 from flsim.clients.base_client import ClientConfig
 from flsim.common.timeout_simulator import GaussianTimeOutSimulatorConfig
 from flsim.data.data_provider import FLDataProviderFromList
-from flsim.data.data_sharder import FLDataSharder
+from flsim.data.data_sharder import SequentialSharder
 from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
 from flsim.fb.data.hive_data_utils import create_dataloader
 from flsim.fb.data.hive_dataset import InlineDatasetConfig
@@ -180,7 +180,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         local_batch_size = 4
         world_size = 1
         dummy_dataset = DummyAlphabetDataset()
-        fl_data_sharder = FLDataSharder("sequential", None, None, None, shard_size)
+        fl_data_sharder = SequentialSharder(examples_per_shard=shard_size)
         data_loader = FLDatasetDataLoaderWithBatch(
             dummy_dataset,
             dummy_dataset,
@@ -291,7 +291,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         local_batch_size = 4
         world_size = 1
         dummy_dataset = DummyAlphabetDataset()
-        fl_data_sharder = FLDataSharder("sequential", None, None, None, shard_size)
+        fl_data_sharder = SequentialSharder(examples_per_shard=shard_size)
         data_loader = FLDatasetDataLoaderWithBatch(
             dummy_dataset,
             dummy_dataset,
@@ -373,7 +373,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         local_batch_size = 4
         world_size = 1
         dummy_dataset = DummyAlphabetDataset()
-        fl_data_sharder = FLDataSharder("sequential", None, None, None, shard_size)
+        fl_data_sharder = SequentialSharder(examples_per_shard=shard_size)
         data_loader = FLDatasetDataLoaderWithBatch(
             dummy_dataset,
             dummy_dataset,
@@ -1037,7 +1037,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         shard_size = int(math.ceil(26 / num_total_users))
         local_batch_size = 4
         dummy_dataset = DummyAlphabetDataset()
-        fl_data_sharder = FLDataSharder("sequential", None, None, None, shard_size)
+        fl_data_sharder = SequentialSharder(examples_per_shard=shard_size)
         data_loader = FLDatasetDataLoaderWithBatch(
             dummy_dataset,
             dummy_dataset,

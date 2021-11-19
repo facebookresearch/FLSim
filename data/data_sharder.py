@@ -1,194 +1,49 @@
 #!/usr/bin/env python3
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
+from __future__ import annotations
+
+import abc
 import random
-from abc import abstractmethod
-from collections import defaultdict, namedtuple
-from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
+from collections import defaultdict
+from dataclasses import dataclass
+from typing import Any, Dict, Iterable, List, Tuple, TypeVar
 
 import numpy as np
 import torch
+from flsim.utils.config_utils import fullclassname
+from flsim.utils.config_utils import init_self_cfg
+from omegaconf import MISSING
 from torch.utils.data import Dataset
 
 
 Shardable = TypeVar("Shardable", Iterable[Dict[str, Any]], Dataset)
 
 
-class ShardingStrategyType:
-    RANDOM: str = "random"
-    BROADCAST: str = "broadcast"
-    COLUMN: str = "column"
-    ROUND_ROBIN: str = "round_robin"
-    SEQUENTIAL: str = "sequential"
-    POWER_LAW: str = "power_law"
-
-
-class FLDataSharder:
+class FLDataSharder(abc.ABC):
     """This class takes in a file, and partitions it into a list of datasets.
     It supports random partitioning, broadcasting,
     round-robining and sharding by a column
     """
 
-    # Similar to the comment in __init__() below. This is also a temporary hack
-    # until we consolidate design for FLConfig. This Config inner class is a
-    # thin namedtuple wrapper for FLDataSharderConfig so that we don't have to
-    # change the code that relies on calls like `self.config.xxx` for this time
-    # and the future.
-    Config = namedtuple(
-        "Config",
-        [
-            "sharding_strategy",
-            "num_shards",
-            "sharding_colindex",
-            "sharding_col_name",
-            "shard_size_for_sequential",
-            "alpha",
-        ],
-    )
-
-    def __init__(
-        self,
-        sharding_strategy: str,
-        num_shards: Optional[int] = None,
-        sharding_colindex: Optional[int] = None,
-        sharding_col_name: Optional[str] = None,
-        shard_size_for_sequential: Optional[int] = None,
-        alpha: Optional[float] = None,
-    ):
-        """This initializer is a temporary workaround until we decide on Config
-        design. Note that in order to avoid any PyText dependency, this
-        initializer requires each property unpacked from FLDataSharderConfig,
-        which currently has dependency on PyText's ConfigBase.
-        """
-        self.config = FLDataSharder.Config(
-            sharding_strategy,
-            num_shards,
-            sharding_colindex,
-            sharding_col_name,
-            shard_size_for_sequential,
-            alpha,
+    def __init__(self, **kwargs):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=FLDataSharderConfig,
+            **kwargs,
         )
 
-    class ShardingStrategy:
-        @abstractmethod
-        def shard_for_row(self, csv_row: Dict[Any, Any]) -> List[Any]:
-            pass
+    @classmethod
+    def _set_defaults_in_cfg(cls, cfg):
+        pass
 
-    class RandomSharding(ShardingStrategy):
-        """Splits training data randomly. num_shards should be specified.
-        Assigns first num_shards rows to different shards to avoid empty shards."""
-
-        def __init__(self, num_shards: int):
-            assert num_shards is not None, "num_shards must be provided."
-            self._num_shards: int = num_shards
-            self._assignments: List[int] = list(range(self._num_shards))
-            random.shuffle(self._assignments)
-
-        def shard_for_row(self, csv_row: Dict[Any, Any]) -> List[int]:
-            if self._assignments:
-                return [self._assignments.pop(0)]
-            return [random.randint(0, self._num_shards - 1)]
-
-    class SequentialSharding(ShardingStrategy):
-        """Assign first N rows to shard A, the next N rows to shard B, and so
-        on. Mostly used for testing purpose (e.g. sanity-check with
-        conventional SGD training based on PyTorch Dataset and its batching
-        mechanism).
+    @abc.abstractmethod
+    def shard_for_row(self, csv_row: Dict[Any, Any]) -> List[Any]:
         """
-
-        def __init__(self, examples_per_shard: int):
-            assert isinstance(
-                examples_per_shard, int
-            ), f"shard_size_for_sequential should be an integer for \
-             sequential sharding. got {examples_per_shard}"
-            self.examples_per_shard = examples_per_shard
-            self.filled_in_current_bucket = 0
-            self.index = 0
-
-        def shard_for_row(self, csv_row: Dict[Any, Any]) -> List[int]:
-            if self.filled_in_current_bucket == self.examples_per_shard:
-                self.index += 1
-                self.filled_in_current_bucket = 1
-            else:
-                self.filled_in_current_bucket += 1
-            return [self.index]
-
-    class BroadcastSharding(ShardingStrategy):
-        """Copy each training datum to all shards. num_shards should be specified"""
-
-        def __init__(self, num_shards: int):
-            assert num_shards is not None, "num_shards must be provided."
-            self._num_shards: int = num_shards
-
-        def shard_for_row(self, csv_row: Dict[Any, Any]) -> List[int]:
-            return list(range(self._num_shards))
-
-    class ColumnSharding(ShardingStrategy):
-        """Specify a column name used to shard.
-        It should be the last column in the file,
-        and sharding_column must be specified.
+        Determine which shard a row should belong to.
         """
-
-        def __init__(self, sharding_col: Union[int, str]):
-            self.sharding_col: Union[int, str] = sharding_col
-
-        def shard_for_row(self, csv_row: Dict[Any, Any]) -> List[Any]:
-            # Pyre needs this manual unwrap of "Optional" for class
-            # attribute (see https://fburl.com/wmn9bmac).
-            unwrapped_colindex = self.sharding_col
-            if isinstance(unwrapped_colindex, int):
-                assert unwrapped_colindex < len(
-                    csv_row
-                ), "Sharding index out of bounds: "
-                f"{unwrapped_colindex}"
-
-            shard_idx = csv_row[unwrapped_colindex]
-
-            # shard_idx can be a 0-dim tensor when a Hive column is an integer.
-            if isinstance(shard_idx, torch.Tensor):
-                shard_idx = shard_idx.item()
-
-            return [shard_idx]
-
-    class RoundRobinSharding(ShardingStrategy):
-        """Splits training in a round-robin fashion between all shards"""
-
-        def __init__(self, num_shards: int):
-            assert num_shards is not None, "num_shards must be provided."
-            self._num_shards: int = num_shards
-            self._last_shard: int = -1
-
-        def shard_for_row(self, csv_row: Dict[Any, Any]) -> List[int]:
-            self._last_shard = (self._last_shard + 1) % self._num_shards
-            return [self._last_shard]
-
-    class PowerLawSharding(ShardingStrategy):
-        """
-        Splits training data based on power law distribution with order
-        alpha where alpha between [0.0, 1.0] to ensure right skewed
-
-        This strategy will shard in a round robin at first to ensure all shard
-        will get at least one example. After that, it will shard following the power
-        law distribution
-        """
-
-        def __init__(self, num_shards: int, alpha: float):
-            assert num_shards is not None, "num_shards must be provided."
-            assert alpha is not None, "alpha must be provided."
-            assert 0.0 < alpha <= 1.0, "alpha must be in the interval (0, 1]"
-            self._num_shards: int = num_shards
-            self._last_shard: int = -1
-            self._weights = np.random.power(alpha, self._num_shards)
-            # normalize to sum to 1.0
-            self._weights = self._weights / sum(self._weights)
-            self._choices = np.arange(0, self._num_shards)
-
-        def shard_for_row(self, csv_row: Dict[Any, Any]) -> List[int]:
-            if self._last_shard < self._num_shards - 1:
-                self._last_shard += 1
-                return [self._last_shard]
-            else:
-                return [np.random.choice(self._choices, p=self._weights)]
+        pass
 
     def shard_rows(self, data_rows: Shardable) -> Iterable[Tuple[str, Any]]:
         """Partition a set of rows into mulitple sets using a sharding strategy.
@@ -198,43 +53,232 @@ class FLDataSharder:
             name to value.
         """
         shards = defaultdict(list)
-        sharding_strategy = ShardingStrategyFactory.create(self.config)
         for one_row in data_rows:
-            for shard_id in sharding_strategy.shard_for_row(one_row):
+            for shard_id in self.shard_for_row(one_row):
                 shards[str(shard_id)].append(one_row)
-
-        # sanity check to avoid empty shards
-        if self.config.sharding_strategy in (
-            ShardingStrategyType.RANDOM,
-            ShardingStrategyType.ROUND_ROBIN,
-            ShardingStrategyType.POWER_LAW,
-        ):
-            assert (
-                len(shards.keys()) >= self.config.num_shards
-            ), "number of rows must be at least the number of shards"
         return shards.items()
 
 
-class ShardingStrategyFactory:
-    @staticmethod
-    def create(config: FLDataSharder.Config):
-        if config.sharding_strategy == ShardingStrategyType.RANDOM:
-            return FLDataSharder.RandomSharding(config.num_shards)
-        elif config.sharding_strategy == ShardingStrategyType.BROADCAST:
-            return FLDataSharder.BroadcastSharding(config.num_shards)
-        elif config.sharding_strategy == ShardingStrategyType.COLUMN:
-            if config.sharding_colindex is not None:
-                param = config.sharding_colindex
-            elif config.sharding_col_name is not None:
-                param = config.sharding_col_name
-            else:
-                raise ValueError("Must provide a value to shard by column.")
-            return FLDataSharder.ColumnSharding(sharding_col=param)
-        elif config.sharding_strategy == ShardingStrategyType.ROUND_ROBIN:
-            return FLDataSharder.RoundRobinSharding(config.num_shards)
-        elif config.sharding_strategy == ShardingStrategyType.SEQUENTIAL:
-            return FLDataSharder.SequentialSharding(config.shard_size_for_sequential)
-        elif config.sharding_strategy == ShardingStrategyType.POWER_LAW:
-            return FLDataSharder.PowerLawSharding(config.num_shards, alpha=config.alpha)
+class RandomSharder(FLDataSharder):
+    """Splits training data randomly. num_shards should be specified.
+    Assigns first num_shards rows to different shards to avoid empty shards."""
+
+    def __init__(self, **kwargs):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=RandomSharderConfig,
+            **kwargs,
+        )
+        super().__init__(**kwargs)
+        self._assignments: List[int] = list(range(self.cfg.num_shards))
+        random.shuffle(self._assignments)
+
+    def shard_for_row(self, csv_row: Dict[Any, Any]) -> List[int]:
+        if self._assignments:
+            return [self._assignments.pop(0)]
+        # pyre-fixme[16]: `RandomSharder` has no attribute `cfg`.
+        return [random.randint(0, self.cfg.num_shards - 1)]
+
+    def shard_rows(self, data_rows: Shardable) -> Iterable[Tuple[str, Any]]:
+        # sanity check to avoid empty shards
+        shards = super().shard_rows(data_rows)
+        assert (
+            sum(1 for _shard in shards)
+            # pyre-fixme[16]: `RandomSharder` has no attribute `cfg`.
+            >= self.cfg.num_shards
+        ), "number of rows must be at least the number of shards"
+        return shards
+
+
+class SequentialSharder(FLDataSharder):
+    """Assign first N rows to shard A, the next N rows to shard B, and so
+    on. Mostly used for testing purpose (e.g. sanity-check with
+    conventional SGD training based on PyTorch Dataset and its batching
+    mechanism).
+    """
+
+    def __init__(self, **kwargs):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=SequentialSharderConfig,
+            **kwargs,
+        )
+        super().__init__(**kwargs)
+        self.filled_in_current_bucket = 0
+        self.index = 0
+
+    def shard_for_row(self, csv_row: Dict[Any, Any]) -> List[int]:
+        # pyre-fixme[16]: `SequentialSharder` has no attribute `cfg`.
+        if self.filled_in_current_bucket == self.cfg.examples_per_shard:
+            self.index += 1
+            self.filled_in_current_bucket = 1
         else:
-            assert f"Invalid sharding strategy: {config.sharding_strategy}."
+            self.filled_in_current_bucket += 1
+        return [self.index]
+
+
+class BroadcastSharder(FLDataSharder):
+    """Copy each training datum to all shards. num_shards should be specified"""
+
+    def __init__(self, **kwargs):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=BroadcastSharderConfig,
+            **kwargs,
+        )
+        super().__init__(**kwargs)
+
+    def shard_for_row(self, csv_row: Dict[Any, Any]) -> List[int]:
+        # pyre-fixme[16]: `BroadcastSharder` has no attribute `cfg`.
+        return list(range(self.cfg.num_shards))
+
+
+class ColumnSharder(FLDataSharder):
+    """Specify a column name used to shard.
+    It should be the last column in the file,
+    and sharding_column must be specified.
+    """
+
+    def __init__(self, **kwargs):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=ColumnSharderConfig,
+            **kwargs,
+        )
+        super().__init__(**kwargs)
+
+    def shard_for_row(self, csv_row: Dict[Any, Any]) -> List[Any]:
+        # pyre-fixme[16]: `ColumnSharder` has no attribute `cfg`.
+        unwrapped_colindex = self.cfg.sharding_col
+        if unwrapped_colindex.isdigit():
+            unwrapped_colindex = int(unwrapped_colindex)
+            assert unwrapped_colindex < len(csv_row), "Sharding index out of bounds: "
+            f"{unwrapped_colindex}"
+
+        shard_idx = csv_row[unwrapped_colindex]
+
+        # shard_idx can be a 0-dim tensor when a Hive column is an integer.
+        if isinstance(shard_idx, torch.Tensor):
+            shard_idx = shard_idx.item()
+
+        return [shard_idx]
+
+
+class RoundRobinSharder(FLDataSharder):
+    """Splits training in a round-robin fashion between all shards"""
+
+    def __init__(self, **kwargs):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=RoundRobinSharderConfig,
+            **kwargs,
+        )
+        super().__init__(**kwargs)
+        self._last_shard: int = -1
+
+    def shard_for_row(self, csv_row: Dict[Any, Any]) -> List[int]:
+        # pyre-fixme[16]: `RoundRobinSharder` has no attribute `cfg`.
+        self._last_shard = (self._last_shard + 1) % self.cfg.num_shards
+        return [self._last_shard]
+
+    def shard_rows(self, data_rows: Shardable) -> Iterable[Tuple[str, Any]]:
+        # sanity check to avoid empty shards
+        shards = super().shard_rows(data_rows)
+        assert (
+            sum(1 for _shard in shards)
+            # pyre-fixme[16]: `RoundRobinSharder` has no attribute `cfg`.
+            >= self.cfg.num_shards
+        ), "number of rows must be at least the number of shards"
+        return shards
+
+
+class PowerLawSharder(FLDataSharder):
+    """
+    Splits training data based on power law distribution with order
+    alpha where alpha between [0.0, 1.0] to ensure right skewed
+
+    This strategy will shard in a round robin at first to ensure all shard
+    will get at least one example. After that, it will shard following the power
+    law distribution
+    """
+
+    def __init__(self, **kwargs):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=PowerLawSharderConfig,
+            **kwargs,
+        )
+        super().__init__(**kwargs)
+        assert 0.0 < self.cfg.alpha <= 1.0, "alpha must be in the interval (0, 1]"
+        self._last_shard: int = -1
+        self._weights = np.random.power(self.cfg.alpha, self.cfg.num_shards)
+        # normalize to sum to 1.0
+        self._weights = self._weights / sum(self._weights)
+        self._choices = np.arange(0, self.cfg.num_shards)
+
+    def shard_for_row(self, csv_row: Dict[Any, Any]) -> List[int]:
+        # pyre-fixme[16]: `PowerLawSharder` has no attribute `cfg`.
+        if self._last_shard < self.cfg.num_shards - 1:
+            self._last_shard += 1
+            return [self._last_shard]
+        else:
+            return [np.random.choice(self._choices, p=self._weights)]
+
+    def shard_rows(self, data_rows: Shardable) -> Iterable[Tuple[str, Any]]:
+        # sanity check to avoid empty shards
+        shards = super().shard_rows(data_rows)
+        assert (
+            sum(1 for _shard in shards)
+            # pyre-fixme[16]: `PowerLawSharder` has no attribute `cfg`.
+            >= self.cfg.num_shards
+        ), "number of rows must be at least the number of shards"
+        return shards
+
+
+@dataclass
+class FLDataSharderConfig:
+    _target_: str = MISSING
+    _recursive_: bool = False
+
+
+@dataclass
+class RandomSharderConfig(FLDataSharderConfig):
+    _target_: str = fullclassname(RandomSharder)
+    num_shards: int = MISSING
+
+
+@dataclass
+class SequentialSharderConfig(FLDataSharderConfig):
+    _target_: str = fullclassname(SequentialSharder)
+    examples_per_shard: int = MISSING
+
+
+@dataclass
+class BroadcastSharderConfig(FLDataSharderConfig):
+    _target_: str = fullclassname(BroadcastSharder)
+    num_shards: int = MISSING
+
+
+@dataclass
+class ColumnSharderConfig(FLDataSharderConfig):
+    _target_: str = fullclassname(ColumnSharder)
+    sharding_col: str = MISSING
+
+
+@dataclass
+class RoundRobinSharderConfig(FLDataSharderConfig):
+    _target_: str = fullclassname(RoundRobinSharder)
+    num_shards: int = MISSING
+
+
+@dataclass
+class PowerLawSharderConfig(FLDataSharderConfig):
+    _target_: str = fullclassname(PowerLawSharder)
+    num_shards: int = MISSING
+    alpha: float = MISSING
