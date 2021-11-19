@@ -7,6 +7,7 @@ from typing import Union
 
 import numpy as np
 import torch
+from flsim.common.pytest_helper import assertEqual, assertEmpty
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.async_aggregators import (
@@ -42,7 +43,6 @@ from flsim.utils.tests.helpers.async_trainer_test_utils import (
 from flsim.utils.tests.helpers.sync_trainer_test_utils import create_sync_trainer
 from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
 from flsim.utils.tests.helpers.test_utils import FLTestUtils
-from libfb.py import testutil
 
 
 class TrainerType(Enum):
@@ -417,11 +417,9 @@ class HybridFLTestUtils:
         )
 
 
-class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-        self.batch_sizes = [4, 16, 32]
-        self.epochs = 5
+class TestFedBuff:
+    @classmethod
+    def setup_class(cls):
         np.random.seed(0)
 
     def test_async_hybrid_same_multiple_clients_to_sync(self):
@@ -452,12 +450,12 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
             hybrid_global_lr=hybrid_global_lr,
             batch_size_hybrid=batch_size_hybrid,
             batch_size_async=batch_size_async,
-            epochs=self.epochs,
+            epochs=5,
             training_rate=training_rate,
             training_duration_mean=training_duration_mean,
             local_lr=local_lr,
         )
-        self.assertEmpty(error_msg, msg=error_msg)
+        assertEmpty(error_msg, msg=error_msg)
 
     def test_non_fl_hybrid_same_multiple_clients_to_sync(self):
         """
@@ -493,7 +491,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
             local_lr=hybrid_local_lr,
             epochs=1,
         )
-        self.assertEmpty(error_msg, msg=error_msg)
+        assertEmpty(error_msg, msg=error_msg)
 
     def test_async_hybrid_same_sync_every_client(self):
         r"""
@@ -510,7 +508,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
             FedAvgWithLRAsyncAggregatorConfig(lr=global_lr),
             FedAdamAsyncAggregatorConfig(lr=global_lr, eps=1e-2),
         ]:
-            for batch_size in self.batch_sizes:
+            for batch_size in [4, 16, 32]:
                 (
                     num_fl_users,
                     examples_per_user,
@@ -532,7 +530,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
                     ),
                     hybrid_local_lr=local_lr,
                     base_local_lr=local_lr,
-                    epochs=self.epochs,
+                    epochs=5,
                     num_examples=num_examples,
                     num_fl_users=num_fl_users,
                     batch_size=batch_size,
@@ -542,7 +540,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
                     training_duration_mean=1,
                     training_duration_sd=0,
                 )
-                self.assertEqual(error_msg, "")
+                assertEqual(error_msg, "")
 
     def test_nonfl_hybrid_same_sgd(self):
         r"""
@@ -564,7 +562,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
         )
         local_lr = 1.0
         buffer_size = 1
-        for batch_size in self.batch_sizes:
+        for batch_size in [4, 16, 32]:
             global_lr = get_safe_global_lr(batch_size, examples_per_user)
             base_aggregator_config = SyncServerConfig(
                 server_optimizer=FedAvgWithLROptimizerConfig(lr=global_lr, momentum=0.0)
@@ -589,7 +587,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
                 training_duration_mean=0,
                 training_duration_sd=0,
             )
-            self.assertEqual(error, "")
+            assertEqual(error, "")
 
     def test_nonfl_hybrid_same_adam(self):
         r"""
@@ -625,7 +623,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
             ),
             hybrid_local_lr=local_lr,
             base_local_lr=local_lr,
-            epochs=self.epochs,
+            epochs=5,
             num_examples=num_examples,
             num_fl_users=num_fl_users,
             batch_size=examples_per_user,
@@ -635,7 +633,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
             training_duration_mean=0,
             training_duration_sd=0,
         )
-        self.assertEqual(error, "")
+        assertEqual(error, "")
 
     def test_sync_hybrid_same_sgd(self):
         r"""
@@ -666,7 +664,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
             server_optimizer=FedAvgWithLROptimizerConfig(lr=global_lr, momentum=0.0)
         )
         buffer_size = num_fl_users
-        for batch_size in self.batch_sizes:
+        for batch_size in [4, 16, 32]:
             print(f"{num_fl_users} {examples_per_user} {local_lr} {global_lr}")
             error = HybridFLTestUtils.compare_hybrid_fl_same(
                 trainer_to_compare_hybrid_fl_with=TrainerType.SYNC,
@@ -688,7 +686,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
                 training_duration_mean=buffer_size * 2,
                 training_duration_sd=0,
             )
-            self.assertEqual(error, "")
+            assertEqual(error, "")
 
     def test_sync_hybrid_same_adam(self):
         r"""
@@ -745,7 +743,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
             training_duration_sd=0,
         )
         print(f"{num_fl_users} {examples_per_user} {local_lr} {global_lr}")
-        self.assertEqual(error, "")
+        assertEqual(error, "")
 
     def test_partial_model_update(self):
         r"""
@@ -789,7 +787,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
         print(
             f"NonFL LR {nonfl_lr} Hybrid Local LR {hybrid_local_lr}  Hybrid Global LR {hybrid_global_lr}"
         )
-        self.assertEmpty(error_msg, msg=error_msg)
+        assertEmpty(error_msg, msg=error_msg)
 
     def test_remaining_clients_to_sync(self):
         """
@@ -828,7 +826,7 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
             training_duration_mean=training_duration_mean,
             local_lr=local_lr,
         )
-        self.assertEmpty(error_msg, msg=error_msg)
+        assertEmpty(error_msg, msg=error_msg)
 
         # test for scenario 2
         buffer_size = 4
@@ -846,4 +844,4 @@ class HybridAsyncFLTest(testutil.BaseFacebookTestCase):
             training_duration_mean=training_duration_mean,
             local_lr=local_lr,
         )
-        self.assertEmpty(error_msg, msg=error_msg)
+        assertEmpty(error_msg, msg=error_msg)
