@@ -71,7 +71,6 @@ class Client:
         self.dataset = dataset
         self.cuda_state_manager = cuda_manager
         self.channel = channel or IdentityChannel()
-        self.channel_endpoint = self.channel.get_client_channel_endpoint()
         self.timeout_simulator = timeout_simulator or NeverTimeOutSimulator(
             **OmegaConf.structured(NeverTimeOutSimulatorConfig())
         )
@@ -183,15 +182,7 @@ class Client:
         # keep a reference to global model
         self.ref_model = model
 
-        # build channel message with model state dict
-        message = self.channel.create_channel_message(model)
-
-        # receive through channel
-        message = self.channel_endpoint.receive(message)
-
-        # decode channel message and load potentially different state dict to model
-        if not isinstance(self.channel, IdentityChannel):
-            message.update_model_(model)
+        # Fixing this in the next diff
 
         return deepcopy(model)
 

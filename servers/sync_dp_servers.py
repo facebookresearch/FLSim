@@ -9,7 +9,10 @@ from typing import Optional
 from flsim.active_user_selectors.simple_user_selector import (
     UniformlyRandomActiveUserSelectorConfig,
 )
-from flsim.channels.base_channel import IFLChannel
+from flsim.channels.base_channel import (
+    IFLChannel,
+    IdentityChannel,
+)
 from flsim.channels.message import Message
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
@@ -76,6 +79,7 @@ class SyncDPSGDServer(ISyncServer):
         )
         self._privacy_engine: Optional[IPrivacyEngine] = None
         self._active_user_selector = instantiate(self.cfg.active_user_selector)
+        self._channel: IFLChannel = channel or IdentityChannel()
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
@@ -118,6 +122,12 @@ class SyncDPSGDServer(ISyncServer):
         self._privacy_engine.attach(self._global_model.fl_get_module())
 
     def receive_update_from_client(self, message: Message):
+        message = self._channel.client_to_server(message)
+
+        self._aggregator.apply_weight_to_update(
+            delta=message.model.fl_get_module(), weight=message.weight
+        )
+
         self._user_update_clipper.clip(
             message.model.fl_get_module(), max_norm=self._clipping_value
         )

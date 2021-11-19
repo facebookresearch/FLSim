@@ -11,7 +11,10 @@ from flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorConfig,
     UniformlyRandomActiveUserSelectorConfig,
 )
-from flsim.channels.base_channel import IFLChannel
+from flsim.channels.base_channel import (
+    IdentityChannel,
+    IFLChannel,
+)
 from flsim.channels.message import Message
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
@@ -119,6 +122,7 @@ class SyncServer(ISyncServer):
             only_federated_params=self.cfg.only_federated_params,
         )
         self._active_user_selector = instantiate(self.cfg.active_user_selector)
+        self._channel: IFLChannel = channel or IdentityChannel()
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
@@ -151,6 +155,8 @@ class SyncServer(ISyncServer):
         self._optimizer.zero_grad()
 
     def receive_update_from_client(self, message: Message):
+        message = self._channel.client_to_server(message)
+
         self._aggregator.apply_weight_to_update(
             delta=message.model.fl_get_module(), weight=message.weight
         )

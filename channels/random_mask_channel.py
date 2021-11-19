@@ -10,7 +10,7 @@ import torch
 from flsim.channels.base_channel import (
     IdentityChannel,
     FLChannelConfig,
-    ChannelMessage,
+    Message,
 )
 from flsim.interfaces.model import IFLModel
 from flsim.utils.config_utils import fullclassname
@@ -47,12 +47,7 @@ class RandomMaskChannel(IdentityChannel):
     def _set_defaults_in_cfg(cls, cfg):
         pass
 
-    def create_channel_message(self, model: IFLModel) -> ChannelMessage:
-        message = ChannelMessage()
-        message.populate(model)
-        return message
-
-    def _calc_message_size_client_to_server(self, message: ChannelMessage):
+    def _calc_message_size_client_to_server(self, message: Message):
         """
         We compute the size of the compressed message as follows: for any
         parameter, we count the number of non-zero entries. Then, we assume
@@ -72,7 +67,7 @@ class RandomMaskChannel(IdentityChannel):
             message_size_bytes += nse * RandomMaskChannel.BYTES_PER_FP32
         return message_size_bytes
 
-    def _on_client_before_transmission(self, message: ChannelMessage) -> ChannelMessage:
+    def _on_client_before_transmission(self, message: Message) -> Message:
         """
         Here we apply a random mask to the parameters before sending the message.
 
@@ -80,6 +75,7 @@ class RandomMaskChannel(IdentityChannel):
             - The message is pruned so that the number of non-sparse entries is
                deterministc and constant across runs for a given weight matrix.
         """
+        message.populate_state_dict()
         new_state_dict = OrderedDict()
 
         for name, param in message.model_state_dict.items():
@@ -96,6 +92,10 @@ class RandomMaskChannel(IdentityChannel):
             new_state_dict[name] = new_param
 
         message.model_state_dict = new_state_dict
+        return message
+
+    def _on_server_after_reception(self, message: Message) -> Message:
+        message.update_model_()
         return message
 
 

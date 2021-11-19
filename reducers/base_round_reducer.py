@@ -142,7 +142,6 @@ class RoundReducer(IFLRoundReducer):
         # pyre-fixme[16]: `RoundReducer` has no attribute `cfg`.
         self.dtype = self.cfg.precision.dtype
         self.channel = channel or IdentityChannel()
-        self.channel_endpoint = self.channel.get_server_channel_endpoint()
         self.name = name or "unnamed_aggregator"
         self.num_users_per_round = num_users_per_round
         self.total_number_of_users = total_number_of_users
@@ -207,17 +206,6 @@ class RoundReducer(IFLRoundReducer):
         over the channel. Any channel effect is applied as part of this
         receive function.
         """
-
-        # build channel message with model state dict
-        message = self.channel.create_channel_message(model)
-
-        # receive through channel
-        message = self.channel_endpoint.receive(message)
-
-        # decode channel message and load potentially different state dict to model
-        if not isinstance(self.channel, IdentityChannel):
-            message.update_model_(model)
-
         return model
 
     @property

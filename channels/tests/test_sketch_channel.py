@@ -7,6 +7,7 @@ from typing import Type
 import pytest
 import torch
 from flsim.channels.communication_stats import ChannelDirection
+from flsim.channels.message import Message
 from flsim.channels.sketch_channel import (
     SketchChannelConfig,
     SketchChannel,
@@ -113,7 +114,7 @@ class TestSketchChannelTest:
         two_fc.fill_all(0.2)
         model = utils.SampleNet(two_fc)
 
-        message = channel.create_channel_message(model)
+        message = Message(model)
         message = channel.client_to_server(message)
         cs = message.count_sketch
         assertIsInstance(cs, CountSketch)
@@ -160,9 +161,8 @@ class TestSketchChannelTest:
         upload_model = deepcopy(base_model)
 
         # client -> server
-        message = channel.create_channel_message(upload_model)
+        message = Message(upload_model)
         message = channel.client_to_server(message)
-        message.update_model_(upload_model)
 
         # test communication stats measurements
         stats = channel.stats_collector.get_channel_stats()

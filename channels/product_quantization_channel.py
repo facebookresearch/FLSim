@@ -8,9 +8,8 @@ from collections import OrderedDict
 from dataclasses import dataclass
 
 from flsim.channels.base_channel import IdentityChannel, FLChannelConfig
-from flsim.channels.message import ChannelMessage
+from flsim.channels.message import Message
 from flsim.compression.pq import PQ
-from flsim.interfaces.model import IFLModel
 from flsim.utils.config_utils import fullclassname
 from flsim.utils.config_utils import init_self_cfg
 
@@ -46,12 +45,7 @@ class ProductQuantizationChannel(IdentityChannel):
     def _set_defaults_in_cfg(cls, cfg):
         pass
 
-    def create_channel_message(self, model: IFLModel) -> ChannelMessage:
-        message = ChannelMessage()
-        message.populate(model)
-        return message
-
-    def _calc_message_size_client_to_server(self, message: ChannelMessage):
+    def _calc_message_size_client_to_server(self, message: Message):
         """
         We compute the size of the compressed message as follows:
             - for the weights (compressed):
@@ -86,12 +80,12 @@ class ProductQuantizationChannel(IdentityChannel):
                 )
         return message_size_bytes
 
-    def _on_client_before_transmission(self, message: ChannelMessage) -> ChannelMessage:
+    def _on_client_before_transmission(self, message: Message) -> Message:
         """
         We quantize the weights under the form of centroids
         and assignments and do not quantize the biases.
         """
-
+        message.populate_state_dict()
         new_state_dict = OrderedDict()
         for name, param in message.model_state_dict.items():
             # compress only large weight matrices
@@ -119,7 +113,7 @@ class ProductQuantizationChannel(IdentityChannel):
         message.model_state_dict = new_state_dict
         return message
 
-    def _on_server_after_reception(self, message: ChannelMessage) -> ChannelMessage:
+    def _on_server_after_reception(self, message: Message) -> Message:
         """
         We reconstruct the weights from the centroids
         and the assignments.
@@ -145,6 +139,7 @@ class ProductQuantizationChannel(IdentityChannel):
             else:
                 new_state_dict[name] = param.data
         message.model_state_dict = new_state_dict
+        message.update_model_()
         return message
 
 

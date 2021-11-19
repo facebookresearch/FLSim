@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
+import copy
 from dataclasses import dataclass
 from typing import List
 
@@ -8,6 +9,8 @@ import numpy as np
 from flsim.active_user_selectors.simple_user_selector import (
     UniformlyRandomActiveUserSelectorConfig,
 )
+from flsim.channels.base_channel import IdentityChannel
+from flsim.channels.half_precision_channel import HalfPrecisionChannel
 from flsim.channels.message import Message
 from flsim.common.pytest_helper import assertEqual, assertEmpty
 from flsim.optimizers.server_optimizers import (
@@ -395,3 +398,29 @@ class SyncServerTest(testutil.BaseFacebookTestCase):
             num_total_users=100, users_per_round=10
         )
         assertEqual(server_selected_indices, uniform_selector_indices)
+
+    @testutil.data_provider(
+        lambda: (
+            {
+                "channel": HalfPrecisionChannel(),
+            },
+            {
+                "channel": IdentityChannel(),
+            },
+        )
+    )
+    def test_server_channel_integration(self, channel):
+        """From Client to Server, the channel should quantize and then dequantize the message
+        therefore there should be no change in the model
+        """
+        server = instantiate(
+            SyncServerConfig(),
+            global_model=SampleNet(create_model_with_value(0)),
+            channel=channel,
+        )
+
+        delta = create_model_with_value(1)
+        init = copy.deepcopy(delta)
+        server.receive_update_from_client(Message(model=SampleNet(delta), weight=1.0))
+        error_msg = verify_models_equivalent_after_training(delta, init)
+        assertEmpty(error_msg, msg=error_msg)

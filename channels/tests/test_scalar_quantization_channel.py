@@ -8,6 +8,7 @@ import pytest
 from flsim.channels.communication_stats import (
     ChannelDirection,
 )
+from flsim.channels.message import Message
 from flsim.channels.scalar_quantization_channel import (
     ScalarQuantizationChannelConfig,
     ScalarQuantizationChannel,
@@ -67,9 +68,9 @@ class TestScalarQuantizationChannel:
         download_model = deepcopy(base_model)
 
         # test server -> client, models should be strictly identical
-        message = channel.create_channel_message(download_model)
+        message = Message(download_model)
         message = channel.server_to_client(message)
-        message.update_model_(download_model)
+
         mismatched = FLModelParamUtils.get_mismatched_param(
             [base_model.fl_get_module(), download_model.fl_get_module()]
         )
@@ -102,9 +103,9 @@ class TestScalarQuantizationChannel:
         upload_model = deepcopy(base_model)
 
         # test client -> server, models should be almost equal due to int8 emulation
-        message = message = channel.create_channel_message(upload_model)
+        message = message = Message(upload_model)
         message = channel.client_to_server(message)
-        message.update_model_(upload_model)
+
         mismatched = FLModelParamUtils.get_mismatched_param(
             [base_model.fl_get_module(), upload_model.fl_get_module()],
             rel_epsilon=1e-8,
@@ -142,14 +143,12 @@ class TestScalarQuantizationChannel:
         upload_model = deepcopy(base_model)
 
         # server -> client
-        message = channel.create_channel_message(download_model)
+        message = Message(download_model)
         message = channel.server_to_client(message)
-        message.update_model_(download_model)
 
         # client -> server
-        message = channel.create_channel_message(upload_model)
+        message = Message(upload_model)
         message = channel.client_to_server(message)
-        message.update_model_(upload_model)
 
         # test communication stats measurements (here per_tensor int8 quantization)
         stats = channel.stats_collector.get_channel_stats()
@@ -199,9 +198,8 @@ class TestScalarQuantizationChannel:
 
         # test client -> server, all weights are equal so quantization error is
         # zero or every acceptable value of n_bits (here tested with n_bits = 4)
-        message = channel.create_channel_message(upload_model)
+        message = Message(upload_model)
         message = channel.client_to_server(message)
-        message.update_model_(upload_model)
 
         mismatched = FLModelParamUtils.get_mismatched_param(
             [base_model.fl_get_module(), upload_model.fl_get_module()]

@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
+import copy
 import math
 from unittest.mock import MagicMock
 
 import numpy as np
 import torch
+from flsim.channels.base_channel import IdentityChannel
+from flsim.channels.half_precision_channel import HalfPrecisionChannel
 from flsim.channels.message import Message
 from flsim.privacy.common import PrivacySetting
 from flsim.privacy.privacy_engine import GaussianPrivacyEngine
@@ -25,6 +28,7 @@ from libfb.py import testutil
 class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
     def setUp(self) -> None:
         super().setUp()
+        self.channel = IdentityChannel()
 
     def _get_num_params(self, model):
         return sum(p.numel() for p in model.parameters())
@@ -36,6 +40,7 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
         num_clients,
         clipping_value,
         noise_multiplier,
+        channel=None,
     ):
         server = instantiate(
             SyncDPSGDServerConfig(
@@ -48,6 +53,7 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
                 ),
             ),
             global_model=server_model,
+            channel=channel,
         )
         server.select_clients_for_training(
             num_total_users=num_rounds * num_clients, users_per_round=num_clients
@@ -230,4 +236,32 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
         server.step()
 
         error_msg = model_parameters_equal_to_value(server_model, expected_value)
+        self.assertEmpty(error_msg, msg=error_msg)
+
+    @testutil.data_provider(
+        lambda: (
+            {
+                "channel": HalfPrecisionChannel(),
+            },
+            {
+                "channel": IdentityChannel(),
+            },
+        )
+    )
+    def test_dp_server_channel_integration(self, channel):
+        """From Client to Server, the channel should quantize and then dequantize the message
+        therefore there should be no change in the model
+        """
+        server = self._create_server(
+            SampleNet(create_model_with_value(0)),
+            num_rounds=1,
+            num_clients=10,
+            clipping_value=10,
+            noise_multiplier=0,
+            channel=channel,
+        )
+        delta = create_model_with_value(1)
+        init = copy.deepcopy(delta)
+        server.receive_update_from_client(Message(model=SampleNet(delta), weight=1.0))
+        error_msg = verify_models_equivalent_after_training(delta, init)
         self.assertEmpty(error_msg, msg=error_msg)

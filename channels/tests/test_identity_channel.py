@@ -9,6 +9,7 @@ from flsim.channels.base_channel import FLChannelConfig, IdentityChannel
 from flsim.channels.communication_stats import (
     ChannelDirection,
 )
+from flsim.channels.message import Message
 from flsim.common.pytest_helper import assertEqual, assertIsInstance
 from flsim.tests import utils
 from flsim.utils.fl.common import FLModelParamUtils
@@ -56,7 +57,7 @@ class TestIdentityChannel:
         download_model = deepcopy(base_model)
 
         # test server -> client, models should be strictly identical
-        message = channel.create_channel_message(download_model)
+        message = Message(download_model)
         message = channel.server_to_client(message)
 
         mismatched = FLModelParamUtils.get_mismatched_param(
@@ -87,7 +88,7 @@ class TestIdentityChannel:
         upload_model = deepcopy(base_model)
 
         # test client -> server, models should be strictly identical
-        message = channel.create_channel_message(upload_model)
+        message = Message(upload_model)
         message = channel.client_to_server(message)
         mismatched = FLModelParamUtils.get_mismatched_param(
             [base_model.fl_get_module(), upload_model.fl_get_module()]
@@ -118,11 +119,11 @@ class TestIdentityChannel:
         upload_model = deepcopy(base_model)
 
         # server -> client
-        message = channel.create_channel_message(download_model)
+        message = Message(download_model)
         message = channel.server_to_client(message)
 
         # client -> server
-        message = channel.create_channel_message(upload_model)
+        message = Message(upload_model)
         message = channel.client_to_server(message)
 
         # test communication stats measurements

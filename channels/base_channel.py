@@ -8,8 +8,7 @@ from dataclasses import dataclass
 from typing import OrderedDict
 
 from flsim.channels.communication_stats import ChannelStatsCollector
-from flsim.channels.message import ChannelMessage
-from flsim.interfaces.model import IFLModel
+from flsim.channels.message import Message
 from flsim.utils.config_utils import fullclassname
 from flsim.utils.config_utils import init_self_cfg
 
@@ -40,25 +39,17 @@ class IFLChannel(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def create_channel_message(self, model: IFLModel):
+    def server_to_client(self, message: Message) -> Message:
         """
-        Creates a channel message. This message is used to communicate with
-        ServerChannelEndPoint
-        """
-        pass
-
-    @abc.abstractmethod
-    def server_to_client(self, message: ChannelMessage) -> ChannelMessage:
-        """
-        Simulates the manipulation and transmission of a `ChannelMessage` from
+        Simulates the manipulation and transmission of a `Message` from
         the server to a client. Also handles relevant stats accounting.
         """
         pass
 
     @abc.abstractmethod
-    def client_to_server(self, message: ChannelMessage) -> ChannelMessage:
+    def client_to_server(self, message: Message) -> Message:
         """
-        Simulates the manipulation and transmission of a `ChannelMessage` from
+        Simulates the manipulation and transmission of a `Message` from
         a client to the server. Also handles relevant stats accounting.
         """
 
@@ -110,22 +101,20 @@ class IdentityChannel(IFLChannel):
         )
         return model_size_bytes
 
-    def _calc_message_size_client_to_server(self, message: ChannelMessage):
+    def _calc_message_size_client_to_server(self, message: Message):
         return self.calc_model_size_float_point(message.model_state_dict)
 
-    def _calc_message_size_server_to_client(self, message: ChannelMessage):
+    def _calc_message_size_server_to_client(self, message: Message):
         return self.calc_model_size_float_point(message.model_state_dict)
 
-    def _on_client_before_transmission(self, message: ChannelMessage) -> ChannelMessage:
+    def _on_client_before_transmission(self, message: Message) -> Message:
         """
         Implements message manipulation that would be done on a client in the real world
         just before transmitting a message to the server.
         """
         return message
 
-    def _during_transmission_client_to_server(
-        self, message: ChannelMessage
-    ) -> ChannelMessage:
+    def _during_transmission_client_to_server(self, message: Message) -> Message:
         """
         Manipulation to the message in transit from client to server.
         """
@@ -137,23 +126,21 @@ class IdentityChannel(IFLChannel):
             )
         return message
 
-    def _on_server_after_reception(self, message: ChannelMessage) -> ChannelMessage:
+    def _on_server_after_reception(self, message: Message) -> Message:
         """
         Implements message manipulation that would be done on the server in the real world
         just after receiving a message from a client.
         """
         return message
 
-    def _on_server_before_transmission(self, message: ChannelMessage) -> ChannelMessage:
+    def _on_server_before_transmission(self, message: Message) -> Message:
         """
         Implements message manipulation that would be done on the server in the real world
         just before transmitting a message to a client.
         """
         return message
 
-    def _during_transmission_server_to_client(
-        self, message: ChannelMessage
-    ) -> ChannelMessage:
+    def _during_transmission_server_to_client(self, message: Message) -> Message:
         """
         Manipulation to the message in transit from server to client.
         """
@@ -164,23 +151,14 @@ class IdentityChannel(IFLChannel):
             )
         return message
 
-    def _on_client_after_reception(self, message: ChannelMessage) -> ChannelMessage:
+    def _on_client_after_reception(self, message: Message) -> Message:
         """
         Implements message manipulation that would be done on a client in the real world
         just after receiving a message from the server.
         """
         return message
 
-    def create_channel_message(self, model: IFLModel) -> ChannelMessage:
-        """
-        In an IndentiyChannel, we will not copy the model state_dict as
-        loading and saving state_dict is a heavy operation and introduces
-        unnecessary latency.
-        """
-        message = ChannelMessage()
-        return message
-
-    def client_to_server(self, message: ChannelMessage) -> ChannelMessage:
+    def client_to_server(self, message: Message) -> Message:
         """
         Performs three successive steps to send a message from a client to the server.
         """
@@ -192,7 +170,7 @@ class IdentityChannel(IFLChannel):
 
         return message
 
-    def server_to_client(self, message: ChannelMessage) -> ChannelMessage:
+    def server_to_client(self, message: Message) -> Message:
         """
         Performs three successive steps to send a message from the server to a client.
         """
@@ -240,7 +218,7 @@ class ServerChannelEndPoint:
     def __init__(self, channel: IFLChannel):
         self._channel = channel
 
-    def receive(self, message: ChannelMessage) -> ChannelMessage:
+    def receive(self, message):
         return self._channel.client_to_server(message)
 
 
@@ -259,7 +237,7 @@ class ClientChannelEndPoint:
     def __init__(self, channel: IFLChannel):
         self._channel = channel
 
-    def receive(self, message: ChannelMessage) -> ChannelMessage:
+    def receive(self, message):
         return self._channel.server_to_client(message)
 
 

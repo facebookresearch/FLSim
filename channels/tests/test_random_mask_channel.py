@@ -10,6 +10,7 @@ import torch
 from flsim.channels.communication_stats import (
     ChannelDirection,
 )
+from flsim.channels.message import Message
 from flsim.channels.random_mask_channel import (
     RandomMaskChannel,
     RandomMaskChannelConfig,
@@ -111,9 +112,9 @@ class TestRandomMaskChannel:
         download_model = deepcopy(base_model)
 
         # test server -> client, models should be strictly identical
-        message = channel.create_channel_message(download_model)
+        message = Message(download_model)
         message = channel.server_to_client(message)
-        message.update_model_(download_model)
+
         mismatched = FLModelParamUtils.get_mismatched_param(
             [base_model.fl_get_module(), download_model.fl_get_module()]
         )
@@ -148,9 +149,8 @@ class TestRandomMaskChannel:
         upload_model = deepcopy(base_model)
 
         # test client -> server, check for sparsity ratio
-        message = channel.create_channel_message(upload_model)
+        message = Message(upload_model)
         message = channel.client_to_server(message)
-        message.update_model_(upload_model)
 
         sparsity = self.calc_model_sparsity(upload_model.fl_get_module().state_dict())
 
@@ -189,9 +189,8 @@ class TestRandomMaskChannel:
         upload_model = deepcopy(base_model)
 
         # client -> server
-        message = channel.create_channel_message(upload_model)
+        message = Message(upload_model)
         message = channel.client_to_server(message)
-        message.update_model_(upload_model)
 
         # test communiction stats measurements
         stats = channel.stats_collector.get_channel_stats()

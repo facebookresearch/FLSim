@@ -18,9 +18,11 @@ class SyncSecAggServerTest(testutil.BaseFacebookTestCase):
     def setUp(self) -> None:
         super().setUp()
 
-    def _create_server(self, model, fixedpoint):
+    def _create_server(self, model, fixedpoint, channel=None):
         return instantiate(
-            SyncSecAggServerConfig(fixedpoint=fixedpoint), global_model=model
+            SyncSecAggServerConfig(fixedpoint=fixedpoint),
+            global_model=model,
+            channel=channel,
         )
 
     def test_sync_secagg_server_init(self) -> None:

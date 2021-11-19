@@ -44,6 +44,7 @@ from flsim.utils.async_trainer.async_staleness_weights import (
     PolynomialStalenessWeightConfig,
 )
 from flsim.utils.async_trainer.async_weights import AsyncWeight, AsyncWeightConfig
+from flsim.utils.count_sketch import CountSketch
 from flsim.utils.distributed.fl_distributed import FLDistributedUtils
 from hydra.errors import HydraException
 from hydra.utils import instantiate
@@ -1050,8 +1051,8 @@ class SketchRoundReducerTest(RoundReducerTestBase):
         """
         rr = self.get_round_reducer()
         model = utils.SampleNet(utils.TwoFC())
-        message = rr.channel.create_channel_message(model)
-        message = rr.channel_endpoint.receive(message)
+        message = Message(model, weight=1, count_sketch=CountSketch())
+        message = rr.channel.client_to_server(message)
         cs = message.count_sketch
 
         for (cs_name, cs_param), (model_name, model_param) in zip(

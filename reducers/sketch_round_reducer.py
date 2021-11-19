@@ -60,7 +60,6 @@ class SketchRoundReducer(IFLRoundReducer):
             device=device,
         )
         self.channel = channel
-        self.channel_endpoint = self.channel.get_server_channel_endpoint()
 
         self.num_users_per_round = num_users_per_round
         self.total_number_of_users = total_number_of_users
@@ -91,10 +90,10 @@ class SketchRoundReducer(IFLRoundReducer):
     def collect_update(self, delta: IFLModel, weight: float) -> None:
 
         # build channel message with model state dict
-        message = self.channel.create_channel_message(delta)
-
         # receive through channel
-        message = self.channel_endpoint.receive(message)
+        message = self.channel.client_to_server(
+            Message(model=delta, weight=weight, count_sketch=CountSketch())
+        )
 
         # decode channel message, here only get the sketch
         sketch = message.count_sketch

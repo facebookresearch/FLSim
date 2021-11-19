@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 import torch
 from flsim.channels.base_channel import IdentityChannel, FLChannelConfig
-from flsim.channels.message import ChannelMessage
+from flsim.channels.message import Message
 from flsim.common.logger import Logger
 from flsim.interfaces.model import IFLModel
 from flsim.utils.config_utils import fullclassname
@@ -48,20 +48,18 @@ class SketchChannel(IdentityChannel):
     def _set_defaults_in_cfg(cls, cfg):
         pass
 
-    def create_channel_message(self, model: IFLModel) -> ChannelMessage:
-        message = ChannelMessage()
-        message.populate(model)
-        return message
-
-    def _calc_message_size_client_to_server(self, message: ChannelMessage):
+    def _calc_message_size_client_to_server(self, message: Message):
+        assert (
+            message.count_sketch is not None
+        ), "Count sketch is none. Please init count_sketch in Message."
         return message.count_sketch.get_size_in_bytes()
 
-    def _on_client_before_transmission(self, message: ChannelMessage) -> ChannelMessage:
+    def _on_client_before_transmission(self, message: Message) -> Message:
         """
         Curerntly sends whole CountSketch class. We could only share relevant attributes
         to re-instantiate the class on the server side, TODO in a next refactor.
         """
-
+        message.populate_state_dict()
         device = next(iter(message.model_state_dict.values())).device
         cs = CountSketch(
             width=self.num_col,
@@ -77,9 +75,7 @@ class SketchChannel(IdentityChannel):
 
         return message
 
-    def _during_transmission_client_to_server(
-        self, message: ChannelMessage
-    ) -> ChannelMessage:
+    def _during_transmission_client_to_server(self, message: Message) -> Message:
         if self.stats_collector:
             message_size_bytes = self._calc_message_size_client_to_server(message)
             self.stats_collector.collect_channel_stats(

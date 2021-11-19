@@ -10,9 +10,8 @@ import torch
 from flsim.channels.base_channel import (
     IdentityChannel,
     FLChannelConfig,
-    ChannelMessage,
+    Message,
 )
-from flsim.interfaces.model import IFLModel
 from flsim.utils.config_utils import fullclassname
 from flsim.utils.config_utils import init_self_cfg
 from torch.quantization.observer import (
@@ -66,7 +65,7 @@ class ScalarQuantizationChannel(IdentityChannel):
         self.quant_max = 2 ** self.n_bits - 1
         self.observer, self.quantizer = self._get_observers_and_quantizers()
 
-    def _calc_message_size_client_to_server(self, message: ChannelMessage):
+    def _calc_message_size_client_to_server(self, message: Message):
         """
         We compute the size of the compressed message as follows:
             - for the weights (compressed): n_bits / 8 bytes per element
@@ -144,17 +143,13 @@ class ScalarQuantizationChannel(IdentityChannel):
     def _set_defaults_in_cfg(cls, cfg):
         pass
 
-    def create_channel_message(self, model: IFLModel) -> ChannelMessage:
-        message = ChannelMessage()
-        message.populate(model)
-        return message
-
-    def _on_client_before_transmission(self, message: ChannelMessage) -> ChannelMessage:
+    def _on_client_before_transmission(self, message: Message) -> Message:
         """
         We quantize the weights but do not quantize the biases since
         the overhead is very small. We copy the state dict since the
         tensor format changes.
         """
+        message.populate_state_dict()
         new_state_dict = OrderedDict()
         for name, param in message.model_state_dict.items():
             if param.ndim > 1:
@@ -165,7 +160,11 @@ class ScalarQuantizationChannel(IdentityChannel):
         message.model_state_dict = new_state_dict
         return message
 
-    def _on_server_after_reception(self, message: ChannelMessage) -> ChannelMessage:
+    def _on_server_before_transmission(self, message: Message) -> Message:
+        message.populate_state_dict()
+        return message
+
+    def _on_server_after_reception(self, message: Message) -> Message:
         """
         We dequantize the weights and do not dequantize the biases
         since they have not beed quantized in the first place. We
@@ -178,8 +177,8 @@ class ScalarQuantizationChannel(IdentityChannel):
                 new_state_dict[name] = param.data.dequantize()
             else:
                 new_state_dict[name] = param.data
-
         message.model_state_dict = new_state_dict
+        message.update_model_()
         return message
 
 

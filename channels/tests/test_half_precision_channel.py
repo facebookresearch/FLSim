@@ -12,6 +12,7 @@ from flsim.channels.half_precision_channel import (
     HalfPrecisionChannelConfig,
     HalfPrecisionChannel,
 )
+from flsim.channels.message import Message
 from flsim.common.pytest_helper import assertEqual, assertIsInstance
 from flsim.tests import utils
 from flsim.utils.fl.common import FLModelParamUtils
@@ -60,9 +61,9 @@ class TestHalfPrecisionChannel:
         download_model = deepcopy(base_model)
 
         # test server -> client, models should be strictly identical
-        message = channel.create_channel_message(download_model)
+        message = Message(download_model)
         message = channel.server_to_client(message)
-        message.update_model_(download_model)
+
         mismatched = FLModelParamUtils.get_mismatched_param(
             [base_model.fl_get_module(), download_model.fl_get_module()]
         )
@@ -92,9 +93,9 @@ class TestHalfPrecisionChannel:
         upload_model = deepcopy(base_model)
 
         # test client -> server, models should be almost equal due to fp16 emulation
-        message = channel.create_channel_message(upload_model)
+        message = Message(upload_model)
         message = channel.client_to_server(message)
-        message.update_model_(upload_model)
+
         mismatched = FLModelParamUtils.get_mismatched_param(
             [base_model.fl_get_module(), upload_model.fl_get_module()],
             rel_epsilon=1e-8,
@@ -127,14 +128,12 @@ class TestHalfPrecisionChannel:
         upload_model = deepcopy(base_model)
 
         # server -> client
-        message = channel.create_channel_message(download_model)
+        message = Message(download_model)
         message = channel.server_to_client(message)
-        message.update_model_(download_model)
 
         # client -> server
-        message = channel.create_channel_message(upload_model)
+        message = Message(upload_model)
         message = channel.client_to_server(message)
-        message.update_model_(upload_model)
 
         # test communiction stats measurements
         stats = channel.stats_collector.get_channel_stats()
