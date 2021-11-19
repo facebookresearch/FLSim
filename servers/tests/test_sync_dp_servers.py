@@ -2,14 +2,17 @@
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
 import copy
+import itertools
 import math
 from unittest.mock import MagicMock
 
 import numpy as np
+import pytest
 import torch
 from flsim.channels.base_channel import IdentityChannel
 from flsim.channels.half_precision_channel import HalfPrecisionChannel
 from flsim.channels.message import Message
+from flsim.common.pytest_helper import assertEmpty
 from flsim.privacy.common import PrivacySetting
 from flsim.privacy.privacy_engine import GaussianPrivacyEngine
 from flsim.servers.aggregator import AggregationType
@@ -22,14 +25,9 @@ from flsim.tests.utils import (
     SampleNet,
 )
 from hydra.utils import instantiate
-from libfb.py import testutil
 
 
-class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-        self.channel = IdentityChannel()
-
+class TestSyncDPSGDServer:
     def _get_num_params(self, model):
         return sum(p.numel() for p in model.parameters())
 
@@ -60,13 +58,8 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
         )
         return server
 
-    @testutil.data_provider(
-        lambda: (
-            {"clipping_value": 1, "num_clients": 10},
-            {"clipping_value": 1, "num_clients": 1},
-            {"clipping_value": 1e10, "num_clients": 10},
-            {"clipping_value": 1e10, "num_clients": 1},
-        )
+    @pytest.mark.parametrize(
+        "clipping_value, num_clients", itertools.product([1, 1e10], [1, 10])
     )
     def test_no_noise_with_clip(self, clipping_value, num_clients) -> None:
         """
@@ -92,13 +85,11 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
             error_msg = model_parameters_equal_to_value(
                 server_model, expected_value * (round_num + 1)
             )
-            self.assertEmpty(error_msg, msg=error_msg)
+            assertEmpty(error_msg, msg=error_msg)
 
-    @testutil.data_provider(
-        lambda: (
-            {"clipping_value": 1, "noise": 1, "num_clients": 10},
-            {"clipping_value": 1, "noise": 1, "num_clients": 1},
-        )
+    @pytest.mark.parametrize(
+        "clipping_value, noise, num_clients",
+        itertools.product([1], [1], [1, 10]),
     )
     def test_noise_and_clip(self, clipping_value, noise, num_clients) -> None:
         """
@@ -142,7 +133,7 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
             error_msg = model_parameters_equal_to_value(
                 server_model, expected_value * (round_num + 1)
             )
-            self.assertEmpty(error_msg, msg=error_msg)
+            assertEmpty(error_msg, msg=error_msg)
 
     def test_no_noise_no_clip(self):
         """
@@ -194,7 +185,7 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
             no_dp_server.step()
 
             error_msg = verify_models_equivalent_after_training(dp_model, no_dp_model)
-            self.assertEmpty(error_msg, msg=error_msg)
+            assertEmpty(error_msg, msg=error_msg)
 
     def test_noise_added_correctly(self):
         """
@@ -205,8 +196,6 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
         means that the parameters of the clipped update will be all equal to sqrt(49/21)= 1.52
         w_t = w_t-1 - lr * (avg(grad) + sgd_noise)
         w_t = 0 - 1.0 * (avg(grad) + sgd_noise) = -(avg(grad) + sgd_noise) = -(1.52 + 0.8) = -2.32
-
-        Same test as https://fburl.com/code/mfaini2k
         """
         num_clients = 10
         clipping_value = 7.0
@@ -236,17 +225,11 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
         server.step()
 
         error_msg = model_parameters_equal_to_value(server_model, expected_value)
-        self.assertEmpty(error_msg, msg=error_msg)
+        assertEmpty(error_msg, msg=error_msg)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "channel": HalfPrecisionChannel(),
-            },
-            {
-                "channel": IdentityChannel(),
-            },
-        )
+    @pytest.mark.parametrize(
+        "channel",
+        [HalfPrecisionChannel(), IdentityChannel()],
     )
     def test_dp_server_channel_integration(self, channel):
         """From Client to Server, the channel should quantize and then dequantize the message
@@ -264,4 +247,4 @@ class SyncDPSGDServerTest(testutil.BaseFacebookTestCase):
         init = copy.deepcopy(delta)
         server.receive_update_from_client(Message(model=SampleNet(delta), weight=1.0))
         error_msg = verify_models_equivalent_after_training(delta, init)
-        self.assertEmpty(error_msg, msg=error_msg)
+        assertEmpty(error_msg, msg=error_msg)
