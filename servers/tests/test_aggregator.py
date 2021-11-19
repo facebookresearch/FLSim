@@ -4,15 +4,21 @@
 
 from tempfile import mkstemp
 
+import pytest
 import torch.distributed as dist
 import torch.multiprocessing as mp
+from flsim.common.pytest_helper import (
+    assertEqual,
+    assertNotEqual,
+    assertAlmostEqual,
+    assertEmpty,
+)
 from flsim.servers.aggregator import Aggregator, AggregationType
 from flsim.tests.utils import (
     create_model_with_value,
     model_parameters_equal_to_value,
 )
 from flsim.utils.distributed.fl_distributed import FLDistributedUtils, OperationType
-from libfb.py import testutil
 
 
 def init_process(
@@ -81,10 +87,15 @@ def run_multiprocess_aggregation_test(
     return res
 
 
-class AggregatorTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
+AGGREGATION_TYPES = [
+    AggregationType.AVERAGE,
+    AggregationType.WEIGHTED_AVERAGE,
+    AggregationType.SUM,
+    AggregationType.WEIGHTED_SUM,
+]
 
+
+class TestAggregator:
     def test_zero_weights(self) -> None:
         model = create_model_with_value(0)
         ag = Aggregator(module=model, aggregation_type=AggregationType.AVERAGE)
@@ -95,38 +106,19 @@ class AggregatorTest(testutil.BaseFacebookTestCase):
             delta = create_model_with_value(1.0)
             ag.apply_weight_to_update(delta=delta, weight=weight)
             ag.add_update(delta=delta, weight=weight)
-        self.assertEqual(ag.weights, weight * steps)
+        assertEqual(ag.weights, weight * steps)
 
         ag.zero_weights()
-        self.assertEqual(ag.weights, 0)
+        assertEqual(ag.weights, 0)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "agg_type": AggregationType.AVERAGE,
-                "num_process": 4,
-                "num_models": 10,
-                "expected_value": 1.0,
-            },
-            {
-                "agg_type": AggregationType.WEIGHTED_AVERAGE,
-                "num_process": 4,
-                "num_models": 10,
-                "expected_value": 1.0,
-            },
-            {
-                "agg_type": AggregationType.WEIGHTED_SUM,
-                "num_process": 4,
-                "num_models": 10,
-                "expected_value": 55.0,
-            },
-            {
-                "agg_type": AggregationType.SUM,
-                "num_process": 4,
-                "num_models": 10,
-                "expected_value": 10.0,
-            },
-        )
+    @pytest.mark.parametrize(
+        "agg_type,num_process,num_models,expected_value",
+        [
+            (AggregationType.AVERAGE, 4, 10, 1.0),
+            (AggregationType.WEIGHTED_AVERAGE, 4, 10, 1.0),
+            (AggregationType.WEIGHTED_SUM, 4, 10, 55.0),
+            (AggregationType.SUM, 4, 10, 10.0),
+        ],
     )
     def test_multiprocess_aggregation(
         self, agg_type, num_process, num_models, expected_value
@@ -137,17 +129,17 @@ class AggregatorTest(testutil.BaseFacebookTestCase):
         results = run_multiprocess_aggregation_test(
             ag, num_processes=num_process, num_models=num_models
         )
-
         for result in results:
-            self.assertAlmostEqual(result, expected_value, places=5)
+            assertAlmostEqual(result, expected_value, places=5)
 
-    @testutil.data_provider(
-        lambda: (
-            {"agg_type": AggregationType.AVERAGE, "expected_value": 1.0},
-            {"agg_type": AggregationType.WEIGHTED_AVERAGE, "expected_value": 1.0},
-            {"agg_type": AggregationType.WEIGHTED_SUM, "expected_value": 55.0},
-            {"agg_type": AggregationType.SUM, "expected_value": 10.0},
-        )
+    @pytest.mark.parametrize(
+        "agg_type,expected_value",
+        [
+            (AggregationType.AVERAGE, 1.0),
+            (AggregationType.WEIGHTED_AVERAGE, 1.0),
+            (AggregationType.WEIGHTED_SUM, 55.0),
+            (AggregationType.SUM, 10.0),
+        ],
     )
     def test_aggregate(self, agg_type, expected_value):
 
@@ -163,15 +155,16 @@ class AggregatorTest(testutil.BaseFacebookTestCase):
 
         model = ag.aggregate()
         error_msg = model_parameters_equal_to_value(model, expected_value)
-        self.assertEmpty(error_msg, msg=error_msg)
+        assertEmpty(error_msg, msg=error_msg)
 
-    @testutil.data_provider(
-        lambda: (
-            {"agg_type": AggregationType.AVERAGE, "expected_value": 10.0},
-            {"agg_type": AggregationType.WEIGHTED_AVERAGE, "expected_value": 55.0},
-            {"agg_type": AggregationType.WEIGHTED_SUM, "expected_value": 55.0},
-            {"agg_type": AggregationType.SUM, "expected_value": 10.0},
-        )
+    @pytest.mark.parametrize(
+        "agg_type,expected_value",
+        [
+            (AggregationType.AVERAGE, 10.0),
+            (AggregationType.WEIGHTED_AVERAGE, 55.0),
+            (AggregationType.WEIGHTED_SUM, 55.0),
+            (AggregationType.SUM, 10.0),
+        ],
     )
     def test_add_update(self, agg_type, expected_value):
         model = create_model_with_value(0)
@@ -183,20 +176,18 @@ class AggregatorTest(testutil.BaseFacebookTestCase):
             ag.apply_weight_to_update(delta=delta, weight=weight)
             ag.add_update(delta=delta, weight=weight)
 
-        self.assertEqual(ag.weights, expected_value)
+        assertEqual(ag.weights, expected_value)
 
-    @testutil.data_provider(
-        lambda: (
-            {"dist_op": OperationType.SUM, "agg_type": AggregationType.SUM},
-            {"dist_op": OperationType.SUM, "agg_type": AggregationType.AVERAGE},
-            {
-                "dist_op": OperationType.SUM,
-                "agg_type": AggregationType.WEIGHTED_AVERAGE,
-            },
-            {"dist_op": OperationType.SUM, "agg_type": AggregationType.WEIGHTED_SUM},
-        )
+    @pytest.mark.parametrize(
+        "agg_type,dist_op",
+        [
+            (AggregationType.AVERAGE, OperationType.SUM),
+            (AggregationType.WEIGHTED_AVERAGE, OperationType.SUM),
+            (AggregationType.WEIGHTED_SUM, OperationType.SUM),
+            (AggregationType.SUM, OperationType.SUM),
+        ],
     )
-    def test_distributed_op_aggregation(self, dist_op, agg_type):
+    def test_distributed_op_aggregation(self, agg_type, dist_op):
         """
         Test aggregation with only SUM and no BROADTCAST then each worker should have
         different parameters.
@@ -211,4 +202,4 @@ class AggregatorTest(testutil.BaseFacebookTestCase):
             distributed_op=dist_op,
         )
         for r, v in zip(results, results[1:]):
-            self.assertNotEqual(r, v)
+            assertNotEqual(r, v)
