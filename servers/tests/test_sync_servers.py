@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import List
 
 import numpy as np
+import pytest
 from flsim.active_user_selectors.simple_user_selector import (
     UniformlyRandomActiveUserSelectorConfig,
 )
@@ -31,7 +32,6 @@ from flsim.tests.utils import (
 )
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
-from libfb.py import testutil
 
 
 @dataclass
@@ -41,10 +41,7 @@ class MockClientUpdate:
     expected_value: float
 
 
-class SyncServerTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestSyncServer:
     def _create_client_updates(self, num_clients, aggregation_type):
         deltas = [i + 1 for i in range(num_clients)]
         weights = [i + 1 for i in range(num_clients)]
@@ -102,31 +99,22 @@ class SyncServerTest(testutil.BaseFacebookTestCase):
             error_msg = verify_models_equivalent_after_training(
                 server_model, optim_model
             )
-            self.assertEmpty(error_msg, msg=error_msg)
+            assertEmpty(error_msg, msg=error_msg)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "aggregation_type": AggregationType.AVERAGE,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_AVERAGE,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.AVERAGE,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_AVERAGE,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-        )
+    @pytest.mark.parametrize(
+        "aggregation_type",
+        [
+            AggregationType.AVERAGE,
+            AggregationType.WEIGHTED_AVERAGE,
+        ],
+    )
+    @pytest.mark.parametrize(
+        "num_clients",
+        [10, 1],
+    )
+    @pytest.mark.parametrize(
+        "num_rounds",
+        [10, 1],
     )
     def test_fed_avg_sync_server(
         self, aggregation_type, num_clients, num_rounds
@@ -158,49 +146,22 @@ class SyncServerTest(testutil.BaseFacebookTestCase):
             )
             assertEmpty(error_msg, msg=error_msg)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "aggregation_type": AggregationType.AVERAGE,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_AVERAGE,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.AVERAGE,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_AVERAGE,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-            {
-                "aggregation_type": AggregationType.SUM,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_SUM,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.SUM,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_SUM,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-        )
+    @pytest.mark.parametrize(
+        "aggregation_type",
+        [
+            AggregationType.AVERAGE,
+            AggregationType.WEIGHTED_AVERAGE,
+            AggregationType.SUM,
+            AggregationType.WEIGHTED_SUM,
+        ],
+    )
+    @pytest.mark.parametrize(
+        "num_clients",
+        [10, 1],
+    )
+    @pytest.mark.parametrize(
+        "num_rounds",
+        [10, 1],
     )
     def test_fed_sgd_sync_server(
         self, aggregation_type, num_clients, num_rounds
@@ -213,49 +174,22 @@ class SyncServerTest(testutil.BaseFacebookTestCase):
             num_clients=num_clients,
         )
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "aggregation_type": AggregationType.AVERAGE,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_AVERAGE,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.AVERAGE,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_AVERAGE,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-            {
-                "aggregation_type": AggregationType.SUM,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_SUM,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.SUM,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_SUM,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-        )
+    @pytest.mark.parametrize(
+        "aggregation_type",
+        [
+            AggregationType.AVERAGE,
+            AggregationType.WEIGHTED_AVERAGE,
+            AggregationType.SUM,
+            AggregationType.WEIGHTED_SUM,
+        ],
+    )
+    @pytest.mark.parametrize(
+        "num_clients",
+        [10, 1],
+    )
+    @pytest.mark.parametrize(
+        "num_rounds",
+        [10, 1],
     )
     def test_fed_adam_sync_server(
         self, aggregation_type, num_clients, num_rounds
@@ -268,49 +202,22 @@ class SyncServerTest(testutil.BaseFacebookTestCase):
             num_clients=num_clients,
         )
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "aggregation_type": AggregationType.AVERAGE,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_AVERAGE,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.AVERAGE,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_AVERAGE,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-            {
-                "aggregation_type": AggregationType.SUM,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_SUM,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.SUM,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_SUM,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-        )
+    @pytest.mark.parametrize(
+        "aggregation_type",
+        [
+            AggregationType.AVERAGE,
+            AggregationType.WEIGHTED_AVERAGE,
+            AggregationType.SUM,
+            AggregationType.WEIGHTED_SUM,
+        ],
+    )
+    @pytest.mark.parametrize(
+        "num_clients",
+        [10, 1],
+    )
+    @pytest.mark.parametrize(
+        "num_rounds",
+        [10, 1],
     )
     def test_fed_lars_sync_server(
         self, aggregation_type, num_clients, num_rounds
@@ -323,49 +230,22 @@ class SyncServerTest(testutil.BaseFacebookTestCase):
             num_clients=num_clients,
         )
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "aggregation_type": AggregationType.AVERAGE,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_AVERAGE,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.AVERAGE,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_AVERAGE,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-            {
-                "aggregation_type": AggregationType.SUM,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_SUM,
-                "num_clients": 10,
-                "num_rounds": 10,
-            },
-            {
-                "aggregation_type": AggregationType.SUM,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-            {
-                "aggregation_type": AggregationType.WEIGHTED_SUM,
-                "num_clients": 1,
-                "num_rounds": 1,
-            },
-        )
+    @pytest.mark.parametrize(
+        "aggregation_type",
+        [
+            AggregationType.AVERAGE,
+            AggregationType.WEIGHTED_AVERAGE,
+            AggregationType.SUM,
+            AggregationType.WEIGHTED_SUM,
+        ],
+    )
+    @pytest.mark.parametrize(
+        "num_clients",
+        [10, 1],
+    )
+    @pytest.mark.parametrize(
+        "num_rounds",
+        [10, 1],
     )
     def test_fed_lamb_sync_server(
         self, aggregation_type, num_clients, num_rounds
@@ -399,17 +279,11 @@ class SyncServerTest(testutil.BaseFacebookTestCase):
         )
         assertEqual(server_selected_indices, uniform_selector_indices)
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "channel": HalfPrecisionChannel(),
-            },
-            {
-                "channel": IdentityChannel(),
-            },
-        )
+    @pytest.mark.parametrize(
+        "channel",
+        [HalfPrecisionChannel(), IdentityChannel()],
     )
-    def test_server_channel_integration(self, channel):
+    def test_sever_channel_integration(self, channel):
         """From Client to Server, the channel should quantize and then dequantize the message
         therefore there should be no change in the model
         """
