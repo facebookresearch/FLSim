@@ -2,6 +2,7 @@
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
 from flsim.channels.message import Message
+from flsim.common.pytest_helper import assertEqual
 from flsim.secure_aggregation.secure_aggregator import FixedPointConfig
 from flsim.servers.sync_secagg_servers import SyncSecAggServerConfig
 from flsim.tests.utils import (
@@ -11,13 +12,9 @@ from flsim.tests.utils import (
     create_model_with_value,
 )
 from hydra.utils import instantiate
-from libfb.py import testutil
 
 
-class SyncSecAggServerTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestSyncSecAggServer:
     def _create_server(self, model, fixedpoint, channel=None):
         return instantiate(
             SyncSecAggServerConfig(fixedpoint=fixedpoint),
@@ -33,8 +30,8 @@ class SyncSecAggServerTest(testutil.BaseFacebookTestCase):
         # test secure aggregation with flat FP config
         fixedpoint = FixedPointConfig(num_bytes=2, scaling_factor=100)
         server = self._create_server(model, fixedpoint=fixedpoint)
-        self.assertEqual(len(server._secure_aggregator.converters), 4)
-        self.assertEqual(  # verify an arbitrary layer of the model
+        assertEqual(len(server._secure_aggregator.converters), 4)
+        assertEqual(  # verify an arbitrary layer of the model
             server._secure_aggregator.converters["fc2.bias"].scaling_factor, 100
         )
 
@@ -71,7 +68,7 @@ class SyncSecAggServerTest(testutil.BaseFacebookTestCase):
             server.global_model.fl_get_module(),
             -(expected_param / scaling_factor) / (m1_w + m2_w),
         )
-        self.assertEqual(mismatched, "", mismatched)
+        assertEqual(mismatched, "", mismatched)
 
     def test_secure_aggregator_step_large_range(self):
         """
@@ -106,7 +103,7 @@ class SyncSecAggServerTest(testutil.BaseFacebookTestCase):
         mismatched = model_parameters_equal_to_value(
             server.global_model.fl_get_module(), expected_param
         )
-        self.assertEqual(mismatched, "", mismatched)
+        assertEqual(mismatched, "", mismatched)
 
     def test_secure_aggregator_step_small_range(self):
         """
@@ -143,4 +140,4 @@ class SyncSecAggServerTest(testutil.BaseFacebookTestCase):
         mismatched = model_parameters_equal_to_value(
             server.global_model.fl_get_module(), expected_param
         )
-        self.assertEqual(mismatched, "", mismatched)
+        assertEqual(mismatched, "", mismatched)
