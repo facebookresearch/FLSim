@@ -25,30 +25,14 @@ from flsim.utils.async_trainer.async_staleness_weights import (
 
 
 class AsyncExampleWeightsTestUtils:
-    @classmethod
-    def provide_example_weight_configs(cls):
-        return (
-            {
-                "example_weight_config": EqualExampleWeightConfig(),
-                "example_weight_class": EqualExampleWeight,
-            },
-            {
-                "example_weight_config": LinearExampleWeightConfig(),
-                "example_weight_class": LinearExampleWeight,
-            },
-            {
-                "example_weight_config": SqrtExampleWeightConfig(),
-                "example_weight_class": SqrtExampleWeight,
-            },
-            {
-                "example_weight_config": Log10ExampleWeightConfig(),
-                "example_weight_class": Log10ExampleWeight,
-            },
-        )
+    EXAMPLE_WEIGHT_TEST_CONFIGS = [
+        (EqualExampleWeightConfig(), EqualExampleWeight),
+        (LinearExampleWeightConfig(), LinearExampleWeight),
+        (SqrtExampleWeightConfig(), SqrtExampleWeight),
+        (Log10ExampleWeightConfig(), Log10ExampleWeight),
+    ]
 
-    @classmethod
-    def provide_avg_num_examples(cls):
-        return ({"avg_num_examples": 1}, {"avg_num_examples": 10000})
+    AVG_NUMBER_OF_EXAMPLES = [1, 10000]
 
     @classmethod
     def expected_weight(

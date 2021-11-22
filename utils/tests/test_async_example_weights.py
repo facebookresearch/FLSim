@@ -2,22 +2,23 @@
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
 import numpy as np
+import pytest
+from flsim.common.pytest_helper import assertEqual
 from flsim.utils.async_trainer.async_example_weights import (
     AsyncExampleWeightConfig,
     ExampleWeight,
 )
-from flsim.utils.tests.helpers.async_weights_test_utils import (
+from flsim.utils.tests.helpers.async_weights_test_utils import (  # noqa
     AsyncExampleWeightsTestUtils,
 )
 from hydra.utils import instantiate
-from libfb.py import testutil
 
 
-class AsyncExampleWeightsTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
-    @testutil.data_provider(AsyncExampleWeightsTestUtils.provide_example_weight_configs)
+class TestAsyncExampleWeights:
+    @pytest.mark.parametrize(
+        "example_weight_config, example_weight_class",
+        AsyncExampleWeightsTestUtils.EXAMPLE_WEIGHT_TEST_CONFIGS,
+    )
     def test_string_conversion(
         self,
         example_weight_config: AsyncExampleWeightConfig,
@@ -25,15 +26,21 @@ class AsyncExampleWeightsTest(testutil.BaseFacebookTestCase):
     ):
         """Check that strings are correctly converted to ExampleWeight"""
         obj = instantiate(example_weight_config)
-        self.assertEqual(obj.__class__, example_weight_class)
+        assertEqual(obj.__class__, example_weight_class)
 
-    @testutil.data_provider(AsyncExampleWeightsTestUtils.provide_example_weight_configs)
-    @testutil.data_provider(AsyncExampleWeightsTestUtils.provide_avg_num_examples)
+    @pytest.mark.parametrize(
+        "example_weight_config, example_weight_class",
+        AsyncExampleWeightsTestUtils.EXAMPLE_WEIGHT_TEST_CONFIGS,
+    )
+    @pytest.mark.parametrize(
+        "avg_num_examples",
+        AsyncExampleWeightsTestUtils.AVG_NUMBER_OF_EXAMPLES,
+    )
     def test_example_weight_compute(
         self,
         example_weight_config: AsyncExampleWeightConfig,
         example_weight_class: ExampleWeight,
-        avg_num_examples=1,
+        avg_num_examples: int,
     ):
         """Test that all weight computation works as expected"""
         # generate 10 random integers
@@ -42,7 +49,7 @@ class AsyncExampleWeightsTest(testutil.BaseFacebookTestCase):
             num_examples = np.random.randint(1, max_num_examples)
             example_weight_config.avg_num_examples = avg_num_examples
             obj = instantiate(example_weight_config)
-            self.assertEqual(
+            assertEqual(
                 obj.weight(num_examples),
                 AsyncExampleWeightsTestUtils.expected_weight(
                     avg_num_examples=avg_num_examples,
