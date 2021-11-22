@@ -3,6 +3,8 @@
 
 import hydra
 import numpy as np
+import pytest
+from flsim.common.pytest_helper import assertEqual, assertRaises
 from flsim.utils.async_trainer.async_staleness_weights import (
     AsyncStalenessWeightConfig,
     StalenessWeight,
@@ -14,15 +16,12 @@ from flsim.utils.tests.helpers.async_weights_test_utils import (
     AsyncStalenessWeightsTestUtils,
 )
 from hydra.utils import instantiate
-from libfb.py import testutil
 
 
-class AsyncStalenessWeightsTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
-    @testutil.data_provider(
-        AsyncStalenessWeightsTestUtils.provide_staleness_weight_configs
+class TestAsyncStalenessWeights:
+    @pytest.mark.parametrize(
+        "staleness_weight_config, staleness_weight_class",
+        AsyncStalenessWeightsTestUtils.STALENESS_WEIGHT_TEST_CONFIGS,
     )
     def test_string_conversion(
         self,
@@ -30,12 +29,13 @@ class AsyncStalenessWeightsTest(testutil.BaseFacebookTestCase):
         staleness_weight_class: StalenessWeight,
     ):
         obj = instantiate(staleness_weight_config)
-        self.assertEqual(obj.__class__, staleness_weight_class)
+        assertEqual(obj.__class__, staleness_weight_class)
 
-    @testutil.data_provider(
-        AsyncStalenessWeightsTestUtils.provide_avg_staleness_weights
+    @pytest.mark.parametrize(
+        "avg_staleness",
+        AsyncStalenessWeightsTestUtils.AVG_TEST_STALENESS,
     )
-    def test_constant_weight_compute(self, avg_staleness=1):
+    def test_constant_weight_compute(self, avg_staleness):
         """Test that all constant weight computation works as expected"""
         max_staleness = 10000
         obj = instantiate(ConstantStalenessWeightConfig(avg_staleness=avg_staleness))
@@ -43,12 +43,13 @@ class AsyncStalenessWeightsTest(testutil.BaseFacebookTestCase):
             staleness = np.random.randint(1, max_staleness)
             numerator = AsyncStalenessWeightsTestUtils.get_constant_wt()
             denom = AsyncStalenessWeightsTestUtils.get_constant_wt()
-            self.assertEqual(obj.weight(staleness), numerator / denom)
+            assertEqual(obj.weight(staleness), numerator / denom)
 
-    @testutil.data_provider(
-        AsyncStalenessWeightsTestUtils.provide_avg_staleness_weights
+    @pytest.mark.parametrize(
+        "avg_staleness",
+        AsyncStalenessWeightsTestUtils.AVG_TEST_STALENESS,
     )
-    def test_threshold_weight_compute(self, avg_staleness=1):
+    def test_threshold_weight_compute(self, avg_staleness):
         """Test that threshold weight computation works as expected"""
         max_staleness = 10000
         for _i in range(10):
@@ -72,12 +73,13 @@ class AsyncStalenessWeightsTest(testutil.BaseFacebookTestCase):
                 cutoff=cutoff,
                 value_after_cutoff=value_after_cutoff,
             )
-            self.assertEqual(obj.weight(staleness), numerator / denom)
+            assertEqual(obj.weight(staleness), numerator / denom)
 
-    @testutil.data_provider(
-        AsyncStalenessWeightsTestUtils.provide_avg_staleness_weights
+    @pytest.mark.parametrize(
+        "avg_staleness",
+        AsyncStalenessWeightsTestUtils.AVG_TEST_STALENESS,
     )
-    def test_polynomial_weight_compute(self, avg_staleness=1):
+    def test_polynomial_weight_compute(self, avg_staleness):
         """Test that threshold weight computation works as expected"""
         max_staleness = 10000
         for _i in range(10):
@@ -94,7 +96,7 @@ class AsyncStalenessWeightsTest(testutil.BaseFacebookTestCase):
             denom = AsyncStalenessWeightsTestUtils.get_polynomial_wt(
                 staleness=avg_staleness, exponent=exponent
             )
-            self.assertEqual(obj.weight(staleness), numerator / denom)
+            assertEqual(obj.weight(staleness), numerator / denom)
 
     def test_polynomial_weight_zero_exponent(self):
         """For polynomial weight, if exponent is zero, wt=1 regardless of
@@ -110,14 +112,14 @@ class AsyncStalenessWeightsTest(testutil.BaseFacebookTestCase):
                     avg_staleness=avg_staleness, exponent=0.0
                 )
             )
-            self.assertEqual(obj.weight(staleness), 1.0)
+            assertEqual(obj.weight(staleness), 1.0)
 
     def test_polynomial_weight_bad_exponent(self):
         """For polynomial weight, exponent must be between 0 and 1, else error"""
         cfg = PolynomialStalenessWeightConfig(avg_staleness=0, exponent=-0.1)
 
         # negative exponent causes error
-        with self.assertRaises(
+        with assertRaises(
             (
                 AssertionError,  # with Hydra 1.1
                 hydra.errors.HydraException,  # with Hydra 1.0
@@ -127,7 +129,7 @@ class AsyncStalenessWeightsTest(testutil.BaseFacebookTestCase):
             instantiate(cfg)
 
         # exponent greater than 1.0 causes error
-        with self.assertRaises(
+        with assertRaises(
             (
                 AssertionError,  # with Hydra 1.1
                 hydra.errors.HydraException,  # with Hydra 1.0

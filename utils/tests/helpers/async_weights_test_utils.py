@@ -54,30 +54,15 @@ class AsyncExampleWeightsTestUtils:
 
 
 class AsyncStalenessWeightsTestUtils:
-    @classmethod
-    def provide_staleness_weight_configs(cls):
-        return (
-            {
-                "staleness_weight_config": ConstantStalenessWeightConfig(),
-                "staleness_weight_class": ConstantStalenessWeight,
-            },
-            {
-                "staleness_weight_config": ThresholdStalenessWeightConfig(
-                    cutoff=1, value_after_cutoff=0.1
-                ),
-                "staleness_weight_class": ThresholdStalenessWeight,
-            },
-            {
-                "staleness_weight_config": PolynomialStalenessWeightConfig(
-                    exponent=0.5
-                ),
-                "staleness_weight_class": PolynomialStalenessWeight,
-            },
-        )
-
-    @classmethod
-    def provide_avg_staleness_weights(cls):
-        return ({"avg_staleness": 1}, {"avg_staleness": 10000})
+    STALENESS_WEIGHT_TEST_CONFIGS = [
+        (ConstantStalenessWeightConfig(), ConstantStalenessWeight),
+        (
+            ThresholdStalenessWeightConfig(cutoff=1, value_after_cutoff=0.1),
+            ThresholdStalenessWeight,
+        ),
+        (PolynomialStalenessWeightConfig(exponent=0.5), PolynomialStalenessWeight),
+    ]
+    AVG_TEST_STALENESS = [1, 10000]
 
     @classmethod
     def get_constant_wt(cls) -> float:
