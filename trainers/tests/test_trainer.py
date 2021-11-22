@@ -8,11 +8,18 @@ from typing import List
 
 import flsim.configs  # noqa
 import pkg_resources
+import pytest
 import torch
 from flsim.active_user_selectors.simple_user_selector import (
     SequentialActiveUserSelectorConfig,
 )
 from flsim.clients.base_client import ClientConfig
+from flsim.common.pytest_helper import (
+    assertEqual,
+    assertTrue,
+    assertIsInstance,
+    assertEmpty,
+)
 from flsim.common.timeout_simulator import GaussianTimeOutSimulatorConfig
 from flsim.data.data_provider import FLDataProviderFromList
 from flsim.data.data_sharder import SequentialSharder
@@ -55,7 +62,6 @@ from flsim.utils.timing.training_duration_distribution import (
 )
 from hydra.experimental import compose, initialize
 from hydra.utils import instantiate
-from libfb.py import testutil
 from omegaconf import OmegaConf
 
 CONFIG_PATH = "test_resources"
@@ -73,23 +79,15 @@ SYNC_TRAINER_WRONG_YAML = "sync_trainer_wrong_dp_config"
 SYNC_TRAINER_WITH_SECAGG_YAML = "sync_trainer_with_secagg"
 
 
-class TrainerTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
-    @testutil.data_provider(
-        lambda: (
-            {"json_file_name": SYNC_TRAINER_JSON, "trainer_class": SyncTrainer},
-            {"json_file_name": ASYNC_TRAINER_JSON, "trainer_class": AsyncTrainer},
-            {
-                "json_file_name": SYNC_TRAINER_WITH_DP_JSON,
-                "trainer_class": SyncTrainer,
-            },
-            {
-                "json_file_name": SYNC_TRAINER_WITH_SECAGG_JSON,
-                "trainer_class": SyncTrainer,
-            },
-        )
+class TestTrainer:
+    @pytest.mark.parametrize(
+        "json_file_name,trainer_class ",
+        [
+            (SYNC_TRAINER_JSON, SyncTrainer),
+            (ASYNC_TRAINER_JSON, AsyncTrainer),
+            (SYNC_TRAINER_WITH_DP_JSON, SyncTrainer),
+            (SYNC_TRAINER_WITH_SECAGG_JSON, SyncTrainer),
+        ],
     )
     def test_trainer_creation_from_json_config(
         self, json_file_name: str, trainer_class: type
@@ -104,7 +102,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             model=DummyAlphabetFLModel(),
             cuda_enabled=False,
         )
-        self.assertIsInstance(trainer, trainer_class)
+        assertIsInstance(trainer, trainer_class)
 
     def test_trainer_sync_server_creation_from_json_config(self):
         file_path = pkg_resources.resource_filename(__name__, SYNC_TRAINER_JSON)
@@ -116,21 +114,16 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             model=DummyAlphabetFLModel(),
             cuda_enabled=False,
         )
-        self.assertIsInstance(trainer.server._optimizer, torch.optim.Adam)
+        assertIsInstance(trainer.server._optimizer, torch.optim.Adam)
 
-    @testutil.data_provider(
-        lambda: (
-            {"yaml_file_name": SYNC_TRAINER_YAML, "trainer_class": SyncTrainer},
-            {"yaml_file_name": ASYNC_TRAINER_YAML, "trainer_class": AsyncTrainer},
-            {
-                "yaml_file_name": SYNC_TRAINER_WITH_DP_YAML,
-                "trainer_class": SyncTrainer,
-            },
-            {
-                "yaml_file_name": SYNC_TRAINER_WITH_SECAGG_YAML,
-                "trainer_class": SyncTrainer,
-            },
-        )
+    @pytest.mark.parametrize(
+        "yaml_file_name,trainer_class ",
+        [
+            (SYNC_TRAINER_YAML, SyncTrainer),
+            (ASYNC_TRAINER_YAML, AsyncTrainer),
+            (SYNC_TRAINER_WITH_DP_YAML, SyncTrainer),
+            (SYNC_TRAINER_WITH_SECAGG_YAML, SyncTrainer),
+        ],
     )
     def test_trainer_creation_from_yaml_config(
         self, yaml_file_name: str, trainer_class: type
@@ -143,7 +136,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
                 model=DummyAlphabetFLModel(),
                 cuda_enabled=False,
             )
-        self.assertIsInstance(trainer, trainer_class)
+        assertIsInstance(trainer, trainer_class)
 
     def test_async_trainer_with_dp_creation_from_json_config(self):
         trainer = None
@@ -156,8 +149,8 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             model=DummyAlphabetFLModel(),
             cuda_enabled=False,
         )
-        self.assertIsInstance(trainer, AsyncTrainer)
-        self.assertTrue(trainer.aggregator.is_private)
+        assertIsInstance(trainer, AsyncTrainer)
+        assertTrue(trainer.aggregator.is_private)
 
     def test_async_trainer_with_dp_creation_from_yaml_config(self):
         trainer = None
@@ -168,8 +161,8 @@ class TrainerTest(testutil.BaseFacebookTestCase):
                 model=DummyAlphabetFLModel(),
                 cuda_enabled=False,
             )
-        self.assertIsInstance(trainer, AsyncTrainer)
-        self.assertTrue(trainer.aggregator.is_private)
+        assertIsInstance(trainer, AsyncTrainer)
+        assertTrue(trainer.aggregator.is_private)
 
     def test_global_model_unchanged_after_metrics_reporting(self):
         """
@@ -233,7 +226,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             modules.append(model.fl_get_module())
 
         # make sure metrics reporting after aggregation does not change global model
-        self.assertEqual(FLModelParamUtils.get_mismatched_param(modules), "")
+        assertEqual(FLModelParamUtils.get_mismatched_param(modules), "")
 
     def test_client_optimizer_creation_from_config(self):
         """
@@ -251,21 +244,19 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             trainer = instantiate(
                 config, model=DummyAlphabetFLModel(), cuda_enabled=False
             )
-            self.assertTrue(isinstance(trainer, trainer_type))
+            assertTrue(isinstance(trainer, trainer_type))
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "config": SyncServerConfig(
+    @pytest.mark.parametrize(
+        "config,trainer_type ",
+        [
+            (
+                SyncServerConfig(
                     server_optimizer=FedAvgWithLROptimizerConfig(lr=1.0, momentum=0.0)
                 ),
-                "trainer_type": SyncTrainer,
-            },
-            {
-                "config": FedAdamAsyncAggregatorConfig(beta1=0.1),
-                "trainer_type": AsyncTrainer,
-            },
-        )
+                SyncTrainer,
+            ),
+            (FedAdamAsyncAggregatorConfig(beta1=0.1), AsyncTrainer),
+        ],
     )
     def test_server_optimizer_creation_from_config(self, config, trainer_type):
         """
@@ -277,7 +268,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             else AsyncTrainerConfig(aggregator=config)
         )
         trainer = instantiate(config, model=DummyAlphabetFLModel(), cuda_enabled=False)
-        self.assertTrue(isinstance(trainer, trainer_type))
+        assertTrue(isinstance(trainer, trainer_type))
 
     def test_same_training_results_with_post_aggregation_reporting(self):
         """
@@ -321,7 +312,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             data_loader.fl_test_set(),
             global_model_1,
         )
-        self.assertEqual(data_provider.num_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_users(), data_loader.num_total_users)
         # training with reporting the train metrics after aggregation
         sync_trainer_1.cfg.report_train_metrics = True
         sync_trainer_1.cfg.report_train_metrics_after_aggregation = True
@@ -354,7 +345,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         )
 
         # check two training instance produce same results
-        self.assertEqual(
+        assertEqual(
             FLModelParamUtils.get_mismatched_param(
                 [global_model_1.fl_get_module(), global_model_2.fl_get_module()]
             ),
@@ -403,7 +394,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             data_loader.fl_test_set(),
             global_model_1,
         )
-        self.assertEqual(data_provider.num_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_users(), data_loader.num_total_users)
         # training with using training clients for aggregation training metrics
         sync_trainer_1.cfg.report_train_metrics_after_aggregation = True
         sync_trainer_1.cfg.use_train_clients_for_aggregation_metrics = True
@@ -446,16 +437,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
                 or batch_metrics_1.num_examples != batch_metrics_2.num_examples
             ):
                 return
-        self.fail("Batch metrics same whether using training or random clients")
-
-    def test_single_users_metrics_reporting(self):
-        # TODO this was doing nothing , comparing None to None
-        # It was a badly written test to start with,
-        # interface of metric_reporter was violated just to
-        # write this test. it is an artificially imposed test
-        # we need to think about a better test to test metric reporting
-        # task here ()
-        pass
+        assert True, "Batch metrics same whether using training or random clients"
 
     def test_one_user_sequential_user_equivalent(self):
         """
@@ -487,7 +469,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         ) = DummyAlphabetDataset.create_data_provider_and_loader(
             dummy_dataset, shard_size, local_batch_size, global_model
         )
-        self.assertEqual(
+        assertEqual(
             data_loader.num_total_users, math.ceil(num_training_examples / shard_size)
         )
 
@@ -520,10 +502,10 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         ) = DummyAlphabetDataset.create_data_provider_and_loader(
             dummy_dataset, shard_size, local_batch_size, global_model
         )
-        self.assertEqual(
+        assertEqual(
             data_loader.num_total_users, math.ceil(num_training_examples / shard_size)
         )
-        self.assertEqual(data_provider.num_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_users(), data_loader.num_total_users)
         # select all users to train in each round
         users_per_round = data_provider.num_users()
         torch.manual_seed(1)
@@ -539,7 +521,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             num_total_users=data_provider.num_users(),
             distributed_world_size=world_size,
         )
-        self.assertEqual(
+        assertEqual(
             verify_models_equivalent_after_training(
                 one_user_global_model,
                 all_users_global_model,
@@ -576,8 +558,8 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         ) = DummyAlphabetDataset.create_data_provider_and_loader(
             dummy_dataset, shard_size, local_batch_size, global_model
         )
-        self.assertEqual(data_loader.num_total_users, math.ceil(26 / shard_size))
-        self.assertEqual(data_provider.num_users(), data_loader.num_total_users)
+        assertEqual(data_loader.num_total_users, math.ceil(26 / shard_size))
+        assertEqual(data_provider.num_users(), data_loader.num_total_users)
         users_per_round = 1
         local_optimizer_lr = 1.0
         epochs = 5
@@ -618,7 +600,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             distributed_world_size=world_size,
         )
         metrics_reporter.reset()
-        self.assertEqual(
+        assertEqual(
             verify_models_equivalent_after_training(
                 constant_lr_model,
                 armijo_ls_model,
@@ -652,7 +634,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         # will be used later to verify training indeed took place
         global_model_init_copy = copy.deepcopy(global_model)
         # num_fl_users users, each with num_examples/num_fl_users training examples
-        self.assertTrue(
+        assertTrue(
             num_examples % num_fl_users == 0,
             f"Expect num_examples({num_examples}) to be multiple of num_fl_users({num_fl_users})",
         )
@@ -666,10 +648,8 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         ) = DummyAlphabetDataset.create_data_provider_and_loader(
             dummy_dataset, shard_size, batch_size, global_model
         )
-        self.assertEqual(
-            data_loader.num_total_users, math.ceil(num_examples / shard_size)
-        )
-        self.assertEqual(data_provider.num_users(), data_loader.num_total_users)
+        assertEqual(data_loader.num_total_users, math.ceil(num_examples / shard_size))
+        assertEqual(data_provider.num_users(), data_loader.num_total_users)
 
         torch.manual_seed(1)
 
@@ -714,7 +694,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             rel_epsilon=1e-4,
             abs_epsilon=1e-6,
         )
-        self.assertEmpty(error_msg, msg=error_msg)
+        assertEmpty(error_msg, msg=error_msg)
 
     def test_fl_nonfl_equivalent_global_optimizer_sgd(self):
         """
@@ -789,15 +769,11 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         ) = DummyAlphabetDataset.create_data_provider_and_loader(
             dummy_dataset, shard_size, local_batch_size, global_model
         )
-        self.assertEqual(data_provider.num_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_users(), data_loader.num_total_users)
         # assert first user gets (dummy_dataset.num_rows / 2) + 1 data point,
         # the second user gets (dummy_dataset.num_rows / 2) - 1 data point
-        self.assertEqual(
-            data_provider[0].num_examples(), dummy_dataset.num_rows / 2 + 1
-        )
-        self.assertEqual(
-            data_provider[1].num_examples(), dummy_dataset.num_rows / 2 - 1
-        )
+        assertEqual(data_provider[0].num_examples(), dummy_dataset.num_rows / 2 + 1)
+        assertEqual(data_provider[1].num_examples(), dummy_dataset.num_rows / 2 - 1)
         # shared trainer config between two training instance
         users_per_round = 1
         local_optimizer_lr = 1.0
@@ -830,7 +806,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         data_provider._users[0] = copy.deepcopy(data_provider._users[1])
         data_provider._users.pop(1)
         # only a single user after remove user 0
-        self.assertEqual(data_provider.num_users(), 1)
+        assertEqual(data_provider.num_users(), 1)
         global_model = copy.deepcopy(global_model_init)
         torch.manual_seed(1)
         dropout_rate = 1.0
@@ -848,7 +824,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             num_total_users=data_provider.num_users(),
             distributed_world_size=1,
         )
-        self.assertEqual(
+        assertEqual(
             verify_models_equivalent_after_training(
                 model_with_overselection,
                 model_single_user,
@@ -938,7 +914,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             num_total_users=data_provider.num_users(),
             distributed_world_size=1,
         )
-        self.assertEqual(
+        assertEqual(
             verify_models_equivalent_after_training(
                 model_with_timeout,
                 model_no_timeout,
@@ -1021,7 +997,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
 
         # If client_metrics_reported_per_epoch = 3 and number of epochs = 6
         # per client eval metrics should be reported twice.
-        self.assertEqual(
+        assertEqual(
             count_word(metrics_reporter.stdout_results, "Per_Client_Eval"),
             2,
             metrics_reporter.stdout_results,
@@ -1031,7 +1007,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         self, num_total_users, num_epochs, users_per_round
     ) -> List[MockRecord]:
         # dataset has 26 rows
-        self.assertTrue(num_total_users <= 26, "Can't have more than 26 users")
+        assertTrue(num_total_users <= 26, "Can't have more than 26 users")
         torch.manual_seed(1)
         # 26 rows in data
         shard_size = int(math.ceil(26 / num_total_users))
@@ -1065,7 +1041,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             data_loader.fl_test_set(),
             global_model,
         )
-        self.assertEqual(data_provider.num_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_users(), data_loader.num_total_users)
         sync_trainer.cfg.report_train_metrics = True
         sync_trainer.cfg.report_train_metrics_after_aggregation = True
         global_model, best_metric = sync_trainer.train(
@@ -1102,7 +1078,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             tag = f"Loss/{TrainingStage(stage).name.title()}"
             num_entries = sum(record.tag == tag for record in tensorboard_results)
             # we report once per epoch
-            self.assertEqual(num_entries, 1)
+            assertEqual(num_entries, 1)
 
         # training runs for 1 epoch, or 5 rounds
         # when train/eval results are reported, global_round_num should be 5
@@ -1110,7 +1086,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         global_steps_reported_actual = [
             record.global_step for record in tensorboard_results
         ]
-        self.assertEqual(
+        assertEqual(
             global_steps_reported_actual,
             global_steps_reported_expected,
             f"Actual global steps: {global_steps_reported_actual}, Expected global steps:{global_steps_reported_expected}",
@@ -1142,7 +1118,7 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             tag = f"Loss/{TrainingStage(stage).name.title()}"
             num_entries = sum(record.tag == tag for record in tensorboard_results)
             # we report once per epoch
-            self.assertEqual(num_entries, num_epochs)
+            assertEqual(num_entries, num_epochs)
 
         rounds_per_epoch = int(math.ceil(num_total_users / users_per_round))
         # example. if num_epochs=3, and rounds_per_epoch=5, global_steps_at_epoch_end will be [5, 10, 15]
@@ -1163,19 +1139,20 @@ class TrainerTest(testutil.BaseFacebookTestCase):
         global_steps_reported_actual = [
             record.global_step for record in tensorboard_results
         ]
-        self.assertEqual(
+        assertEqual(
             global_steps_reported_actual,
             global_steps_reported_expected,
             f"Actual global steps: {global_steps_reported_actual}, Expected global steps:{global_steps_reported_expected}",
         )
 
-    @testutil.data_provider(
-        lambda: (
-            {"page_turn_freq": 0.99, "users_per_round": 5, "pages_used": 6},
-            {"page_turn_freq": 0.99, "users_per_round": 10, "pages_used": 6},
-            {"page_turn_freq": 0.50, "users_per_round": 10, "pages_used": 9},
-            {"page_turn_freq": 0.50, "users_per_round": 5, "pages_used": 9},
-        )
+    @pytest.mark.parametrize(
+        "page_turn_freq,users_per_round, pages_used",
+        [
+            (0.99, 5, 6),
+            (0.99, 10, 6),
+            (0.50, 10, 9),
+            (0.50, 5, 9),
+        ],
     )
     def test_sync_trainer_with_page_data_provider(
         self, page_turn_freq, users_per_round, pages_used
@@ -1226,4 +1203,4 @@ class TrainerTest(testutil.BaseFacebookTestCase):
             num_total_users=num_total_users,
             distributed_world_size=1,
         )
-        self.assertEqual(data_provider.pages_used, pages_used)
+        assertEqual(data_provider.pages_used, pages_used)
