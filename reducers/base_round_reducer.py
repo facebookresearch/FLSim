@@ -21,6 +21,7 @@ from typing import Optional, Tuple
 
 import torch
 from flsim.channels.base_channel import IdentityChannel
+from flsim.channels.message import Message
 from flsim.common.logger import Logger
 from flsim.interfaces.model import IFLModel
 from flsim.utils.config_utils import fullclassname
@@ -206,7 +207,8 @@ class RoundReducer(IFLRoundReducer):
         over the channel. Any channel effect is applied as part of this
         receive function.
         """
-        return model
+        message = self.channel.client_to_server(Message(model))
+        return message.model
 
     @property
     def current_results(self) -> Tuple[nn.Module, float]:

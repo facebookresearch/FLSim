@@ -13,7 +13,9 @@ from flsim.active_user_selectors.simple_user_selector import (
 from flsim.channels.base_channel import IdentityChannel
 from flsim.channels.half_precision_channel import HalfPrecisionChannel
 from flsim.channels.message import Message
+from flsim.channels.sparse_mask_channel import SparseMaskChannelConfig
 from flsim.common.pytest_helper import assertEqual, assertEmpty
+from flsim.common.pytest_helper import assertRaises
 from flsim.optimizers.server_optimizers import (
     FedAvgOptimizerConfig,
     FedAdamOptimizerConfig,
@@ -22,6 +24,9 @@ from flsim.optimizers.server_optimizers import (
     FedLAMBOptimizerConfig,
     OptimizerType,
 )
+from flsim.reducers.sketch_round_reducer import (
+    SketchRoundReducerConfig,
+)
 from flsim.servers.aggregator import AggregationType
 from flsim.servers.sync_servers import SyncServerConfig
 from flsim.tests.utils import (
@@ -29,8 +34,10 @@ from flsim.tests.utils import (
     model_parameters_equal_to_value,
     verify_models_equivalent_after_training,
     SampleNet,
+    TwoFC,
 )
 from flsim.utils.fl.common import FLModelParamUtils
+from hydra.errors import HydraException
 from hydra.utils import instantiate
 
 
@@ -283,7 +290,7 @@ class TestSyncServer:
         "channel",
         [HalfPrecisionChannel(), IdentityChannel()],
     )
-    def test_sever_channel_integration(self, channel):
+    def test_server_channel_integration(self, channel):
         """From Client to Server, the channel should quantize and then dequantize the message
         therefore there should be no change in the model
         """
@@ -298,3 +305,16 @@ class TestSyncServer:
         server.receive_update_from_client(Message(model=SampleNet(delta), weight=1.0))
         error_msg = verify_models_equivalent_after_training(delta, init)
         assertEmpty(error_msg, msg=error_msg)
+
+    def test_sketch_creation_wrong_channel(self):
+        """
+        Tests if creating SketchRoundReducer with a wrong channel raises an error
+        """
+        model = SampleNet(TwoFC())
+        channel = instantiate(SparseMaskChannelConfig())
+        with assertRaises((HydraException, AssertionError)):
+            _ = instantiate(
+                SketchRoundReducerConfig(),
+                global_model=model,
+                channel=channel,
+            )

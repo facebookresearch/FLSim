@@ -7,13 +7,13 @@ from typing import Type
 
 import pytest
 import torch
+from flsim.channels.base_channel import Message
 from flsim.channels.communication_stats import (
     ChannelDirection,
 )
-from flsim.channels.message import Message
-from flsim.channels.random_mask_channel import (
-    RandomMaskChannel,
-    RandomMaskChannelConfig,
+from flsim.channels.sparse_mask_channel import (
+    SparseMaskChannel,
+    SparseMaskChannelConfig,
 )
 from flsim.common.pytest_helper import assertEqual, assertIsInstance, assertAlmostEqual
 from flsim.tests import utils
@@ -23,7 +23,7 @@ from hydra.utils import instantiate
 from torch.nn.utils import prune
 
 
-class TestRandomMaskChannel:
+class TestSparseMaskChannel:
     @classmethod
     def calc_model_sparsity(cls, state_dict: OrderedDict):
         """
@@ -64,14 +64,19 @@ class TestRandomMaskChannel:
     @pytest.mark.parametrize(
         "config",
         [
-            RandomMaskChannelConfig(
+            SparseMaskChannelConfig(
                 proportion_of_zero_weights=0.6,
+                sparsity_method="topk",
+            ),
+            SparseMaskChannelConfig(
+                proportion_of_zero_weights=0.6,
+                sparsity_method="random",
             ),
         ],
     )
     @pytest.mark.parametrize(
         "expected_type",
-        [RandomMaskChannel],
+        [SparseMaskChannel],
     )
     def test_random_mask_instantiation(self, config: Type, expected_type: Type) -> None:
         """
@@ -85,14 +90,19 @@ class TestRandomMaskChannel:
     @pytest.mark.parametrize(
         "config",
         [
-            RandomMaskChannelConfig(
+            SparseMaskChannelConfig(
                 proportion_of_zero_weights=0.6,
+                sparsity_method="topk",
+            ),
+            SparseMaskChannelConfig(
+                proportion_of_zero_weights=0.6,
+                sparsity_method="random",
             ),
         ],
     )
     @pytest.mark.parametrize(
         "expected_type",
-        [RandomMaskChannel],
+        [SparseMaskChannel],
     )
     def test_random_mask_server_to_client(
         self, config: Type, expected_type: Type
@@ -123,16 +133,21 @@ class TestRandomMaskChannel:
     @pytest.mark.parametrize(
         "config",
         [
-            RandomMaskChannelConfig(
+            SparseMaskChannelConfig(
                 proportion_of_zero_weights=0.6,
+                sparsity_method="topk",
+            ),
+            SparseMaskChannelConfig(
+                proportion_of_zero_weights=0.6,
+                sparsity_method="random",
             ),
         ],
     )
     @pytest.mark.parametrize(
         "expected_type",
-        [RandomMaskChannel],
+        [SparseMaskChannel],
     )
-    def test_random_mask_client_to_server(
+    def test_sparse_mask_client_to_server(
         self, config: Type, expected_type: Type
     ) -> None:
         """
@@ -152,27 +167,69 @@ class TestRandomMaskChannel:
         message = Message(upload_model)
         message = channel.client_to_server(message)
 
-        sparsity = self.calc_model_sparsity(upload_model.fl_get_module().state_dict())
+        sparsity = self.calc_model_sparsity(message.model_state_dict)
 
         # sparsity ratio should be approximately proportion_of_zero_weights
         # approximately since we round the number of parameters to prune
-        # to an integer, see random_mask_channel.py
+        # to an integer, see sparse_mask_channel.py
         assertAlmostEqual(channel.cfg.proportion_of_zero_weights, sparsity, delta=0.05)
 
     @pytest.mark.parametrize(
         "config",
         [
-            RandomMaskChannelConfig(
+            SparseMaskChannelConfig(
                 proportion_of_zero_weights=0.6,
-                report_communication_metrics=True,
+                sparsity_method="topk",
             ),
         ],
     )
     @pytest.mark.parametrize(
         "expected_type",
-        [RandomMaskChannel],
+        [SparseMaskChannel],
     )
-    def test_random_mask_stats(self, config: Type, expected_type: Type) -> None:
+    def test_topk_mask_sparsity(self, config: Type, expected_type: Type) -> None:
+        """
+        Tests that TopK compression has worked ie. the smallest client updates
+        are  masked out.
+        """
+
+        # instantiation
+        channel = instantiate(config)
+
+        # create dummy model
+        two_fc = utils.TwoFC()
+        base_model = utils.SampleNet(two_fc)
+        upload_model = deepcopy(base_model)
+
+        # test client -> server, check for topk sparse mask
+        message = Message(upload_model)
+        message = channel.client_to_server(message)
+
+        for name, p in base_model.fl_get_module().named_parameters():
+            flattened_params = p.flatten().abs()
+            sparse_indices = flattened_params.abs().argsort()[
+                : int(config.proportion_of_zero_weights * flattened_params.numel())
+            ]
+            flattened_message_params = torch.cat(
+                [torch.flatten(p) for p in message.model_state_dict[name]]
+            ).flatten()
+            assertEqual(flattened_message_params[sparse_indices].sum(), 0.0)
+
+    @pytest.mark.parametrize("sparsity_method", ["topk", "random"])
+    @pytest.mark.parametrize(
+        "compressed_size_measurement",
+        ["bitmask", "coo"],
+    )
+    @pytest.mark.parametrize(
+        "expected_type",
+        [SparseMaskChannel],
+    )
+    def test_sparse_mask_stats(
+        self,
+        sparsity_method: str,
+        compressed_size_measurement: str,
+        expected_type: Type,
+    ) -> None:
         """
         Tests stats measurement. We assume that the sparse tensor
         is stored in COO format and manually compute the number
@@ -181,6 +238,12 @@ class TestRandomMaskChannel:
         """
 
         # instantiation
+        config = SparseMaskChannelConfig(
+            proportion_of_zero_weights=0.6,
+            report_communication_metrics=True,
+            sparsity_method=sparsity_method,
+            compressed_size_measurement=compressed_size_measurement,
+        )
         channel = instantiate(config)
 
         # create dummy model
@@ -192,7 +255,7 @@ class TestRandomMaskChannel:
         message = Message(upload_model)
         message = channel.client_to_server(message)
 
-        # test communiction stats measurements
+        # test communication stats measurements
         stats = channel.stats_collector.get_channel_stats()
         client_to_server_bytes = stats[ChannelDirection.CLIENT_TO_SERVER].mean()
 
@@ -209,15 +272,23 @@ class TestRandomMaskChannel:
         n_dim_biases = 1
         true_size_bytes_weights = (
             # size of the index
-            non_zero_weights * RandomMaskChannel.BYTES_PER_INT64 * n_dim_weights
+            (
+                non_zero_weights * SparseMaskChannel.BYTES_PER_INT64 * n_dim_weights
+                if compressed_size_measurement == "coo"
+                else SparseMaskChannel.BYTES_PER_BIT * n_weights
+            )
             # size of values
-            + non_zero_weights * RandomMaskChannel.BYTES_PER_FP32
+            + non_zero_weights * SparseMaskChannel.BYTES_PER_FP32
         )
         true_size_bytes_biases = (
             # size of the index
-            non_zero_biases * RandomMaskChannel.BYTES_PER_INT64 * n_dim_biases
+            (
+                non_zero_biases * SparseMaskChannel.BYTES_PER_INT64 * n_dim_biases
+                if compressed_size_measurement == "coo"
+                else SparseMaskChannel.BYTES_PER_BIT * n_biases
+            )
             # size of values
-            + non_zero_biases * RandomMaskChannel.BYTES_PER_FP32
+            + non_zero_biases * SparseMaskChannel.BYTES_PER_FP32
         )
 
         # size of the values

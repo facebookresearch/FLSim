@@ -6,9 +6,9 @@ from hydra.core.config_store import ConfigStore
 from .base_channel import FLChannelConfig
 from .half_precision_channel import HalfPrecisionChannelConfig
 from .product_quantization_channel import ProductQuantizationChannelConfig
-from .random_mask_channel import RandomMaskChannelConfig
 from .scalar_quantization_channel import ScalarQuantizationChannelConfig
 from .sketch_channel import SketchChannelConfig
+from .sparse_mask_channel import SparseMaskChannelConfig
 
 ConfigStore.instance().store(
     name="base_identity_channel",
@@ -17,8 +17,8 @@ ConfigStore.instance().store(
 )
 
 ConfigStore.instance().store(
-    name="base_random_mask_channel",
-    node=RandomMaskChannelConfig,
+    name="base_sparse_mask_channel",
+    node=SparseMaskChannelConfig,
     group="channel",
 )
 

@@ -83,6 +83,7 @@ class IdentityChannel(IFLChannel):
     BYTES_PER_FP32 = 4
     BYTES_PER_FP64 = 8
     BYTES_PER_INT64 = 8
+    BYTES_PER_BIT = 0.125
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -162,7 +163,6 @@ class IdentityChannel(IFLChannel):
         """
         Performs three successive steps to send a message from a client to the server.
         """
-
         # process through channel
         message = self._on_client_before_transmission(message)
         message = self._during_transmission_client_to_server(message)

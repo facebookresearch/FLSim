@@ -14,8 +14,8 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 from flsim.channels.message import Message
-from flsim.channels.random_mask_channel import RandomMaskChannelConfig
 from flsim.channels.sketch_channel import SketchChannelConfig
+from flsim.channels.sparse_mask_channel import SparseMaskChannelConfig
 from flsim.clients.base_client import Client, ClientConfig
 from flsim.privacy.common import PrivacySetting
 from flsim.reducers.base_round_reducer import (
@@ -996,19 +996,6 @@ class SketchRoundReducerTest(RoundReducerTestBase):
                 SketchRoundReducerConfig(),
                 global_model=model,
                 channel=None,
-            )
-
-    def test_sketch_creation_wrong_channel(self):
-        """
-        Tests if creating SketchRoundReducer with a wrong channel raises an error
-        """
-        model = utils.SampleNet(utils.TwoFC())
-        channel = instantiate(RandomMaskChannelConfig())
-        with self.assertRaises((HydraException, AssertionError)):
-            _ = instantiate(
-                SketchRoundReducerConfig(),
-                global_model=model,
-                channel=channel,
             )
 
     def test_sketch_creation(self):
