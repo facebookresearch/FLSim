@@ -142,12 +142,13 @@ class SyncDPSGDServer(ISyncServer):
 
         if FLDistributedUtils.is_master_worker():
             self._privacy_engine.add_noise(
-                aggregated_model, self._clipping_value / self._aggregator.weights
+                aggregated_model,
+                self._clipping_value / self._aggregator.sum_weights.item(),
             )
 
         FLDistributedUtils.synchronize_across_ranks(
             model=aggregated_model,
-            weights=self._aggregator.weights,
+            weights=self._aggregator.sum_weights,
             operation=OperationType.BROADCAST,
         )
 

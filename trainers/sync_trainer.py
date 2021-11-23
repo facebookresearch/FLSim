@@ -459,32 +459,27 @@ class SyncTrainer(FLTrainer):
         [c.eval(model=model, metric_reporter=metric_reporter) for c in clients]
 
         metrics = []
-        if not self.is_user_level_dp:
-            return metrics
+        if self.is_user_level_dp:
+            user_eps = self.server.privacy_budget.epsilon  # pyre-fixme
+            metrics.append(Metric("user level dp (eps)", user_eps))
+        if self.is_sample_level_dp:
+            # calculate sample level dp privacy loss statistics.
+            all_client_eps = torch.Tensor(
+                [c.privacy_budget.epsilon for c in clients]  # pyre-fixme
+            )
+            mean_client_eps = all_client_eps.mean()
+            max_client_eps = all_client_eps.max()
+            min_client_eps = all_client_eps.min()
+            p50_client_eps = torch.median(all_client_eps)
+            sample_dp_metrics: List[Metric] = Metric.from_args(
+                mean=mean_client_eps,
+                min=min_client_eps,
+                max=max_client_eps,
+                median=p50_client_eps,
+            )
+            metrics.append(Metric("sample level dp (eps)", sample_dp_metrics))
 
-        # calculate sample level dp privacy loss statistics.
-        all_client_eps = torch.Tensor(
-            [c.privacy_budget.epsilon for c in clients]  # pyre-ignore
-        )
-        mean_client_eps = all_client_eps.mean()
-        max_client_eps = all_client_eps.max()
-        min_client_eps = all_client_eps.min()
-        p50_client_eps = torch.median(all_client_eps)
-        sample_dp_metrics = Metric.from_args(
-            mean=mean_client_eps,
-            min=min_client_eps,
-            max=max_client_eps,
-            median=p50_client_eps,
-        )
-
-        # calculate user level dp privacy loss statistics.
-        # pyre-ignore[16]
-        user_eps = self.server.privacy_budget.epsilon
-
-        return metrics + [
-            Metric("sample level dp (eps)", sample_dp_metrics),
-            Metric("user level dp (eps)", user_eps),
-        ]
+        return metrics
 
     def calc_post_epoch_client_metrics(
         self,

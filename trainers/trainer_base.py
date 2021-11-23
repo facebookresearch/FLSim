@@ -10,10 +10,6 @@ from dataclasses import dataclass
 from typing import Any, Iterable, List, Optional, Tuple
 
 import torch
-from flsim.active_user_selectors.simple_user_selector import (
-    ActiveUserSelectorConfig,
-    UniformlyRandomActiveUserSelectorConfig,
-)
 from flsim.channels.base_channel import FLChannelConfig
 from flsim.channels.communication_stats import (
     ChannelDirection,

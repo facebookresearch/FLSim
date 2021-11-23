@@ -36,7 +36,7 @@ class Aggregator:
     ):
         self._buffer_module: nn.Module = FLModelParamUtils.clone(module)
         self.device = next(self._buffer_module.parameters()).device
-        self.sum_weights: torch.Tensor = torch.zeros(1, device=self.device)
+        self._sum_weights: torch.Tensor = torch.zeros(1, device=self.device)
         self.only_federated_params = only_federated_params
         FLModelParamUtils.zero_weights(
             self._buffer_module, only_federated_params=self.only_federated_params
@@ -47,12 +47,12 @@ class Aggregator:
         FLModelParamUtils.zero_weights(
             self._buffer_module, only_federated_params=self.only_federated_params
         )
-        self.sum_weights = torch.zeros(1, device=self.device)
+        self._sum_weights = torch.zeros(1, device=self.device)
 
     def add_update(self, delta: nn.Module, weight: float):
         weight = weight if self._is_weighted else 1.0
         FLModelParamUtils.add_model(delta, self._buffer_module, self._buffer_module)
-        self.sum_weights += weight
+        self._sum_weights += weight
 
     def apply_weight_to_update(self, delta: nn.Module, weight: float):
         weight = weight if self._is_weighted else 1.0
@@ -67,21 +67,21 @@ class Aggregator:
     ) -> nn.Module:
         FLDistributedUtils.synchronize_across_ranks(
             model=self._buffer_module,
-            weights=self.sum_weights,
+            weights=self._sum_weights,
             operation=distributed_op,
         )
 
         if self._is_averaged:
             FLModelParamUtils.multiply_model_by_weight(
                 model=self._buffer_module,
-                weight=1 / self.weights,
+                weight=1.0 / self.sum_weights.item(),
                 model_to_save=self._buffer_module,
             )
         return self._buffer_module
 
     @property
-    def weights(self) -> float:
-        return self.sum_weights.item()
+    def sum_weights(self) -> torch.Tensor:
+        return self._sum_weights
 
     @property
     def _is_weighted(self) -> bool:

@@ -106,10 +106,10 @@ class TestAggregator:
             delta = create_model_with_value(1.0)
             ag.apply_weight_to_update(delta=delta, weight=weight)
             ag.add_update(delta=delta, weight=weight)
-        assertEqual(ag.weights, weight * steps)
+        assertEqual(ag.sum_weights.item(), weight * steps)
 
         ag.zero_weights()
-        assertEqual(ag.weights, 0)
+        assertEqual(ag.sum_weights.item(), 0)
 
     @pytest.mark.parametrize(
         "agg_type,num_process,num_models,expected_value",
@@ -176,7 +176,7 @@ class TestAggregator:
             ag.apply_weight_to_update(delta=delta, weight=weight)
             ag.add_update(delta=delta, weight=weight)
 
-        assertEqual(ag.weights, expected_value)
+        assertEqual(ag.sum_weights.item(), expected_value)
 
     @pytest.mark.parametrize(
         "agg_type,dist_op",
