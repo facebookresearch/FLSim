@@ -44,7 +44,6 @@ from flsim.utils.config_utils import init_self_cfg
 from flsim.utils.cuda import ICudaStateManager, DEFAULT_CUDA_MANAGER
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
-from libfb.py.pyre import none_throws
 from omegaconf import OmegaConf
 
 
@@ -351,7 +350,7 @@ class Client:
         loss.backward()
         # pyre-fixme[16]: `Client` has no attribute `cfg`.
         if self.cfg.max_clip_norm_normalized is not None:
-            max_norm = none_throws(self.cfg.max_clip_norm_normalized)
+            max_norm = self.cfg.max_clip_norm_normalized
             FLModelParamUtils.clip_gradients(
                 max_normalized_l2_norm=max_norm, model=model.fl_get_module()
             )
