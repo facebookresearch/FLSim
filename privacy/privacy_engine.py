@@ -15,7 +15,6 @@ from typing import Optional, List
 
 import numpy as np
 import torch
-import torchcsprng as csprng
 from flsim.common.logger import Logger
 from flsim.privacy.common import (
     PrivacyBudget,
@@ -205,7 +204,6 @@ class TreePrivacyEngine(IPrivacyEngine):
         self.num_tree: int = 1
         self.ref_model = None
         self.device = None
-        self.random_number_generator = self._set_seed()
 
         self.tree = TreePrivacyEngine.build_tree(self.num_leaf, efficient_tree)
 
@@ -308,19 +306,4 @@ class TreePrivacyEngine(IPrivacyEngine):
             std=noise_std,
             size=size,
             device=self.device,
-            generator=self.random_number_generator,
         )
-
-    def _set_seed(self) -> torch.Generator:
-        if self.setting.secure_rng:
-            # pyre-ignore[16]
-            return csprng.create_random_device_generator("/dev/urandom")
-        else:
-            self.logger.warning("Secure RNG turned off, not cryptographically secure")
-            noise_seed = (
-                int.from_bytes(os.urandom(8), byteorder="big", signed=True)
-                if self.setting.noise_seed is None
-                else self.setting.noise_seed
-            )
-            # pyre-ignore[16]
-            return csprng.create_mt19937_generator(seed=noise_seed)
