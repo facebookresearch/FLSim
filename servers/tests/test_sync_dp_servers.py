@@ -4,15 +4,18 @@
 import copy
 import itertools
 import math
+from tempfile import mkstemp
 from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 import torch
+import torch.distributed as dist
+import torch.multiprocessing as mp
 from flsim.channels.base_channel import IdentityChannel
 from flsim.channels.half_precision_channel import HalfPrecisionChannel
 from flsim.channels.message import Message
-from flsim.common.pytest_helper import assertEmpty
+from flsim.common.pytest_helper import assertEmpty, assertEqual
 from flsim.privacy.common import PrivacySetting
 from flsim.privacy.privacy_engine import GaussianPrivacyEngine
 from flsim.servers.aggregator import AggregationType
@@ -24,7 +27,71 @@ from flsim.tests.utils import (
     verify_models_equivalent_after_training,
     SampleNet,
 )
+from flsim.utils.distributed.fl_distributed import FLDistributedUtils
 from hydra.utils import instantiate
+
+
+def init_process(
+    rank,
+    world_size,
+    server,
+    models,
+    file_loc,
+    pipe,
+):
+    FLDistributedUtils.dist_init(
+        rank=rank,
+        world_size=world_size,
+        init_method=f"file://{file_loc}",
+        use_cuda=False,
+    )
+    server.init_round()
+    for i, m in enumerate(models):
+        if i % world_size == rank:
+            weight = i + 1
+            server.receive_update_from_client(
+                Message(model=SampleNet(m), weight=weight)
+            )
+
+    server.step()
+    sums, weights = 0.0, 0.0
+    all_sum = [
+        (p.sum(), p.numel()) for p in server.global_model.fl_get_module().parameters()
+    ]
+    for s, w in all_sum:
+        sums += float(s)
+        weights += float(w)
+    pipe.send(sums / weights)
+    dist.destroy_process_group()
+
+
+def run_multiprocess_server_test(server, num_processes=1, num_models=4):
+    _, tmpfile = mkstemp(dir="/tmp")
+    pipe_out, pipe_in = mp.Pipe(False)
+    models = [create_model_with_value(1.0) for i in range(num_models)]
+
+    processes = []
+    results = []
+    FLDistributedUtils.WORLD_SIZE = num_processes
+    for pid in range(num_processes):
+        p = mp.Process(
+            target=init_process,
+            args=(
+                pid,
+                num_processes,
+                server,
+                models,
+                tmpfile,
+                pipe_in,
+            ),
+        )
+        p.start()
+        processes.append(p)
+        results.append(pipe_out)
+    for p in processes:
+        p.join()
+    res = [r.recv() for r in results]
+    return res
 
 
 class TestSyncDPSGDServer:
@@ -248,3 +315,15 @@ class TestSyncDPSGDServer:
         server.receive_update_from_client(Message(model=SampleNet(delta), weight=1.0))
         error_msg = verify_models_equivalent_after_training(delta, init)
         assertEmpty(error_msg, msg=error_msg)
+
+    def test_sync_dp_server_with_multiple_processes(self):
+        server = self._create_server(
+            SampleNet(create_model_with_value(0)),
+            num_rounds=1,
+            num_clients=10,
+            clipping_value=10,
+            noise_multiplier=0,
+        )
+        results = run_multiprocess_server_test(server, num_processes=4, num_models=4)
+        for r, v in zip(results, results[1:]):
+            assertEqual(r, v)
