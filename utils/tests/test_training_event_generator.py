@@ -4,6 +4,13 @@
 from typing import Type
 
 import numpy as np
+import pytest
+from flsim.common.pytest_helper import (
+    assertEqual,
+    assertTrue,
+    assertAlmostEqual,
+    assertGreaterEqual,
+)
 from flsim.utils.async_trainer.training_event_generator import (
     AsyncTrainingEventGenerator,
     AsyncTrainingEventGeneratorConfig,
@@ -23,14 +30,10 @@ from flsim.utils.timing.training_duration_distribution import (
     PerUserGaussianDurationDistribution,
     PerUserGaussianDurationDistributionConfig,
 )
-from libfb.py import testutil
 from omegaconf import OmegaConf
 
 
-class EventDistributionsUtilTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestEventDistributionsUtil:
     def test_simulated_training_training_event_generator(self) -> None:
         """Check that EventDistributionFromList works correctly by inputing
         a sample distribution, and confirming that the output is correct
@@ -44,25 +47,25 @@ class EventDistributionsUtilTest(testutil.BaseFacebookTestCase):
                 AsyncTrainingEventGeneratorFromListConfig(training_events=random_list)
             )
         )
-        self.assertTrue(
+        assertTrue(
             distr.time_to_next_event_start()
             == timing_info1.prev_event_start_to_current_start
         )
-        self.assertTrue(
+        assertTrue(
             distr.training_duration(num_training_examples=1) == timing_info1.duration
         )
-        self.assertTrue(
+        assertTrue(
             distr.time_to_next_event_start()
             == timing_info2.prev_event_start_to_current_start
         )
-        self.assertTrue(
+        assertTrue(
             distr.training_duration(num_training_examples=1) == timing_info2.duration
         )
-        self.assertTrue(
+        assertTrue(
             distr.time_to_next_event_start()
             == timing_info3.prev_event_start_to_current_start
         )
-        self.assertTrue(
+        assertTrue(
             distr.training_duration(num_training_examples=1) == timing_info3.duration
         )
 
@@ -78,8 +81,8 @@ class EventDistributionsUtilTest(testutil.BaseFacebookTestCase):
         for _ in range(sample_count):
             durations.append(event_generator.training_duration(num_training_examples=1))
         # normality check doesn't verify mean and variance
-        self.assertAlmostEqual(np.mean(durations), expected_mean, delta=epsilon)
-        self.assertAlmostEqual(np.std(durations), expected_sd, delta=epsilon)
+        assertAlmostEqual(np.mean(durations), expected_mean, delta=epsilon)
+        assertAlmostEqual(np.std(durations), expected_sd, delta=epsilon)
 
     def test_poisson_training_event_generator(self) -> None:
         """Check that TrainingEventDistritubion makes sense by checking that
@@ -137,7 +140,7 @@ class EventDistributionsUtilTest(testutil.BaseFacebookTestCase):
                 )
             )
         )
-        self.assertEqual(distr.time_to_next_event_start(), 1 / event_rate_per_sec)
+        assertEqual(distr.time_to_next_event_start(), 1 / event_rate_per_sec)
         self._duration_normality_check(
             distr,
             1000,  # sample_count
@@ -172,14 +175,12 @@ class EventDistributionsUtilTest(testutil.BaseFacebookTestCase):
             )
             # generate duration and time_to_next_event_start two times
             for _ in range(2):
-                self.assertAlmostEqual(
+                assertAlmostEqual(
                     distr.training_duration(num_training_examples=1),
                     duration_mean,
                     delta=1e-4,
                 )
-                self.assertEqual(
-                    distr.time_to_next_event_start(), 1 / event_rate_per_sec
-                )
+                assertEqual(distr.time_to_next_event_start(), 1 / event_rate_per_sec)
 
     def test_training_duration_min_bound(self) -> None:
         """Check that training_duration_min bound is followed"""
@@ -216,7 +217,7 @@ class EventDistributionsUtilTest(testutil.BaseFacebookTestCase):
                 per_user_gaussian_duration = per_user_duration_distr.training_duration(
                     num_training_examples=num_examples
                 )
-                self.assertGreaterEqual(per_user_gaussian_duration, duration_min)
+                assertGreaterEqual(per_user_gaussian_duration, duration_min)
                 # for per-example training duration, duration-min_bound applies to each example
                 # while training_duration() returns time for each user
                 # so actual bound is
@@ -225,21 +226,22 @@ class EventDistributionsUtilTest(testutil.BaseFacebookTestCase):
                         num_training_examples=num_examples
                     )
                 )
-                self.assertGreaterEqual(
+                assertGreaterEqual(
                     per_example_gaussian_duration, duration_min * num_examples
                 )
 
-    @testutil.data_provider(
-        lambda: (
-            {
-                "start_time_distr_config_class": PoissonAsyncTrainingStartTimeDistrConfig,
-                "start_time_distr_class": PoissonAsyncTrainingStartTimeDistr,
-            },
-            {
-                "start_time_distr_config_class": ConstantAsyncTrainingStartTimeDistrConfig,
-                "start_time_distr_class": ConstantAsyncTrainingStartTimeDistr,
-            },
-        )
+    @pytest.mark.parametrize(
+        "start_time_distr_config_class, start_time_distr_class",
+        [
+            (
+                PoissonAsyncTrainingStartTimeDistrConfig,
+                PoissonAsyncTrainingStartTimeDistr,
+            ),
+            (
+                ConstantAsyncTrainingStartTimeDistrConfig,
+                ConstantAsyncTrainingStartTimeDistr,
+            ),
+        ],
     )
     def test_string_conversion(
         self,
@@ -256,7 +258,7 @@ class EventDistributionsUtilTest(testutil.BaseFacebookTestCase):
             training_duration_mean=duration_mean_sec,
             training_duration_sd=training_duration_sd,
         )
-        self.assertEqual(
+        assertEqual(
             AsyncTrainingEventGenerator(
                 **OmegaConf.structured(
                     AsyncTrainingEventGeneratorConfig(

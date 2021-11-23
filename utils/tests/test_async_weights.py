@@ -2,6 +2,8 @@
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
 import numpy as np
+import pytest
+from flsim.common.pytest_helper import assertEqual
 from flsim.utils.async_trainer.async_example_weights import (
     ExampleWeight,
     AsyncExampleWeightConfig,
@@ -19,17 +21,18 @@ from flsim.utils.tests.helpers.async_weights_test_utils import (
     AsyncStalenessWeightsTestUtils,
 )
 from hydra.utils import instantiate
-from libfb.py import testutil
 
 
-class AsyncExampleWeightsTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
+class TestAsyncExampleWeights:
 
-    # two data_providers together produce a cartesian product
-    @testutil.data_provider(AsyncExampleWeightsTestUtils.provide_example_weight_configs)
-    @testutil.data_provider(
-        AsyncStalenessWeightsTestUtils.provide_staleness_weight_configs
+    # two parametrize together produce a cartesian product
+    @pytest.mark.parametrize(
+        "example_weight_config, example_weight_class",
+        AsyncExampleWeightsTestUtils.EXAMPLE_WEIGHT_TEST_CONFIGS,
+    )
+    @pytest.mark.parametrize(
+        "staleness_weight_config, staleness_weight_class",
+        AsyncStalenessWeightsTestUtils.STALENESS_WEIGHT_TEST_CONFIGS,
     )
     def test_string_conversion(
         self,
@@ -45,10 +48,13 @@ class AsyncExampleWeightsTest(testutil.BaseFacebookTestCase):
                 example_weight=example_weight_config,
             )
         )
-        self.assertEqual(obj.example_weight.__class__, example_weight_class)
-        self.assertEqual(obj.staleness_weight.__class__, staleness_weight_class)
+        assertEqual(obj.example_weight.__class__, example_weight_class)
+        assertEqual(obj.staleness_weight.__class__, staleness_weight_class)
 
-    @testutil.data_provider(AsyncExampleWeightsTestUtils.provide_example_weight_configs)
+    @pytest.mark.parametrize(
+        "example_weight_config, example_weight_class",
+        AsyncExampleWeightsTestUtils.EXAMPLE_WEIGHT_TEST_CONFIGS,
+    )
     def test_weight_compute(
         self,
         example_weight_config: AsyncExampleWeightConfig,
@@ -94,4 +100,4 @@ class AsyncExampleWeightsTest(testutil.BaseFacebookTestCase):
                 combined_weight = combined_weight_object.weight(
                     num_examples=num_examples, staleness=staleness
                 )
-                self.assertEqual(expected_combined_weight, combined_weight)
+                assertEqual(expected_combined_weight, combined_weight)

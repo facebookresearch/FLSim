@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
+from flsim.common.pytest_helper import assertEqual
 from flsim.utils.config_utils import _flatten_dict, fl_json_to_dotlist
-from libfb.py import testutil
 
 
-class ConfigUtilsTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestConfigUtils:
     def test_flatten_dict(self):
-        self.assertEqual(_flatten_dict({}), {})
-        self.assertEqual(_flatten_dict({"a": 1}), {"a": 1})
-        self.assertEqual(_flatten_dict({"a": None}), {"a": None})
+        assertEqual(_flatten_dict({}), {})
+        assertEqual(_flatten_dict({"a": 1}), {"a": 1})
+        assertEqual(_flatten_dict({"a": None}), {"a": None})
 
         # checks neesting, exp notation
-        self.assertEqual(
+        assertEqual(
             _flatten_dict(
                 {
                     "a": {
@@ -37,10 +34,10 @@ class ConfigUtilsTest(testutil.BaseFacebookTestCase):
         )
 
         # checks string floats
-        self.assertEqual(_flatten_dict({"e": "5.5"}), {"e": '"5.5"'})
+        assertEqual(_flatten_dict({"e": "5.5"}), {"e": '"5.5"'})
 
         # make sure json in list remains untouched
-        self.assertEqual(
+        assertEqual(
             _flatten_dict(
                 {
                     "a": {"b": 1},
@@ -56,7 +53,7 @@ class ConfigUtilsTest(testutil.BaseFacebookTestCase):
         )
 
         # make sure json in key with suffix _dict remains untouched
-        self.assertEqual(
+        assertEqual(
             _flatten_dict(
                 {
                     "a": {"b": 1},
@@ -70,7 +67,7 @@ class ConfigUtilsTest(testutil.BaseFacebookTestCase):
         )
 
         # check with _base_
-        self.assertEqual(
+        assertEqual(
             _flatten_dict(
                 {
                     "_base_": {"_base_": "base1", "_base": "base2", "base_": "base3"},
@@ -92,16 +89,14 @@ class ConfigUtilsTest(testutil.BaseFacebookTestCase):
         )
 
     def test_json_to_dotlist(self):
-        self.assertEqual(fl_json_to_dotlist({}, append_or_override=False), [])
-        self.assertEqual(
-            fl_json_to_dotlist({"a": 1}, append_or_override=False), ["a=1"]
-        )
-        self.assertEqual(
+        assertEqual(fl_json_to_dotlist({}, append_or_override=False), [])
+        assertEqual(fl_json_to_dotlist({"a": 1}, append_or_override=False), ["a=1"])
+        assertEqual(
             fl_json_to_dotlist({"a": None}, append_or_override=False), ["a=null"]
         )
 
         # checks neesting, exp notation
-        self.assertEqual(
+        assertEqual(
             fl_json_to_dotlist(
                 {
                     "a": {
@@ -117,12 +112,12 @@ class ConfigUtilsTest(testutil.BaseFacebookTestCase):
         )
 
         # checks string floats
-        self.assertEqual(
+        assertEqual(
             fl_json_to_dotlist({"e": "5.5"}, append_or_override=False), ['e="5.5"']
         )
 
         # make sure json in list remains untouched
-        self.assertEqual(
+        assertEqual(
             fl_json_to_dotlist(
                 {
                     "a": {"b": 1},
@@ -139,7 +134,7 @@ class ConfigUtilsTest(testutil.BaseFacebookTestCase):
         )
 
         # make sure json in key with suffix _dict is handled correctly
-        self.assertEqual(
+        assertEqual(
             fl_json_to_dotlist(
                 {
                     "a": {"b": 1},
@@ -154,7 +149,7 @@ class ConfigUtilsTest(testutil.BaseFacebookTestCase):
         )
 
         # check with _base_
-        self.assertEqual(
+        assertEqual(
             fl_json_to_dotlist(
                 {
                     "_base_": {
@@ -198,12 +193,12 @@ class ConfigUtilsTest(testutil.BaseFacebookTestCase):
 
     def test_json_to_dotlist_append_or_override(self):
 
-        self.assertEqual(fl_json_to_dotlist({}), [])
-        self.assertEqual(fl_json_to_dotlist({"a": 1}), ["++a=1"])
-        self.assertEqual(fl_json_to_dotlist({"a": None}), ["++a=null"])
+        assertEqual(fl_json_to_dotlist({}), [])
+        assertEqual(fl_json_to_dotlist({"a": 1}), ["++a=1"])
+        assertEqual(fl_json_to_dotlist({"a": None}), ["++a=null"])
 
         # checks neesting, exp notation
-        self.assertEqual(
+        assertEqual(
             fl_json_to_dotlist(
                 {
                     "a": {
@@ -225,10 +220,10 @@ class ConfigUtilsTest(testutil.BaseFacebookTestCase):
         )
 
         # checks string floats
-        self.assertEqual(fl_json_to_dotlist({"e": "5.5"}), ['++e="5.5"'])
+        assertEqual(fl_json_to_dotlist({"e": "5.5"}), ['++e="5.5"'])
 
         # make sure json in list remains untouched
-        self.assertEqual(
+        assertEqual(
             fl_json_to_dotlist(
                 {
                     "a": {"b": 1},
@@ -244,7 +239,7 @@ class ConfigUtilsTest(testutil.BaseFacebookTestCase):
         )
 
         # make sure json in key with suffix _dict is handled correctly
-        self.assertEqual(
+        assertEqual(
             fl_json_to_dotlist(
                 {
                     "a": {"b": 1},
@@ -258,7 +253,7 @@ class ConfigUtilsTest(testutil.BaseFacebookTestCase):
         )
 
         # check with _base_
-        self.assertEqual(
+        assertEqual(
             fl_json_to_dotlist(
                 {
                     "_base_": {

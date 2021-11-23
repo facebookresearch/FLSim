@@ -56,6 +56,10 @@ def assertLess(object1, object2) -> None:
     assert object1 < object2
 
 
+def assertGreater(object1, object2) -> None:
+    assert object1 > object2
+
+
 def assertLessEqual(object1, object2) -> None:
     assert object1 <= object2
 

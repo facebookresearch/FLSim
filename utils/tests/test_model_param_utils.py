@@ -7,6 +7,13 @@ import math
 
 import torch
 import torch.nn as nn
+from flsim.common.pytest_helper import (
+    assertEqual,
+    assertTrue,
+    assertAlmostEqual,
+    assertFalse,
+    assertRaises,
+)
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.fl.personalized_model import FLModelWithPrivateModules
 from flsim.utils.tests.helpers.test_models import (
@@ -15,31 +22,26 @@ from flsim.utils.tests.helpers.test_models import (
     PersonalizedLinearRegression,
 )
 from flsim.utils.tests.helpers.test_utils import FLTestUtils
-from libfb.py import testutil
-
 
 PRIVATE_SLOPE_MODULE_NAME = FLModelWithPrivateModules.USER_PRIVATE_MODULE_PREFIX + "_a"
 
 
-class FLModelParamUtilsTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestFLModelParamUtils:
     def test_get_state_dict(self) -> None:
         model = LinearRegression()
-        self.assertEqual(
+        assertEqual(
             set(FLModelParamUtils.get_state_dict(model, False).keys()), {"a", "b"}
         )
-        self.assertEqual(
+        assertEqual(
             set(FLModelParamUtils.get_state_dict(model, True).keys()), {"a", "b"}
         )
 
         personalized_model = PersonalizedLinearRegression()
-        self.assertEqual(
+        assertEqual(
             set(FLModelParamUtils.get_state_dict(personalized_model, False).keys()),
             {PRIVATE_SLOPE_MODULE_NAME, "b"},
         )
-        self.assertEqual(
+        assertEqual(
             set(FLModelParamUtils.get_state_dict(personalized_model, True).keys()),
             {"b"},
         )
@@ -52,7 +54,7 @@ class FLModelParamUtilsTest(testutil.BaseFacebookTestCase):
         state_dict["b"] = torch.tensor([0.5])
 
         FLModelParamUtils.load_state_dict(personalized_model, state_dict, False)
-        self.assertEqual(
+        assertEqual(
             dict(FLModelParamUtils.get_state_dict(personalized_model, False)),
             dict(state_dict),
         )
@@ -63,18 +65,18 @@ class FLModelParamUtilsTest(testutil.BaseFacebookTestCase):
         FLModelParamUtils.load_state_dict(
             personalized_model, state_dict_without_private_module, True
         )
-        self.assertEqual(
+        assertEqual(
             dict(FLModelParamUtils.get_state_dict(personalized_model, False)),
             {PRIVATE_SLOPE_MODULE_NAME: torch.tensor([1.0]), "b": torch.tensor([0.3])},
         )
         # throws when unexpected key is provided
         state_dict["c"] = torch.tensor([0.0])
-        with self.assertRaises(AssertionError):
+        with assertRaises(AssertionError):
             FLModelParamUtils.load_state_dict(personalized_model, state_dict, True)
         # throws when non-private (i.e. federated module) is missing
         state_dict_with_missing_non_private_module = collections.OrderedDict()
         state_dict_with_missing_non_private_module["a"] = torch.tensor([1.0])
-        with self.assertRaises(AssertionError):
+        with assertRaises(AssertionError):
             FLModelParamUtils.load_state_dict(
                 personalized_model, state_dict_with_missing_non_private_module, True
             )
@@ -92,23 +94,23 @@ class FLModelParamUtilsTest(testutil.BaseFacebookTestCase):
             False,
         )
         FLModelParamUtils.zero_weights(personalized_model, True)
-        self.assertEqual(
+        assertEqual(
             dict(FLModelParamUtils.get_state_dict(personalized_model, False)),
             {PRIVATE_SLOPE_MODULE_NAME: torch.tensor([2.0]), "b": torch.tensor([0.0])},
         )
         FLModelParamUtils.zero_weights(personalized_model)
-        self.assertEqual(
+        assertEqual(
             dict(FLModelParamUtils.get_state_dict(personalized_model, False)),
             {PRIVATE_SLOPE_MODULE_NAME: torch.tensor([0.0]), "b": torch.tensor([0.0])},
         )
 
     def test_get_trainable_params(self):
         fc_model = FCModel()
-        self.assertEqual(len(list(FLModelParamUtils.get_trainable_params(fc_model))), 6)
+        assertEqual(len(list(FLModelParamUtils.get_trainable_params(fc_model))), 6)
 
     def test_get_num_trainable_params(self):
         fc_model = FCModel()
-        self.assertEqual(
+        assertEqual(
             FLModelParamUtils.get_num_trainable_params(fc_model),
             10 * 5 + 5 * 3 + 3 * 1 + 5 + 3 + 1,
         )
@@ -118,13 +120,13 @@ class FLModelParamUtilsTest(testutil.BaseFacebookTestCase):
         # set all gradients to 0, l2 norm should be zero
         for p in FLModelParamUtils.get_trainable_params(fc_model):
             p.grad = torch.zeros_like(p)
-        self.assertEqual(FLModelParamUtils.get_gradient_l2_norm_raw(fc_model), 0.0)
+        assertEqual(FLModelParamUtils.get_gradient_l2_norm_raw(fc_model), 0.0)
 
         # set all gradients to 1, non-normalized l2 norm should be = sqrt(#params)
         num_trainable_params = FLModelParamUtils.get_num_trainable_params(fc_model)
         for p in FLModelParamUtils.get_trainable_params(fc_model):
             p.grad = torch.ones_like(p)
-        self.assertAlmostEqual(
+        assertAlmostEqual(
             FLModelParamUtils.get_gradient_l2_norm_raw(fc_model),
             math.sqrt(num_trainable_params),
             delta=1e-4,
@@ -134,7 +136,7 @@ class FLModelParamUtilsTest(testutil.BaseFacebookTestCase):
         torch.manual_seed(1)
         for p in FLModelParamUtils.get_trainable_params(fc_model):
             p.grad = torch.randn_like(p)
-        self.assertAlmostEqual(
+        assertAlmostEqual(
             FLModelParamUtils.get_gradient_l2_norm_normalized(fc_model), 1, delta=1e-1
         )
 
@@ -159,14 +161,14 @@ class FLModelParamUtilsTest(testutil.BaseFacebookTestCase):
         temp_model = copy.deepcopy(models[0])
         # verify that 0 weights work as expected
         FLModelParamUtils.average_models(models, temp_model, [0, 0, 0, 1])
-        self.assertTrue(
+        assertTrue(
             FLModelParamUtils.get_mismatched_param([temp_model, models[3]]) == ""
         )
         # verify that equal weights work as expected
         FLModelParamUtils.average_models(models, temp_model, [1, 1, 1, 1])
         temp_model_no_wts = copy.deepcopy(models[0])
         FLModelParamUtils.average_models(models, temp_model_no_wts)
-        self.assertTrue(
+        assertTrue(
             FLModelParamUtils.get_mismatched_param([temp_model, temp_model_no_wts])
             == ""
         )
@@ -183,7 +185,7 @@ class FLModelParamUtilsTest(testutil.BaseFacebookTestCase):
         mismatched_param = FLModelParamUtils.get_mismatched_param(
             [temp_model_3, temp_model_4], 1e-6
         )
-        self.assertTrue(
+        assertTrue(
             mismatched_param == "",
             (
                 f"Mismatched param name: {mismatched_param}\n"
@@ -211,10 +213,10 @@ class FLModelParamUtilsTest(testutil.BaseFacebookTestCase):
         fc_model = FCModel()
         for p in fc_model.parameters():
             torch.nn.init.constant_(p, 0.0)
-        self.assertEqual(FLModelParamUtils.debug_model_norm(fc_model), 0)
+        assertEqual(FLModelParamUtils.debug_model_norm(fc_model), 0)
         for p in fc_model.parameters():
             p.data.fill_(1.0)
-        self.assertEqual(
+        assertEqual(
             FLModelParamUtils.debug_model_norm(fc_model),
             FLModelParamUtils.get_num_trainable_params(fc_model),
         )
@@ -227,8 +229,8 @@ class FLModelParamUtilsTest(testutil.BaseFacebookTestCase):
         FLModelParamUtils.set_gradient(
             model=model, reference_gradient=reconstructed_gradient
         )
-        self.assertEqual(model.a.grad, reconstructed_gradient.a)
-        self.assertEqual(model.b.grad, reconstructed_gradient.b)
+        assertEqual(model.a.grad, reconstructed_gradient.a)
+        assertEqual(model.b.grad, reconstructed_gradient.b)
 
     def test_get_mismatched_param(self):
         a_val, b_val = 0.5, 1.0
@@ -253,33 +255,27 @@ class FLModelParamUtilsTest(testutil.BaseFacebookTestCase):
         )
 
         # 1) models have same params => return an empty string
-        self.assertEqual(FLModelParamUtils.get_mismatched_param([model_1, model_2]), "")
+        assertEqual(FLModelParamUtils.get_mismatched_param([model_1, model_2]), "")
 
         # 2) only param 'a' is different => return 'a'
         model_2.a.data = torch.FloatTensor([b_val])
-        self.assertEqual(
-            FLModelParamUtils.get_mismatched_param([model_1, model_2]), "a"
-        )
+        assertEqual(FLModelParamUtils.get_mismatched_param([model_1, model_2]), "a")
 
         # 3) only param 'b' is different => return 'b'
         model_2.a.data, model_2.b.data = (
             torch.FloatTensor([a_val]),
             torch.FloatTensor([a_val]),
         )
-        self.assertEqual(
-            FLModelParamUtils.get_mismatched_param([model_1, model_2]), "b"
-        )
+        assertEqual(FLModelParamUtils.get_mismatched_param([model_1, model_2]), "b")
 
         # 4) both param 'a' and 'b' are different
         # => return the first mismatched param, which is 'a'
         model_2.a.data = torch.FloatTensor([b_val])
-        self.assertEqual(
-            FLModelParamUtils.get_mismatched_param([model_1, model_2]), "a"
-        )
+        assertEqual(FLModelParamUtils.get_mismatched_param([model_1, model_2]), "a")
 
         # 5) param 'b' in model_1 is missing in MismatchingLinearRegression
         # => return 'b'
-        self.assertEqual(
+        assertEqual(
             FLModelParamUtils.get_mismatched_param(
                 [model_1, MismatchingLinearRegression()]
             ),
@@ -291,11 +287,11 @@ class FLModelParamUtilsTest(testutil.BaseFacebookTestCase):
         fc_model = FCModel()
         torch.manual_seed(2)
         copied_fc_model = FCModel()
-        self.assertFalse(
+        assertFalse(
             FLTestUtils.do_two_models_have_same_weights(fc_model, copied_fc_model)
         )
 
         FLModelParamUtils.copy_models(fc_model, [copied_fc_model])
-        self.assertTrue(
+        assertTrue(
             FLTestUtils.do_two_models_have_same_weights(fc_model, copied_fc_model)
         )

@@ -2,6 +2,7 @@
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
 import torch
+from flsim.common.pytest_helper import assertEqual, assertAlmostEqual
 from flsim.utils.timing.training_duration_distribution import (
     PerUserUniformDurationDistribution,
     PerUserUniformDurationDistributionConfig,
@@ -16,14 +17,10 @@ from flsim.utils.timing.training_time_estimator import (
     AsyncTrainingTimeEstimator,
     SyncTrainingTimeEstimator,
 )
-from libfb.py import testutil
 from omegaconf import OmegaConf
 
 
-class TrainingTimeEstimatorTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestTrainingTimeEstimator:
     def test_time_from_list(self) -> None:
         """
         Test training time from list
@@ -92,8 +89,8 @@ class TrainingTimeEstimatorTest(testutil.BaseFacebookTestCase):
 
         async_time = async_estimator.training_time()
         sync_time = sync_estimator.training_time()
-        self.assertEqual(sync_time, 6)
-        self.assertEqual(async_time, 5)
+        assertEqual(sync_time, 6)
+        assertEqual(async_time, 5)
 
     def test_uniform_training_time(self) -> None:
         """
@@ -124,7 +121,7 @@ class TrainingTimeEstimatorTest(testutil.BaseFacebookTestCase):
             epochs=epochs,
             training_dist=training_dist,
         )
-        self.assertAlmostEqual(sync_time, async_time, delta=1e-3)
+        assertAlmostEqual(sync_time, async_time, delta=1e-3)
 
     def test_per_user_half_normal(self) -> None:
         """
@@ -156,6 +153,6 @@ class TrainingTimeEstimatorTest(testutil.BaseFacebookTestCase):
             epochs=epochs,
             training_dist=training_dist,
         )
-        self.assertAlmostEqual(sync_time, async_time, delta=1e-3)
-        self.assertAlmostEqual(sync_time, num_users * duration_min, delta=1e-3)
-        self.assertAlmostEqual(async_time, num_users * duration_min, delta=1e-3)
+        assertAlmostEqual(sync_time, async_time, delta=1e-3)
+        assertAlmostEqual(sync_time, num_users * duration_min, delta=1e-3)
+        assertAlmostEqual(async_time, num_users * duration_min, delta=1e-3)

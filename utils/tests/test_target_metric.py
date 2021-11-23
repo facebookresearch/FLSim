@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 # (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
 
+from flsim.common.pytest_helper import (
+    assertTrue,
+    assertLess,
+    assertGreater,
+    assertFalse,
+)
 from flsim.utils.fl.stats import (
     AverageType,
 )
 from flsim.utils.fl.target_metric import TargetMetricTracker, TargetMetricDirection
-from libfb.py import testutil
 
 
-class TargetMetricTestTest(testutil.BaseFacebookTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestTargetMetricTest:
     def test_target_metric_optimize_for_max(self) -> None:
         """
         Test if target tracker returns true when the sliding window returns
@@ -32,11 +34,11 @@ class TargetMetricTestTest(testutil.BaseFacebookTestCase):
                 direction=TargetMetricDirection.MAX,
             )
             for metric in metrics[:-1]:
-                self.assertFalse(target_tracker.update_and_check_target(metric))
-                self.assertLess(target_tracker.mean, target_value)
+                assertFalse(target_tracker.update_and_check_target(metric))
+                assertLess(target_tracker.mean, target_value)
 
-            self.assertTrue(target_tracker.update_and_check_target(metrics[-1]))
-            self.assertGreater(target_tracker.mean, target_value)
+            assertTrue(target_tracker.update_and_check_target(metrics[-1]))
+            assertGreater(target_tracker.mean, target_value)
 
     def test_target_metric_optimize_for_min(self) -> None:
         """
@@ -58,8 +60,8 @@ class TargetMetricTestTest(testutil.BaseFacebookTestCase):
                 direction=TargetMetricDirection.MIN,
             )
             for metric in metrics[:-1]:
-                self.assertFalse(target_tracker.update_and_check_target(metric))
-                self.assertGreater(target_tracker.mean, target_value)
+                assertFalse(target_tracker.update_and_check_target(metric))
+                assertGreater(target_tracker.mean, target_value)
 
-            self.assertTrue(target_tracker.update_and_check_target(metrics[-1]))
-            self.assertLess(target_tracker.mean, target_value)
+            assertTrue(target_tracker.update_and_check_target(metrics[-1]))
+            assertLess(target_tracker.mean, target_value)
