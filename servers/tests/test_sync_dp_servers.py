@@ -38,12 +38,13 @@ def init_process(
     models,
     file_loc,
     pipe,
+    usa_cuda,
 ):
     FLDistributedUtils.dist_init(
         rank=rank,
         world_size=world_size,
         init_method=f"file://{file_loc}",
-        use_cuda=False,
+        use_cuda=usa_cuda and torch.cuda.is_available(),
     )
     server.init_round()
     for i, m in enumerate(models):
@@ -65,7 +66,7 @@ def init_process(
     dist.destroy_process_group()
 
 
-def run_multiprocess_server_test(server, num_processes=1, num_models=4):
+def run_multiprocess_server_test(server, num_processes=1, num_models=4, use_cuda=False):
     _, tmpfile = mkstemp(dir="/tmp")
     pipe_out, pipe_in = mp.Pipe(False)
     models = [create_model_with_value(1.0) for i in range(num_models)]
@@ -76,14 +77,7 @@ def run_multiprocess_server_test(server, num_processes=1, num_models=4):
     for pid in range(num_processes):
         p = mp.Process(
             target=init_process,
-            args=(
-                pid,
-                num_processes,
-                server,
-                models,
-                tmpfile,
-                pipe_in,
-            ),
+            args=(pid, num_processes, server, models, tmpfile, pipe_in, use_cuda),
         )
         p.start()
         processes.append(p)
@@ -316,14 +310,32 @@ class TestSyncDPSGDServer:
         error_msg = verify_models_equivalent_after_training(delta, init)
         assertEmpty(error_msg, msg=error_msg)
 
-    def test_sync_dp_server_with_multiple_processes(self):
+    @pytest.mark.parametrize(
+        "noise",
+        [0, 1],
+    )
+    @pytest.mark.parametrize(
+        "clip",
+        [1, 10],
+    )
+    @pytest.mark.parametrize(
+        "use_cuda",
+        [False, True],
+    )
+    def test_sync_dp_server_with_multiple_processes(self, noise, clip, use_cuda):
+        if use_cuda and not torch.cuda.is_available():
+            return
+
         server = self._create_server(
             SampleNet(create_model_with_value(0)),
             num_rounds=1,
             num_clients=10,
-            clipping_value=10,
-            noise_multiplier=0,
+            clipping_value=clip,
+            noise_multiplier=noise,
         )
-        results = run_multiprocess_server_test(server, num_processes=4, num_models=4)
+
+        results = run_multiprocess_server_test(
+            server, num_processes=4, num_models=4, use_cuda=use_cuda
+        )
         for r, v in zip(results, results[1:]):
             assertEqual(r, v)
