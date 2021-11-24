@@ -15,14 +15,14 @@ class TestDataUtils:
         assertEqual(list(batchify([1, 2, 3, 4], 1)), [[1], [2], [3], [4]])
 
     def test_merge_dicts(self) -> None:
-        expected = {"a": torch.Tensor([[1.0], [2.0]])}
+        expected = {"a": torch.Tensor([1.0, 2.0])}
         for key, actual in merge_dicts(
             [{"a": torch.Tensor([1])}, {"a": torch.Tensor([2])}]
         ).items():
             assertTrue(key in expected)
             assertTrue(torch.all(actual.eq(expected[key])))
 
-        expected = {"a": torch.Tensor([[1.0]]), "b": torch.Tensor([[2.0]])}
+        expected = {"a": torch.Tensor([1.0]), "b": torch.Tensor([2.0])}
         for key, actual in merge_dicts(
             [{"a": torch.Tensor([1])}, {"b": torch.Tensor([2])}]
         ).items():

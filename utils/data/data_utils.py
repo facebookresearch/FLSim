@@ -32,13 +32,13 @@ def merge_dicts(batch: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]
     Merge a list of dictionaries into one dictionary
     Example:
     >>> merge_dicts([{"a": torch.Tensor([1])}, {"a": torch.Tensor([2])}])
-    >>> {"a": torch.Tensor([[1.0], [2.0]])},
+    >>> {"a": torch.Tensor([1.0, 2.0])},
     """
     res = defaultdict(list)
     for ex in batch:
         for key, value in ex.items():
             res[key].append(value)
-    return {k: torch.stack(v) for k, v in res.items()}
+    return {k: torch.cat(v) for k, v in res.items()}
 
 
 def stable_hash(base: int = 100000) -> int:
