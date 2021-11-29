@@ -27,7 +27,7 @@ from flsim.privacy.privacy_engine import (
 from flsim.privacy.privacy_engine_factory import PrivacyEngineFactory, NoiseType
 from flsim.tests import utils
 from libfb.py import testutil
-from opacus import privacy_analysis
+from opacus.accountants.analysis import rdp as privacy_analysis
 
 
 class TestGaussianPrivacyEngine:
@@ -58,8 +58,10 @@ class TestGaussianPrivacyEngine:
         return privacy_engine
 
     def _calc_eps(self, sample_rate, noise_multiplier, steps, alphas, delta):
-        rdp = privacy_analysis.compute_rdp(sample_rate, noise_multiplier, steps, alphas)
-        eps, _ = privacy_analysis.get_privacy_spent(alphas, rdp, delta=delta)
+        rdp = privacy_analysis.compute_rdp(
+            q=sample_rate, noise_multiplier=noise_multiplier, steps=steps, orders=alphas
+        )
+        eps, _ = privacy_analysis.get_privacy_spent(orders=alphas, rdp=rdp, delta=delta)
         return eps
 
     def test_privacy_analysis_alpha_in_alphas(self):

@@ -36,12 +36,15 @@ from flsim.utils.timing.training_duration_distribution import (
     PerExampleGaussianDurationDistributionConfig,
 )
 from omegaconf import OmegaConf
-from opacus import PrivacyEngine, privacy_analysis
+from opacus.accountants.analysis import rdp as privacy_analysis
+from opacus.optimizers import DPOptimizer
 
 
 def calc_eps(sample_rate, noise_multiplier, steps, alphas, delta):
-    rdp = privacy_analysis.compute_rdp(sample_rate, noise_multiplier, steps, alphas)
-    eps, _ = privacy_analysis.get_privacy_spent(alphas, rdp, delta=delta)
+    rdp = privacy_analysis.compute_rdp(
+        q=sample_rate, noise_multiplier=noise_multiplier, steps=steps, orders=alphas
+    )
+    eps, _ = privacy_analysis.get_privacy_spent(orders=alphas, rdp=rdp, delta=delta)
     return eps
 
 
@@ -455,10 +458,10 @@ class TestDPClient(ClientTestBase):
         clnt = self._get_dp_client(data, noise_multiplier=0.1, clipping_value=2.0)
         model = utils.SampleNet(utils.TwoFC())
         model, optim, optim_sch = clnt.prepare_for_training(model)
-        p_eng = optim.privacy_engine
-        assertEqual(p_eng.noise_multiplier, 0.1)
-        assertEqual(p_eng.max_grad_norm, 2.0)
-        assertEqual(p_eng.sample_rate, 1.0 / 11)
+        assertIsInstance(optim, DPOptimizer)
+        assertEqual(optim.noise_multiplier, 0.1)
+        assertEqual(optim.max_grad_norm, 2.0)
+        assertEqual(optim.expected_batch_size, 3)
 
     def test_privacy_turned_off(self):
         data = self._fake_data(num_batches=11, batch_size=3)
@@ -482,11 +485,9 @@ class TestDPClient(ClientTestBase):
         mismatched = utils.verify_models_equivalent_after_training(model2, model)
         assertEqual(mismatched, "")
         # expect correct type of optimizer
-        assertIsInstance(optim, LocalOptimizerSGD)
+        assertIsInstance(optim, DPOptimizer)
+        assertIsInstance(optim.original_optimizer, LocalOptimizerSGD)
         assertIsInstance(optim_sch, ConstantLRScheduler)
-        # expect privacy engine attached
-        p_eng = optim.privacy_engine
-        assertTrue(hasattr(p_eng, "optimizer"))
 
     def test_storage(self):
         client = self._get_dp_client(store_models_and_optimizers=True)
@@ -497,8 +498,7 @@ class TestDPClient(ClientTestBase):
         # test existance of privacy_engine
         # model1 should be the first model stored
         optim = client.optimizers[0]
-        assertTrue(hasattr(optim, "privacy_engine"))
-        assertIsInstance(optim.privacy_engine, PrivacyEngine)
+        assertIsInstance(optim, DPOptimizer)
 
     def test_no_noise_no_clip(self):
         data = self._fake_data(3, 4)
@@ -569,14 +569,16 @@ class TestDPClient(ClientTestBase):
         model = utils.SampleNet(utils.TwoFC())
         clnt = self._get_dp_client(data, noise_multiplier, clipping_value, True)
         model, weight = clnt.generate_local_update(model)
-        privacy_engine = clnt.optimizers[0].privacy_engine
-        alphas = privacy_engine.alphas
-        delta = privacy_engine.target_delta
+
+        alphas = clnt.accountant.DEFAULT_ALPHAS
+        delta = 1e-5
 
         eps_from_script = calc_eps(
             1.0 / num_batches, noise_multiplier, num_batches, alphas, delta
         )
-        eps_from_client, _ = privacy_engine.get_privacy_spent()
+        eps_from_client, _ = clnt.accountant.get_privacy_spent(
+            delta=delta, alphas=alphas
+        )
         assertAlmostEqual(eps_from_script, eps_from_client)
 
     def test_dp_client_eval(self):

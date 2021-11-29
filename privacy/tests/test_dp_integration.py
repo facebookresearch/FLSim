@@ -38,7 +38,8 @@ from flsim.utils.tests.helpers.async_trainer_test_utils import (
 )
 from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
 from omegaconf import OmegaConf
-from opacus import PrivacyEngine
+from opacus import GradSampleModule
+from opacus.optimizers import DPOptimizer
 
 
 class TestDifferentialPrivacyIntegration:
@@ -72,15 +73,15 @@ class TestDifferentialPrivacyIntegration:
         optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum)
         optimizer.zero_grad()
         if sample_level_dp:
-            pe = PrivacyEngine(
-                model,
-                batch_size=train_batch_size,
-                sample_size=self.data_size,  # pyre-ignore
-                alphas=dp_config["alphas"],
+            model = GradSampleModule(model)
+
+            optimizer = DPOptimizer(
+                optimizer=optimizer,
                 noise_multiplier=dp_config["sample_dp_noise_multiplier"],
                 max_grad_norm=dp_config["sample_dp_clipping_value"],
+                expected_batch_size=train_batch_size,
             )
-            pe.attach(optimizer)
+
         return optimizer
 
     def _load_data(self, one_user: bool, data_size: int = 26):

@@ -140,14 +140,11 @@ class FLTestUtils:
         global_model: IFLModel,
         optimizer: torch.optim.Optimizer,
         metrics_reporter: Optional[IFLMetricsReporter] = None,
-        private_engine: Optional[PrivacyEngine] = None,
         epochs: int = 1,
         cuda_enabled: bool = False,
     ):
         if cuda_enabled:
             global_model.fl_cuda()
-        if private_engine is not None:
-            private_engine.attach(optimizer)
 
         for _ in range(epochs):
             for one_user_data in data_provider.train_data():

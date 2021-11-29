@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Optional
 
+import torch
 from flsim.channels.base_channel import IdentityChannel
 from flsim.clients.base_client import Client, ClientConfig
 from flsim.common.timeout_simulator import TimeOutSimulator
@@ -19,7 +20,9 @@ from flsim.privacy.common import PrivacyBudget, PrivacySetting
 from flsim.utils.config_utils import fullclassname
 from flsim.utils.config_utils import init_self_cfg
 from flsim.utils.cuda import ICudaStateManager, DEFAULT_CUDA_MANAGER
-from opacus import PrivacyEngine
+from opacus import GradSampleModule
+from opacus.accountants import RDPAccountant
+from opacus.optimizers import DPOptimizer
 
 
 class DPClient(Client):
@@ -58,6 +61,9 @@ class DPClient(Client):
             self.cfg.privacy_setting.noise_multiplier >= 0
             and self.cfg.privacy_setting.clipping_value < float("inf")
         )
+        if self.privacy_on:
+            self.accountant = RDPAccountant()
+            self.grad_sample_module = None
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
@@ -82,27 +88,41 @@ class DPClient(Client):
         model, optimizer, optimizer_scheduler = super().prepare_for_training(model)
         if self.privacy_on:
             batch_size, self.dataset_length = self._get_dataset_stats(model)
-            privacy_engine = PrivacyEngine(
-                module=model.fl_get_module(),
-                batch_size=batch_size,
-                sample_size=self.dataset_length,
-                # pyre-fixme[16]: `DPClient` has no attribute `cfg`.
-                alphas=self.cfg.privacy_setting.alphas,
+            sample_rate = batch_size / self.dataset_length
+
+            self.grad_sample_module = GradSampleModule(model.fl_get_module())
+
+            # pyre-fixme[16]: `DPClient` has no attribute `cfg`.
+            if self.cfg.privacy_setting.noise_seed is not None:
+                generator = torch.Generator()
+                # pyre-fixme[16]
+                generator.manual_seed(self.cfg.privacy_setting.noise_seed)
+            else:
+                generator = None
+
+            optimizer = DPOptimizer(
+                optimizer=optimizer,
                 noise_multiplier=self.cfg.privacy_setting.noise_multiplier,
                 max_grad_norm=self.cfg.privacy_setting.clipping_value,
-                delta=self.cfg.privacy_setting.target_delta,
+                expected_batch_size=batch_size,
+                generator=generator,
             )
-            if self.cfg.privacy_setting.noise_seed is not None:
-                privacy_engine.random_number_generator = privacy_engine._set_seed(
-                    self.cfg.privacy_setting.noise_seed
+
+            def accountant_hook(optim: DPOptimizer):
+                self.accountant.step(
+                    noise_multiplier=optim.noise_multiplier,
+                    sample_rate=sample_rate * optim.accumulated_iterations,
                 )
-            privacy_engine.steps = self.privacy_steps
-            privacy_engine.attach(optimizer)
+
+            optimizer.attach_step_hook(accountant_hook)
+
         return model, optimizer, optimizer_scheduler
 
-    def _get_privacy_budget(self, optimizer) -> PrivacyBudget:
+    def _get_privacy_budget(self) -> PrivacyBudget:
         if self.privacy_on and self.dataset_length > 0:
-            eps, delta = optimizer.privacy_engine.get_privacy_spent()
+            # pyre-fixme[16]: `DPClient` has no attribute `cfg`.
+            delta = self.cfg.privacy_setting.target_delta
+            eps = self.accountant.get_epsilon(delta=delta)
             return PrivacyBudget(epsilon=eps, delta=delta)
         else:
             return PrivacyBudget()
@@ -110,7 +130,7 @@ class DPClient(Client):
     def post_batch_train(
         self, epoch: int, model: IFLModel, sample_count: int, optimizer: Any
     ):
-        if self.privacy_on and sample_count > optimizer.privacy_engine.batch_size:
+        if self.privacy_on and sample_count > optimizer.expected_batch_size:
             raise ValueError(
                 "Batchsize was not properly calculated!"
                 " Calculated Epsilons are not Correct"
@@ -124,19 +144,19 @@ class DPClient(Client):
             DPClient.logger.warning(
                 "Calculated privacy budgets were not Accurate." " Fixing the problem."
             )
-            sample_rate = float(optimizer.privacy_engine.batch_size) / total_samples
-            optimizer.privacy_engine.sample_rate = sample_rate
+            sample_rate = float(optimizer.expected_batch_size) / total_samples
+            self.accountant.steps = [
+                (noise, sample_rate, num_steps)
+                for noise, _, num_steps in self.accountant.steps
+            ]
 
-        self._privacy_budget = self._get_privacy_budget(optimizer)
+        self._privacy_budget = self._get_privacy_budget()
         DPClient.logger.debug(f"Privacy Budget: {self._privacy_budget}")
 
-        # book keeping
-        privacy_engine = optimizer.privacy_engine
-        self.privacy_steps = privacy_engine.steps
         # detach the engine to be safe, (not necessary if model is not reused.)
-        privacy_engine.detach()
+        self.grad_sample_module.to_standard_module()
         # re-add the detached engine so that can be saved along with optimizer
-        optimizer.privacy_engine = privacy_engine
+        optimizer.accountant = self.accountant
 
 
 @dataclass

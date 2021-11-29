@@ -20,7 +20,7 @@ from flsim.privacy.common import (
     PrivacyBudget,
     PrivacySetting,
 )
-from opacus import privacy_analysis
+from opacus.accountants.analysis import rdp as privacy_analysis
 from torch import nn
 
 
@@ -147,10 +147,13 @@ class GaussianPrivacyEngine(IPrivacyEngine):
             target_delta = self.target_delta
 
         rdp = privacy_analysis.compute_rdp(
-            self.user_sampling_rate, self.noise_multiplier, self.steps, self.alphas
+            q=self.user_sampling_rate,
+            noise_multiplier=self.noise_multiplier,
+            steps=self.steps,
+            orders=self.alphas,
         )
         eps, opt_alpha = privacy_analysis.get_privacy_spent(
-            self.alphas, rdp, delta=target_delta
+            orders=self.alphas, rdp=rdp, delta=target_delta
         )
 
         self.logger.info(
