@@ -8,8 +8,8 @@ provided the script get_data.sh for such task.
 
   Typical usage example:
 
-  python3 sent140_tutorial.py -- \\
-  --config-file fblearner/flow/projects/papaya/examples/hydra_configs/sent140_single_process.json
+  python3 sent140_tutorial.py --config-file configs/sent140_config.json
+
 """
 import itertools
 import json
@@ -25,10 +25,10 @@ import torch.nn as nn
 from flsim.interfaces.metrics_reporter import Channel
 from flsim.utils.config_utils import maybe_parse_json_config
 from flsim.utils.example_utils import (
-    LEAFDataLoader,
-    LEAFDataProvider,
-    MetricsReporter,
+    DataProvider,
     FLModel,
+    MetricsReporter,
+    LEAFDataLoader,
 )
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
@@ -155,11 +155,11 @@ class Sent140Dataset(Dataset):
 def build_data_provider(data_config, drop_last=False):
 
     train_dataset = Sent140Dataset(
-        data_root="train/all_data_0_01_keep_1_train_9.json",
+        data_root="leaf/data/sent140/data/train/all_data_0_01_keep_1_train_9.json",
         max_seq_len=data_config.max_seq_len,
     )
     test_dataset = Sent140Dataset(
-        data_root="test/all_data_0_01_keep_1_test_9.json",
+        data_root="leaf/data/sent140/data/test/all_data_0_01_keep_1_test_9.json",
         max_seq_len=data_config.max_seq_len,
     )
 
@@ -171,7 +171,7 @@ def build_data_provider(data_config, drop_last=False):
         drop_last=drop_last,
     )
 
-    data_provider = LEAFDataProvider(dataloader)
+    data_provider = DataProvider(dataloader)
     return data_provider, train_dataset.num_letters
 
 
@@ -180,7 +180,6 @@ def main_worker(
     model_config,
     data_config,
     use_cuda_if_available=True,
-    rank=0,
     distributed_world_size=1,
 ):
     data_provider, num_letters = build_data_provider(data_config)
@@ -207,7 +206,6 @@ def main_worker(
         metric_reporter=metrics_reporter,
         num_total_users=data_provider.num_users(),
         distributed_world_size=distributed_world_size,
-        rank=rank,
     )
 
     trainer.test(
@@ -216,10 +214,9 @@ def main_worker(
     )
 
 
-@hydra.main(config_path=None, config_name="sent140_single_process")
+@hydra.main(config_path=None, config_name="sent140_tutorial")
 def run(cfg: DictConfig):
     print(OmegaConf.to_yaml(cfg))
-    assert cfg.distributed_world_size == 1, "Distributed training is not yet supported."
 
     trainer_config = cfg.trainer
     model_config = cfg.model
