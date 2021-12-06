@@ -59,6 +59,7 @@ class Globals:
 
 @pytest.fixture(scope="class")
 def prepare_training_simulator_test_utils(request):
+    torch.random.manual_seed(0)
     request.cls.shared_client_config = ClientConfig(
         epochs=1,
         max_clip_norm_normalized=0,
