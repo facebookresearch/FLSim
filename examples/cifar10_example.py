@@ -16,6 +16,7 @@ import hydra
 import torch
 from flsim.data.data_sharder import SequentialSharder
 from flsim.interfaces.metrics_reporter import Channel
+from flsim.utils.config_utils import maybe_parse_json_config
 from flsim.utils.example_utils import (
     DataLoader,
     DataProvider,
@@ -23,7 +24,6 @@ from flsim.utils.example_utils import (
     FLModel,
     MetricsReporter,
 )
-from flsim.utils.config_utils import maybe_parse_json_config
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from torchvision import transforms
