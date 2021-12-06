@@ -251,8 +251,6 @@ class FLTrainer(abc.ABC):
 
 @dataclass
 class FLTrainerConfig:
-    # TODO: (jesikmin) T59233747 [papaya][trainer] Remove default values and
-    # fix all tests
     _target_: str = MISSING
     _recursive_: bool = False
     # Training epochs

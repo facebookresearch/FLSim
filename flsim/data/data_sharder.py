@@ -161,7 +161,7 @@ class ColumnSharder(FLDataSharder):
 
         shard_idx = csv_row[unwrapped_colindex]
 
-        # shard_idx can be a 0-dim tensor when a Hive column is an integer.
+        # shard_idx can be a 0-dim tensor when a table column is an integer.
         if isinstance(shard_idx, torch.Tensor):
             shard_idx = shard_idx.item()
 

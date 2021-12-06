@@ -41,8 +41,6 @@ class FLDatasetDataLoader(IFLDataLoader):
 
 
 class FLDatasetDataLoaderWithBatch(IFLDataLoader):
-    # TODO: (jesikmin) T58865105 [papaya][data] Add shuffling support to FL
-    # dataset data loader
     def __init__(
         self,
         train_dataset: Dataset,

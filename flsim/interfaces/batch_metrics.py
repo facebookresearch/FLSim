@@ -26,7 +26,6 @@ class IFLBatchMetrics(abc.ABC):
     def num_examples(self) -> int:
         pass
 
-    # TODO: ngjhn Remove these since they accumulate in memory causing OOM
     @property
     @abc.abstractmethod
     def predictions(self) -> List[Any]:

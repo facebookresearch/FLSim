@@ -17,11 +17,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 class FLMetricsReporter(IFLMetricsReporter, abc.ABC):
-    """Note that Tensorboard will not work with FBLearner
-    if you use this metrics reporter. This is the
-    MetricsRepoorter without any FB-specific dependency.
-    If you want to use Tensorboard within FBLearner or
-    inside Bento, please take a look at FBFLMetricsReporter.
+    """
+    This is a MetricsReporter with Tensorboard support.
     """
 
     def __init__(self, channels: List[Channel], log_dir: Optional[str] = None):

@@ -49,7 +49,7 @@ class SyncAggregator(abc.ABC):
             config_class=SyncAggregatorConfig,
             **kwargs,
         )
-        assert (  # TODO: remove after T84246363
+        assert (
             not self.is_round_reducer_dp
         ), "To create a private round reducer, use PrivateSyncTrainer instead."
         self.reducer = instantiate(
@@ -57,8 +57,6 @@ class SyncAggregator(abc.ABC):
             self.cfg.reducer,
             global_model=global_model,
             channel=channel,
-            # TODO: ngjhn passing this here for DP reducer instantiation
-            # will fix in T80906721
             num_users_per_round=self.cfg.num_users_per_round,
             total_number_of_users=self.cfg.total_number_of_users,
         )
@@ -71,7 +69,6 @@ class SyncAggregator(abc.ABC):
 
     @property
     def is_round_reducer_dp(self):
-        # TODO: remove after T84246363
         # reducer can be a DictConfig (if constructed the normal way via constructor)
         # or a dataclass instance (if the param is set directly - not a recommended way).
         return issubclass(self.cfg.reducer.__class__, DPRoundReducerConfig) or (

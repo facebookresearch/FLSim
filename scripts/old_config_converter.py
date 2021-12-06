@@ -528,10 +528,9 @@ def create_new_fl_config_from_old_json(
 if __name__ == "__main__":
     warning_msg = """ NOTE:\n
     -----\n
-    THIS CONFIG CONVERTOR IS A HACK BY krp@ AND IS NOT FULLY TESTED. \n
+    THIS CONFIG CONVERTOR IS A HACK AND IS NOT FULLY TESTED. \n
     DO NOT RELY ON THIS CONVERTOR SCRIPT BEING AVAILABLE FOR A LONG TIME. \n
     IF YOU HAVE A LOT OF CONFIGS TO CONVERT, PLEASE DO SO ASAP. \n
-    IF YOU RUN INTO ISSUES, PLEASE REACH OUT TO KRP@ AND HE WILL FIX THE SCRIPT. \n
     \n
     WARNING:\n
     --------\n

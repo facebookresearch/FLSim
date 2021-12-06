@@ -8,8 +8,6 @@ from typing import Dict, Iterable
 import torch
 
 
-# TODO: (jesikmin) T55061072 Add test under papaya directory for
-# FLModelWithPrivateModules
 class FLModelWithPrivateModules(abc.ABC):
     """
     This class emulates the user-private modules in FL by making them reference to
