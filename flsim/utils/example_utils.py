@@ -18,6 +18,7 @@ from flsim.metrics_reporter.tensorboard_metrics_reporter import FLMetricsReporte
 from flsim.utils.data.data_utils import batchify
 from flsim.utils.simple_batch_metrics import FLBatchMetrics
 from torch import nn
+from torch.utils.data import Dataset
 from torchvision import transforms
 from torchvision.datasets.cifar import CIFAR10
 from torchvision.datasets.vision import VisionDataset
@@ -355,3 +356,88 @@ class MetricsReporter(FLMetricsReporter):
     ) -> Any:
         accuracy = scores[self.ACCURACY]
         return {self.ACCURACY: accuracy}
+
+
+class LEAFDataLoader(IFLDataLoader):
+    SEED = 2137
+    random.seed(SEED)
+
+    def __init__(
+        self,
+        train_dataset: Dataset,
+        eval_dataset: Dataset,
+        test_dataset: Dataset,
+        batch_size: int,
+        drop_last: bool = False,
+    ):
+        self.train_dataset = train_dataset
+        self.eval_dataset = eval_dataset
+        self.test_dataset = test_dataset
+        self.batch_size = batch_size
+        self.drop_last = drop_last
+
+    def fl_train_set(self, **kwargs) -> Iterable[Dict[str, Generator]]:
+        yield from self._batchify(self.train_dataset, self.drop_last)
+
+    def fl_eval_set(self, **kwargs) -> Iterable[Dict[str, Generator]]:
+        yield from self._batchify(self.eval_dataset, drop_last=False)
+
+    def fl_test_set(self, **kwargs) -> Iterable[Dict[str, Generator]]:
+        yield from self._batchify(self.test_dataset, drop_last=False)
+
+    def _batchify(
+        self, dataset: Dataset, drop_last=False
+    ) -> Generator[Dict[str, Generator], None, None]:
+        for one_user_inputs, one_user_labels in dataset:
+            data = list(zip(one_user_inputs, one_user_labels))
+            random.shuffle(data)
+            one_user_inputs, one_user_labels = zip(*data)
+            batch = {
+                "features": batchify(one_user_inputs, self.batch_size, drop_last),
+                "labels": batchify(one_user_labels, self.batch_size, drop_last),
+            }
+            yield batch
+
+
+class LEAFDataProvider(IFLDataProvider):
+    def __init__(self, data_loader):
+        self.data_loader = data_loader
+        self.train_users = self._create_fl_users(data_loader.fl_train_set())
+        self.eval_users = self._create_fl_users(data_loader.fl_eval_set())
+        self.test_users = self._create_fl_users(data_loader.fl_test_set())
+
+    def user_ids(self) -> List[int]:
+        return list(self.train_users.keys())
+
+    def num_users(self) -> int:
+        return len(self.train_users)
+
+    def get_user_data(self, user_index: int) -> IFLUserData:
+        if user_index in self.train_users:
+            return self.train_users[user_index]
+        else:
+            raise IndexError(
+                f"Index {user_index} is out of bound for list with len {self.num_users()}"
+            )
+
+    def train_data(self) -> Iterable[IFLUserData]:
+        for user_data in self.train_users.values():
+            yield user_data
+
+    def eval_data(self) -> Iterable[Dict[str, torch.Tensor]]:
+        for user_data in self.eval_users.values():
+            for batch in user_data:
+                yield batch
+
+    def test_data(self) -> Iterable[Dict[str, torch.Tensor]]:
+        for user_data in self.test_users.values():
+            for batch in user_data:
+                yield batch
+
+    def _create_fl_users(self, iterator: Iterator) -> Dict[int, IFLUserData]:
+        return {
+            user_index: UserData(user_data)
+            for user_index, user_data in tqdm(
+                enumerate(iterator), desc="Creating FL User", unit="user"
+            )
+        }

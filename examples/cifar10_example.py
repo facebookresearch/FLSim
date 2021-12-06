@@ -16,7 +16,7 @@ import hydra
 import torch
 from flsim.data.data_sharder import SequentialSharder
 from flsim.interfaces.metrics_reporter import Channel
-from flsim.utils.cifar10_utils import (
+from flsim.utils.example_utils import (
     DataLoader,
     DataProvider,
     SimpleConvNet,
