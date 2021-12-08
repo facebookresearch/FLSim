@@ -1,4 +1,4 @@
-<hr/>
+# Federated Learning Simulator (FLSim)
 
 <!-- [![CircleCI](https://circleci.com/gh/pytorch/flsim.svg?style=svg)](https://circleci.com/gh/pytorch/flsim) -->
 
@@ -37,17 +37,16 @@ To implement a central training loop in the FL setting using FLSim, a developer 
 
 ### Tutorials
 * [Image classification with CIFAR-10](https://github.com/facebookresearch/FLSim/blob/main/tutorials/cifar10_tutorial.ipynb)
-* [Sentiment classification with LEAF's Sent140](hhttps://github.com/facebookresearch/FLSim/blob/main/tutorials/sent140_tutorial.ipynb)
+* [Sentiment classification with LEAF's Sent140](https://github.com/facebookresearch/FLSim/blob/main/tutorials/sent140_tutorial.ipynb)
 * [Compression for communication efficiency](https://github.com/facebookresearch/FLSim/blob/main/tutorials/channel_feature_tutorial.ipynb)
 * [Adding a custom communication channel](https://github.com/facebookresearch/FLSim/blob/main/tutorials/custom_channel_tutorial.ipynb)
-
 
 To see the details, please refer to the [tutorials](https://github.com/facebookresearch/FLSim/tree/main/tutorials) that we have prepared.
 
 ### Examples
 We have prepared the runnable exampels for 2 of the tutorials above:
-* [Image classification with CIFAR-10] (https://github.com/facebookresearch/FLSim/blob/main/examples/cifar10_example.py)
-* [Sentiment classification with LEAF's Sent140] (https://github.com/facebookresearch/FLSim/blob/main/examples/sent140_example.py)
+* [Image classification with CIFAR-10](https://github.com/facebookresearch/FLSim/blob/main/examples/cifar10_example.py)
+* [Sentiment classification with LEAF's Sent140](https://github.com/facebookresearch/FLSim/blob/main/examples/sent140_example.py)
 
 
 ## Contributing
