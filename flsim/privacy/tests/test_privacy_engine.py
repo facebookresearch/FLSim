@@ -3,10 +3,10 @@
 
 import copy
 import math
-import unittest
 from unittest.mock import MagicMock
 
 import numpy as np
+import pytest
 import torch
 import torch.nn as nn
 from flsim.common.pytest_helper import (
@@ -26,7 +26,6 @@ from flsim.privacy.privacy_engine import (
 )
 from flsim.privacy.privacy_engine_factory import PrivacyEngineFactory, NoiseType
 from flsim.tests import utils
-from libfb.py import testutil
 from opacus.accountants.analysis import rdp as privacy_analysis
 
 
@@ -201,10 +200,7 @@ class TestGaussianPrivacyEngine:
         assertFalse(raised_exception)
 
 
-class TreePrivacyEngineTest(unittest.TestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
+class TestTreePrivacyEngine:
     def _create_delta(self, dim, value=0.0):
         delta = nn.Linear(dim, 1)
         delta.bias.data.fill_(value)
@@ -222,13 +218,7 @@ class TreePrivacyEngineTest(unittest.TestCase):
             count += 1
         return count
 
-    @testutil.data_provider(
-        lambda: (
-            {"num_leaf": 4, "max_height": 2},
-            {"num_leaf": 8, "max_height": 3},
-            {"num_leaf": 16, "max_height": 4},
-        )
-    )
+    @pytest.mark.parametrize("num_leaf, max_height", [(4, 2), (8, 3), (16, 4)])
     def test_build_tree(self, num_leaf, max_height):
         """
         Test that build tree logic is correct.
@@ -262,19 +252,17 @@ class TreePrivacyEngineTest(unittest.TestCase):
             bits = float(self._count_bits(i + 1))
             assertEqual(cumsum, bits)
 
-    @testutil.data_provider(
-        lambda: (
-            {"upr": 4, "n_users": 4, "noise_multiplier": 1, "exp_var": 0.57},
-            {"upr": 7, "n_users": 7, "noise_multiplier": 1, "exp_var": 2.23},
-            {"upr": 8, "n_users": 8, "noise_multiplier": 1, "exp_var": 0.53},
-            {"upr": 8, "n_users": 8, "noise_multiplier": 2, "exp_var": 2.13},
-            {"upr": 8, "n_users": 8, "noise_multiplier": 0.5, "exp_var": 0.13},
-        )
+    @pytest.mark.parametrize(
+        "upr, n_users, noise_multiplier, exp_var",
+        [
+            (4, 4, 1, 0.57),
+            (7, 7, 1, 2.23),
+            (8, 8, 1, 0.53),
+            (8, 8, 2, 2.13),
+            (8, 8, 0.5, 0.13),
+        ],
     )
     def test_tree_noise_sum_expected(self, upr, n_users, noise_multiplier, exp_var):
-        """
-        See D27796316 test plan for explanation
-        """
         delta, _ = self._create_delta(dim=1000, value=0)
 
         setting = PrivacySetting(
@@ -294,19 +282,17 @@ class TreePrivacyEngineTest(unittest.TestCase):
         )
         assertAlmostEqual(torch.var(noised_delta), exp_var, delta=0.15)
 
-    @testutil.data_provider(
-        lambda: (
-            {"steps": 4, "upr": 4, "n_users": 4, "sigma": 1, "exp_var": 0.57},
-            {"steps": 7, "upr": 7, "n_users": 7, "sigma": 1, "exp_var": 2.23},
-            {"steps": 8, "upr": 8, "n_users": 8, "sigma": 1, "exp_var": 0.53},
-            {"steps": 8, "upr": 8, "n_users": 8, "sigma": 2, "exp_var": 2.13},
-            {"steps": 8, "upr": 8, "n_users": 8, "sigma": 0.5, "exp_var": 0.13},
-        )
+    @pytest.mark.parametrize(
+        "upr, n_users, noise_multiplier, exp_var",
+        [
+            (4, 4, 1, 0.57),
+            (7, 7, 1, 2.23),
+            (8, 8, 1, 0.53),
+            (8, 8, 2, 2.13),
+            (8, 8, 0.5, 0.13),
+        ],
     )
     def test_range_sum_noise_expected(self, steps, upr, n_users, sigma, exp_var):
-        """
-        See D27796316 test plan for explanation
-        """
         setting = PrivacySetting(
             noise_multiplier=sigma,
             noise_seed=1,
@@ -322,12 +308,13 @@ class TreePrivacyEngineTest(unittest.TestCase):
 
         assertAlmostEqual(torch.var(sum_), exp_var, delta=0.15)
 
-    @testutil.data_provider(
-        lambda: (
-            {"n_users": 1600, "upr": 100, "sigma": 4.03, "epsilon": 4.19},
-            {"n_users": 1600, "upr": 100, "sigma": 6.21, "epsilon": 2.60},
-            {"n_users": 1600, "upr": 100, "sigma": 8.83, "epsilon": 1.77},
-        )
+    @pytest.mark.parametrize(
+        "n_users, upr, sigma, epsilon",
+        [
+            (1600, 100, 4.03, 4.19),
+            (1600, 100, 6.21, 2.60),
+            (1600, 100, 8.83, 1.77),
+        ],
     )
     def test_privacy_analysis_epsilon(self, n_users, upr, sigma, epsilon):
         delta, _ = self._create_delta(dim=1000, value=0)
