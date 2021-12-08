@@ -383,19 +383,15 @@ class SyncTrainer(FLTrainer):
             )
             self.server.receive_update_from_client(Message(client_delta, weight))
 
-        # TODO MM add multi-processing here for now we will do sequential
-        # with Pool(100) as workers:
-        #    workers.map(client_update, clients)
-
         t = time()
-        [update(client) for client in clients]
+        for client in clients:
+            update(client)
         self.logger.info(f"Collecting round's clients took {time() - t} s.")
 
         t = time()
         self.server.step()
         self.logger.info(f"Finalizing round took {time() - t} s.")
 
-        # TODO MM on adding asyn-trainer change api to get timeline
         t = time()
         self._report_train_metrics(
             model=self.global_model(),
@@ -452,10 +448,8 @@ class SyncTrainer(FLTrainer):
         """
         Calculates post-server aggregation metrics.
         """
-        # TODO do multiprocessing
-        # lines below internally change the state of metric reporter,
-        # no need to create extra reportable metrics.
-        [c.eval(model=model, metric_reporter=metric_reporter) for c in clients]
+        for client in clients:
+            client.eval(model=model, metric_reporter=metric_reporter)
 
         metrics = []
         if self.is_user_level_dp:
