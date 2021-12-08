@@ -6,10 +6,13 @@
 Before running this file, you need to download the dataset, and partition the data by users. We
 provided the script get_data.sh for such task.
 
-  Typical usage example:
+    Typical usage example:
 
-  python3 sent140_tutorial.py --config-file configs/sent140_config.json
+    FedAvg
+    python3 sent140_tutorial.py --config-file configs/sent140_config.json
 
+    FedBuff + SGDM
+    python3 sent140_tutorial.py --config-file configs/sent140_fedbuff_config.json
 """
 import itertools
 import json
