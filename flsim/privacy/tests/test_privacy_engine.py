@@ -283,19 +283,20 @@ class TestTreePrivacyEngine:
         assertAlmostEqual(torch.var(noised_delta), exp_var, delta=0.15)
 
     @pytest.mark.parametrize(
-        "upr, n_users, noise_multiplier, exp_var",
+        "steps, upr, n_users, sigma, exp_var",
         [
-            (4, 4, 1, 0.57),
-            (7, 7, 1, 2.23),
-            (8, 8, 1, 0.53),
-            (8, 8, 2, 2.13),
-            (8, 8, 0.5, 0.13),
+            (4, 4, 4, 1, 0.57),
+            (7, 7, 7, 1, 2.23),
+            (8, 8, 8, 1, 0.53),
+            (8, 8, 8, 2, 2.13),
+            (8, 8, 8, 0.5, 0.13),
         ],
     )
     def test_range_sum_noise_expected(self, steps, upr, n_users, sigma, exp_var):
+
         setting = PrivacySetting(
             noise_multiplier=sigma,
-            noise_seed=1,
+            noise_seed=2,
         )
         privacy_engine = PrivacyEngineFactory.create(
             setting,
