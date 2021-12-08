@@ -523,11 +523,9 @@ class TestTrainingSimulatorUtils:
         )
 
     def test_training_duration_per_example_gaussian(self):
-        # TODO: T88456330: Fix timing out issue for this test
         pass
 
     def test_training_duration_per_user_gaussian(self):
-        # TODO: T88456330: Fix timing out issue for this test
         pass
 
     def test_training_end_training_start_relative_priority(self):

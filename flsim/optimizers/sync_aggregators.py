@@ -334,8 +334,6 @@ class SyncAggregatorConfig:
     _target_: str = MISSING
     _recursive_: bool = False
     reducer: IFLRoundReducerConfig = IFLRoundReducerConfig()
-    # TODO: ngjhn passing this here for DP reducer instantiation
-    # will fix in T80906721
     num_users_per_round: int = 1
     total_number_of_users: int = 10000000000
 

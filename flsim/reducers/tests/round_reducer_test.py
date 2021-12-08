@@ -365,7 +365,6 @@ class TestSecureRoundReducer(TestRoundReducerBase):
         when the reduce() method is called, and when the num_bytes is
         big, so we do not have a possible fixedpoint overflow
         """
-        # TODO: revisit when we implement overflow in aggregation T96117010
         ref_model = utils.SampleNet(utils.TwoFC())
         fixedpoint = FixedPointConfig(num_bytes=4, scaling_factor=10)
         rr = self.get_round_reducer(ref_model, fixedpoint=fixedpoint)
@@ -400,7 +399,6 @@ class TestSecureRoundReducer(TestRoundReducerBase):
         when the reduce() method is called, and when the num_bytes is
         small so we have possible fixedpoint overflows
         """
-        # TODO: revisit when we implement overflow in aggregation T96117010
         ref_model = utils.SampleNet(utils.TwoFC())
         fixedpoint = FixedPointConfig(num_bytes=1, scaling_factor=100)
         # the range of numbers would be (-128,127)

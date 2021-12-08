@@ -246,7 +246,6 @@ class SyncTrainer(FLTrainer):
                     )
 
                 # report training success rate and training time variance
-                # TODO write to metrics reporter T62638873
                 if rank == 0:
                     if (
                         self._timeout_simulator.sample_mean_per_user != 0

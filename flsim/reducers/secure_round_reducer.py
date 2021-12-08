@@ -74,7 +74,7 @@ class SecureRoundReducer(RoundReducer):
 
         Notes:
             Once we allow per-layer config for FixedPoint, we should change the
-            fixedpoint to a dictionary or a similar data structure. T97188526
+            fixedpoint to a dictionary or a similar data structure.
         """
         return SecureAggregator(
             utility_config_flatter(

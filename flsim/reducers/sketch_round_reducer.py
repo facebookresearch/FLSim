@@ -126,6 +126,5 @@ class SketchRoundReducer(IFLRoundReducer):
 class SketchRoundReducerConfig(IFLRoundReducerConfig):
     _target_: str = fullclassname(SketchRoundReducer)
     only_federated_params: bool = False
-    # TODO: Handle reduction_type and precision T95227332
     reduction_type: ReductionType = ReductionType.WEIGHTED_AVERAGE
     precision: ReductionPrecision = ReductionPrecision.DEFAULT

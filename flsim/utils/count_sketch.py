@@ -25,8 +25,6 @@ class CountSketch:
     tensor shapes are stored for decompression.
     """
 
-    # TODO: Add device: T95215140
-    # TODO: Add message to constructor? T95215260
     def __init__(
         self,
         width: int = 10000,
@@ -75,7 +73,6 @@ class CountSketch:
         self.n = 0
         self.param_sizes = OrderedDict()
 
-    # T95859841: Change return shape.
     def compute_hash_vector(self, x: torch.Tensor, hash: torch.Tensor) -> torch.Tensor:
         """
         Computes the hash of a vector x that represents the ids using the hash functions in the parameter hash.

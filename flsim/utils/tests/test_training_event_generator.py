@@ -89,7 +89,6 @@ class TestEventDistributionsUtil:
         generated event durations follow normal distribution.
         """
         np.random.seed(1)
-        # TODO: (jesikmin) T54593732 Add test to ensure that time_to_next_event_start
         # follows Poisson
         event_rate_per_sec, duration_mean, duration_sd = 10, 1, 5
         # set training_duration_min to a very negative number, to not bound the distribution

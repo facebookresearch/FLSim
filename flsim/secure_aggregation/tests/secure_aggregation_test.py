@@ -138,8 +138,6 @@ class TestSecureAggregator:
         from floating point to fixed point, when we have different
         FixedPointConverter configs for different layers
 
-        Notes:
-            T97188526
         """
 
         config_layer1 = FixedPointConfig(num_bytes=2, scaling_factor=100)

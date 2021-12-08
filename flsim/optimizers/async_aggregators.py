@@ -115,8 +115,6 @@ class AsyncAggregator:
             self.cfg.reducer,
             global_model=self._global_model,
             channel=channel,
-            # TODO: ngjhn passing this here for DP reducer instantiation
-            # will fix in T80906721
             num_users_per_round=self.cfg.num_users_per_round,
             total_number_of_users=self.cfg.total_number_of_users,
         )
@@ -131,8 +129,6 @@ class AsyncAggregator:
         return self._global_model
 
     def set_num_total_users(self, num_total_users: int) -> None:
-        # TODO: ngjhn this is ugly and we will fix this by moving
-        # num_total_users to the constructor of TrainerBase T80906721
         self.reducer.set_num_total_users(num_total_users)
 
     def model_staleness(self, model_seqnum: int):
@@ -521,8 +517,6 @@ class AsyncAggregatorConfig:
     reducer: RoundReducerConfig = RoundReducerConfig(
         reduction_type=ReductionType.WEIGHTED_SUM
     )
-    # TODO: ngjhn passing this here for DP reducer instantiation
-    # will fix in T80906721
     num_users_per_round: int = 1
     total_number_of_users: int = 10000000000
 

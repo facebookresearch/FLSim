@@ -153,8 +153,6 @@ class SecureAggregator:
                 neural network. If the utility ``utility_config_flatter`` is used,
                 same config will be used for all layers of the neural network.
 
-        Notes:
-            T97188526
         """
         self.converters = {}
         for key in config.keys():

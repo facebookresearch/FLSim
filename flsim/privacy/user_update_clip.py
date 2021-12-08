@@ -40,7 +40,7 @@ class UserUpdateClipper:
         This method clips the parameters of the user update. This operation
         is in-place (modifies ``model_diff`` in this method)
         """
-        max_norm = float(max_norm)  # TODO: (extension to per-layer clip) T69971799
+        max_norm = float(max_norm)
 
         per_user_update_norm = self._calc_norm(model_diff.parameters())
         clip_factor = self._calc_clip_factor(max_norm, per_user_update_norm)
@@ -57,7 +57,7 @@ class UserUpdateClipper:
             raise ValueError("Error: max_norm and per_user_norm must be both positive.")
         clip_factor = max_norm / (per_user_norm + __EPS__)
         clip_factor = min(clip_factor, 1.0)
-        return clip_factor  # TODO: (consolidate with another implementation) T69972084
+        return clip_factor
 
     def _calc_norm(self, params):
         """

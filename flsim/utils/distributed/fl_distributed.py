@@ -282,7 +282,6 @@ class FLDistributedUtils:
         'buffer' (i.e. the 2nd param) as a well-flattened 1D tensor of the list
         of params and copy all the params back to buffer.
         """
-        # TODO: (jesikmin) T55869097 Check whether the size of buffer is same as
         # the total number of elements of params
         # copy all-reduced grads back into their original place
         offset = 0
