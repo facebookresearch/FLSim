@@ -10,11 +10,8 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
-import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
-from flsim.channels.message import Message
-from flsim.channels.sketch_channel import SketchChannelConfig
 from flsim.clients.base_client import Client, ClientConfig
 from flsim.common.pytest_helper import (
     assertEqual,
@@ -23,7 +20,6 @@ from flsim.common.pytest_helper import (
     assertFalse,
     assertTrue,
     assertIsInstance,
-    assertRaises,
 )
 from flsim.privacy.common import PrivacySetting
 from flsim.reducers.base_round_reducer import (
@@ -35,10 +31,6 @@ from flsim.reducers.dp_round_reducer import DPRoundReducer, DPRoundReducerConfig
 from flsim.reducers.secure_round_reducer import (
     SecureRoundReducer,
     SecureRoundReducerConfig,
-)
-from flsim.reducers.sketch_round_reducer import (
-    SketchRoundReducer,
-    SketchRoundReducerConfig,
 )
 from flsim.reducers.weighted_dp_round_reducer import (
     EstimatorType,
@@ -52,9 +44,7 @@ from flsim.utils.async_trainer.async_staleness_weights import (
     PolynomialStalenessWeightConfig,
 )
 from flsim.utils.async_trainer.async_weights import AsyncWeight, AsyncWeightConfig
-from flsim.utils.count_sketch import CountSketch
 from flsim.utils.distributed.fl_distributed import FLDistributedUtils
-from hydra.errors import HydraException
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
@@ -968,119 +958,3 @@ class FLRoundReducerTest:
         ref_model = utils.SampleNet(utils.TwoFC())
         reducer = instantiate(config, global_model=ref_model)
         assertIsInstance(reducer, expected_type)
-
-
-class TestSketchRoundReducer(TestRoundReducerBase):
-    def get_round_reducer(
-        self,
-        model=None,
-        reduction_type=ReductionType.WEIGHTED_AVERAGE,
-        reset=True,
-        channel=None,
-    ):
-        model = model or utils.SampleNet(utils.TwoFC())
-        channel = channel or instantiate(SketchChannelConfig())
-        round_reducer = instantiate(
-            SketchRoundReducerConfig(),
-            global_model=model,
-            channel=channel,
-        )
-        return round_reducer
-
-    def test_sketch_creation_error(self):
-        """
-        Tests if creating SketchRoundReducer with no channel raises an error
-        """
-        model = utils.SampleNet(utils.TwoFC())
-        with assertRaises((HydraException, AssertionError)):
-            _ = instantiate(
-                SketchRoundReducerConfig(),
-                global_model=model,
-                channel=None,
-            )
-
-    def test_sketch_creation(self):
-        """
-        Tests creating SketchRoundReducer correctly
-        """
-        rr = self.get_round_reducer()
-        assertIsInstance(rr, SketchRoundReducer)
-
-    def test_sketch_reset(self):
-        """
-        Tests if reducer's internals resets correctly.
-        """
-        rr = self.get_round_reducer()
-        assertTrue(torch.allclose(rr.round_cs.buckets, torch.tensor([0.0])))
-        model = utils.SampleNet(utils.TwoFC())
-
-        total_params = 0
-        for _, param in model.fl_get_module().named_parameters():
-            total_params += param.numel()
-
-        assertEqual(rr.round_cs.n, total_params)
-
-        rr.collect_update(model, 1.0)
-        rr.reset(model)
-        assertTrue(torch.allclose(rr.round_cs.buckets, torch.tensor([0.0])))
-
-        assertEqual(rr.round_cs.n, total_params)
-
-        for (cs_name, cs_param), (model_name, model_param) in zip(
-            list(rr.round_cs.param_sizes.items()),
-            list(model.fl_get_module().named_parameters()),
-        ):
-            assertEqual(cs_name, model_name)
-            assertEqual(cs_param, model_param.size())
-
-    def test_sketch_receive_through_channel(self):
-        """
-        Tests if reducer's receives CountSketch from channel correctly when given a model
-        """
-        rr = self.get_round_reducer()
-        model = utils.SampleNet(utils.TwoFC())
-        message = Message(model, weight=1, count_sketch=CountSketch())
-        message = rr.channel.client_to_server(message)
-        cs = message.count_sketch
-
-        for (cs_name, cs_param), (model_name, model_param) in zip(
-            list(cs.param_sizes.items()), list(model.fl_get_module().named_parameters())
-        ):
-            assertEqual(cs_name, model_name)
-            assertEqual(cs_param, model_param.size())
-
-    def test_sketch_collect_update_reduce(self):
-        """
-        Tests if reducer collects update correctly and reduces to the correct weights.
-        """
-        param_values = [0.1 * i for i in range(100)]
-        weights = [i % 10 for i in range(100)]
-        global_param = 1.0
-        clients = [
-            self._fake_client(global_param, p, w) for p, w in zip(param_values, weights)
-        ]
-        ref_model = utils.SampleNet(utils.TwoFC())
-        rr = self.get_round_reducer(ref_model)
-        for clnt in clients:
-            model, weight = clnt.generate_local_update(utils.SampleNet(utils.TwoFC()))
-            rr.collect_update(model, weight)
-        expected_sum_weights = sum(weights)
-        expected_param_values = sum(
-            (global_param - param_value) * w
-            for param_value, w in zip(param_values, weights)
-        )
-        assertAlmostEqual(expected_sum_weights, rr.sum_weights.item(), 5)
-
-        sd = rr.round_cs.unsketch_model()
-        for _, param in sd.items():
-            assertTrue(torch.allclose(param, torch.tensor([expected_param_values])))
-
-        sketch, sum_weights = rr.reduce()
-        assertAlmostEqual(expected_sum_weights, sum_weights.item(), 5)
-        sd = sketch.unsketch_model()
-        for _, param in sd.items():
-            assertTrue(
-                torch.allclose(
-                    param, torch.tensor([expected_param_values / expected_sum_weights])
-                )
-            )

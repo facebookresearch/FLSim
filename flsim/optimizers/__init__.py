@@ -23,7 +23,6 @@ from .server_optimizers import (
     FedLAMBOptimizerConfig,
     FedLARSOptimizerConfig,
 )
-from .sketch_aggregator import SketchAggregatorConfig
 from .sync_aggregators import (
     FedAvgSyncAggregatorConfig,
     FedAdamSyncAggregatorConfig,
@@ -130,12 +129,6 @@ ConfigStore.instance().store(
 ConfigStore.instance().store(
     name="base_fed_adam_hybrid_aggregator",
     node=FedAdamHybridAggregatorConfig,
-    group="aggregator",
-)
-
-ConfigStore.instance().store(
-    name="base_sketch_aggregator",
-    node=SketchAggregatorConfig,
     group="aggregator",
 )
 
