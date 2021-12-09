@@ -1,0 +1,58 @@
+{
+    "config": {
+      "trainer": {
+        "_base_": "base_private_sync_trainer",
+        "epochs": 5,
+        "client": {
+          "_base_": "base_dp_client",
+          "epochs": 1,
+          "optimizer": {
+            "_base_": "base_optimizer_sgd",
+            "lr": 0.05,
+            "momentum": 0
+          },
+          "privacy_setting": {
+            "noise_multiplier": 0,
+            "clipping_value": "inf",
+            "target_delta": 0.00001
+          }
+        },
+        "aggregator": {
+          "_base_": "base_fed_avg_with_lr_sync_aggregator",
+          "lr": 0.21,
+          "momentum": 0.9
+        },
+        "reducer": {
+          "_base_": "base_dp_reducer",
+          "reduction_type": "AVERAGE",
+          "privacy_setting": {
+            "noise_multiplier": 0.5,
+            "clipping_value": 0.1,
+            "target_delta": 0.000001
+          }
+        },
+        "active_user_selector": {
+          "_base_": "base_uniformly_random_active_user_selector"
+        },
+        "users_per_round": 10,
+        "train_metrics_reported_per_epoch": 1,
+        "always_keep_trained_model": false,
+        "report_train_metrics": true,
+        "eval_epoch_frequency": 1,
+        "do_eval": true,
+        "report_train_metrics_after_aggregation": true
+      },
+      "data": {
+        "local_batch_size": 25,
+        "examples_per_user": 50
+      },
+      "model": {
+        "use_resnet": false
+      },
+      "distributed_world_size": 1,
+      "use_cuda_if_available": true,
+      "memory_requirement": "10G",
+      "is_integration_test": true,
+      "rank": 0
+    }
+  }

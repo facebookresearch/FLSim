@@ -1,0 +1,20 @@
+defaults:
+    - trainer/base_sync_trainer
+    - /optimizer@trainer.client.optimizer: base_optimizer_sgd
+    - /active_user_selector@trainer.server.active_user_selector: base_sequential_active_user_selector
+    - _self_
+
+trainer:
+    client:
+        epochs: 5
+        optimizer:
+            lr: 0.01
+            momentum: 0.9
+    users_per_round: 10
+    epochs: 1
+    always_keep_trained_model: false
+    train_metrics_reported_per_epoch: 1
+    report_train_metrics: true
+    eval_epoch_frequency: 1
+    do_eval: true
+    report_train_metrics_after_aggregation: true

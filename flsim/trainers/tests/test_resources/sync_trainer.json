@@ -1,0 +1,31 @@
+{
+  "trainer": {
+    "_base_": "base_sync_trainer",
+      "server": {
+        "_base_": "base_sync_server",
+        "server_optimizer": {
+          "_base_": "base_fed_adam",
+          "beta1": 0.1
+        },
+        "active_user_selector": {
+          "_base_": "base_uniformly_random_active_user_selector"
+        }
+      },
+      "client": {
+        "optimizer": {
+          "lr": 1.0,
+          "momentum": 0,
+          "_base_": "base_optimizer_sgd"
+        },
+        "epochs": 1
+      },
+      "users_per_round": 100,
+      "epochs": 10,
+      "always_keep_trained_model": false,
+      "train_metrics_reported_per_epoch": 100,
+      "report_train_metrics": true,
+      "eval_epoch_frequency": 0.1,
+      "do_eval": true,
+      "report_train_metrics_after_aggregation": true
+  }
+}

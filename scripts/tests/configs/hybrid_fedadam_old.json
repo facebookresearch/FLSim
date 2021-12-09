@@ -1,0 +1,59 @@
+{
+    "trainer_config": {
+      "type": "AsyncTrainer",
+      "epochs": 5,
+      "user_epochs_per_round": 1,
+      "train_metrics_reported_per_epoch": 1,
+      "always_keep_trained_model": false,
+      "optimizer": {
+        "type": "SGD",
+        "lr": 0.1,
+        "momentum": 0.90
+      },
+      "aggregator": {
+        "type": "HybridFedAdam",
+        "lr": 0.002,
+        "weight_decay": 0.00002,
+        "eps": 1e-8,
+        "buffer_size": 1
+      },
+      "training_event_generator_config": {
+        "type": "async_training_event_generator",
+        "training_start_time_distr": {
+          "type": "constant",
+          "training_rate": 10
+        },
+        "training_duration_distr": {
+          "type": "per_user_gaussian",
+          "training_duration_mean": 1,
+          "training_duration_sd": 1,
+          "training_duration_min": 0.1
+        }
+      },
+      "local_lr_scheduler": {
+        "type": "batch_size_normalizer",
+        "local_lr_normalizer": 50
+      },
+      "example_weight_config": {
+        "type": "equal"
+      },
+      "report_train_metrics": true,
+      "max_clip_norm_normalized": false,
+      "eval_epoch_frequency": 1,
+      "do_eval": true,
+      "active_user_selector": {
+        "type": "uniformly_random"
+      },
+      "report_train_metrics_after_aggregation": true
+    },
+    "data_config": {
+      "local_batch_size": 25,
+      "examples_per_user": 50
+    },
+    "distributed_world_size": 1,
+    "use_cuda_if_available": true,
+    "use_resnet": false,
+    "is_integration_test": true,
+    "memory_requirement": "10G",
+    "rank": 0
+  }

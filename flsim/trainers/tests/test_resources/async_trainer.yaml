@@ -1,0 +1,41 @@
+defaults:
+    - trainer/base_async_trainer
+    - /aggregator@trainer.aggregator: base_fed_avg_with_lr_async_aggregator
+    - /reducer@trainer.aggregator.reducer: base_weighted_dp_reducer
+    - /optimizer@trainer.client.optimizer: base_optimizer_sgd
+    - /training_event_generator@trainer.training_event_generator: base_async_training_event_generator
+    - /training_start_time_distribution@trainer.training_event_generator.training_start_time_distribution: base_poisson_training_start_time_distribution
+    - /duration_distribution_generator@trainer.training_event_generator.duration_distribution_generator: base_per_example_gaussian_duration_distribution
+    - _self_
+
+trainer:
+  aggregator:
+    reducer:
+        reduction_type: WEIGHTED_SUM
+        max_weight: 10
+        min_weight: 1e-6
+        privacy_setting:
+            alphas: [2, 3, 4, 6, 7, 8, 9, 10, 20, 30 , 40 , 60]
+            noise_multiplier: 1e-6
+            clipping_value: 10.0
+            target_delta: 1e-5
+    num_users_per_round: 10
+    total_number_of_users: 10000
+  client:
+      epochs: 5
+      optimizer:
+          lr: 0.01
+          momentum: 0.9
+  epochs: 1
+  always_keep_trained_model: false
+  train_metrics_reported_per_epoch: 1
+  report_train_metrics: true
+  eval_epoch_frequency: 1
+  do_eval: true
+  report_train_metrics_after_aggregation: true
+  training_event_generator:
+    training_start_time_distribution:
+      training_rate: 0.5
+    duration_distribution_generator:
+      training_duration_mean: 1.0
+      training_duration_sd: 0.1

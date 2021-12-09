@@ -1,0 +1,55 @@
+{
+    "trainer_config": {
+      "type": "PrivateSyncTrainer",
+      "epochs": 5,
+      "user_epochs_per_round": 1,
+      "train_metrics_reported_per_epoch": 1,
+      "always_keep_trained_model": false,
+      "users_per_round": 10,
+      "aggregator": {
+        "type": "FedAvgWithLR",
+        "lr": 0.21,
+        "momentum": 0.9
+      },
+      "private_client_config": {
+        "optim_config": {
+          "type": "SGD",
+          "lr": 0.05,
+          "momentum": 0
+        },
+        "privacy_setting": {
+          "noise_multiplier": 0,
+          "clipping_value": "inf",
+          "target_delta": 0.00001
+        },
+        "epochs": 1
+      },
+      "private_reducer_config": {
+        "type": "DPRoundReducer",
+        "reduction_type": "AVERAGE",
+        "privacy_setting": {
+          "noise_multiplier": 0.5,
+          "clipping_value": 0.1,
+          "target_delta": 0.000001
+        }
+      },
+      "report_train_metrics": true,
+      "max_clip_norm_normalized": false,
+      "eval_epoch_frequency": 1,
+      "do_eval": true,
+      "active_user_selector": {
+        "type": "uniformly_random"
+      },
+      "report_train_metrics_after_aggregation": true
+    },
+    "data_config": {
+      "local_batch_size": 25,
+      "examples_per_user": 50
+    },
+    "distributed_world_size": 1,
+    "use_cuda_if_available": true,
+    "use_resnet": false,
+    "is_integration_test": true,
+    "memory_requirement": "10G",
+    "rank": 0
+  }

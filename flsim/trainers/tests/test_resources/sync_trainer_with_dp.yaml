@@ -1,0 +1,28 @@
+defaults:
+    - trainer/base_sync_trainer
+    - /server@trainer.server: base_sync_dp_server
+    - /optimizer@trainer.client.optimizer: base_optimizer_sgd
+    - /active_user_selector@trainer.server.active_user_selector: base_sequential_active_user_selector
+    - _self_
+
+trainer:
+    server:
+        aggregation_type: AVERAGE
+        privacy_setting:
+            alphas: [2, 3, 4, 6, 7, 8, 9, 10, 20, 30 , 40 , 60]
+            noise_multiplier: 1.0
+            clipping_value: 10000.0
+            target_delta: 1e-6
+    client:
+        epochs: 10
+        optimizer:
+            lr: 0.01
+            momentum: 0.9
+    users_per_round: 10
+    epochs: 1
+    always_keep_trained_model: false
+    train_metrics_reported_per_epoch: 1
+    report_train_metrics: true
+    eval_epoch_frequency: 1
+    do_eval: true
+    report_train_metrics_after_aggregation: true
