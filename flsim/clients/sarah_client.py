@@ -8,22 +8,39 @@
 This file defines the concept of a SARAH clients
 """
 from __future__ import annotations
-
+import logging
+import random
+from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, List, Optional, Tuple, Iterable
 
 import torch
 from flsim.channels.base_channel import IdentityChannel
-from flsim.clients.base_client import Client, ClientConfig
-from flsim.common.timeout_simulator import TimeOutSimulator
+from flsim.channels.message import Message
+from flsim.common.logger import Logger
+from flsim.common.timeout_simulator import (
+    NeverTimeOutSimulator,
+    NeverTimeOutSimulatorConfig,
+    TimeOutSimulator,
+)
 from flsim.data.data_provider import IFLUserData
+from flsim.interfaces.metrics_reporter import IFLMetricsReporter
 from flsim.interfaces.model import IFLModel
-from flsim.privacy.common import PrivacyBudget, PrivacySetting
+from flsim.optimizers.local_optimizers import (
+    LocalOptimizerConfig,
+    LocalOptimizerSGDConfig,
+)
+from flsim.optimizers.optimizer_scheduler import (
+    OptimizerScheduler,
+    OptimizerSchedulerConfig,
+    ConstantLRSchedulerConfig,
+)
 from flsim.utils.config_utils import fullclassname
 from flsim.utils.config_utils import init_self_cfg
 from flsim.utils.cuda import ICudaStateManager, DEFAULT_CUDA_MANAGER
-
-
+from flsim.utils.fl.common import FLModelParamUtils
+from hydra.utils import instantiate
+from omegaconf import OmegaConf
 
 class SarahClient(Client):
     def __init__(
@@ -43,6 +60,15 @@ class SarahClient(Client):
             config_class=SarahClientConfig,
             **kwargs,
         )
+        super().__init__(
+            dataset=dataset,
+            channel=channel,
+            timeout_simulator=timeout_simulator,
+            store_last_updated_model=store_last_updated_model,
+            name=name,
+            cuda_manager=cuda_manager,
+            **kwargs,
+        )
 
     def generate_local_update(
         self, model: IFLModel, prev_model: IFLModel, round_number: int, metric_reporter: Optional[IFLMetricsReporter] = None
@@ -50,6 +76,7 @@ class SarahClient(Client):
         
         if (round_number + 1) % self.cfg.large_cohort_period:
             local_model = self.receive_through_channel(model)
+            local_model, optim, optim_scheduler = self.prepare_for_training(local_model)
             # compute \nabla f_i^{\lamda, v} (w^{t})
             local_model, weight = self.train(
                 local_model, optim, optim_scheduler, metric_reporter
@@ -201,7 +228,7 @@ class SarahClient(Client):
 
 @dataclass
 class SarahClientConfig(ClientConfig):
-    _target_: str = fullclassname(DPClient)
+    _target_: str = fullclassname(SarahClient)
     epochs: int = 1  # No. of epochs for local training
     optimizer: LocalOptimizerConfig = LocalOptimizerConfig()
     large_cohort_period: int = 100

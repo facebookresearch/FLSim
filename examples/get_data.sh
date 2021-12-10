@@ -5,4 +5,4 @@
 # LICENSE file in the root directory of this source tree.
 git clone https://github.com/TalwalkarLab/leaf.git
 cd leaf/data/femnist || exit
-./preprocess.sh --sf 0.5 -s niid -t 'user' --tf 0.90 -k 1 --spltseed 1
+./preprocess.sh --sf 0.1 -s niid -t 'user' --tf 0.90 -k 1 --spltseed 1

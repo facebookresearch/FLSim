@@ -48,8 +48,13 @@ class SarahServer(ISyncServer):
         init_self_cfg(
             self,
             component_class=__class__,  # pyre-fixme[10]: Name `__class__` is used but not defined.
-            config_class=SyncDPSGDServerConfig,
+            config_class=SarahServerConfig,
             **kwargs,
+        )
+        self._optimizer = OptimizerType.create_optimizer(
+            # pyre-fixme[16]: `SyncServer` has no attribute `cfg`.
+            config=self.cfg.server_optimizer,
+            model=global_model.fl_get_module(),
         )
         self._round_number = 0
         self.previous_global_model: IFLModel = global_model
@@ -142,7 +147,7 @@ class SarahServer(ISyncServer):
             # g^t = g^{t-1} + 1/m \sigma_{i \in S_t} (d_{i}^{t})
             FLModelParamUtils.add_model(
                 model1=self._global_model.fl_get_module(), 
-                model2=aggregated_model
+                model2=aggregated_model,
                 model_to_save=aggregated_model
             )
             FLModelParamUtils.set_gradient(
@@ -158,7 +163,7 @@ class SarahServer(ISyncServer):
 @dataclass
 class SarahServerConfig(SyncServerConfig):
     _target_: str = fullclassname(SarahServer)
-    # using #examples on client as weight
-    aggregation_type: AggregationType = AggregationType.WEIGTHED_AVERAGE 
+    # set all client weights = 1
+    aggregation_type: AggregationType = AggregationType.AVERAGE 
     large_cohort_period: int = 10
-    large_cohort_clients: int 1000
+    large_cohort_clients: int = 1000

@@ -12,7 +12,9 @@
         },
         "active_user_selector": {
           "_base_": "base_uniformly_random_active_user_selector"
-        }
+        },
+        "large_cohort_period": 100,
+        "large_cohort_clients": 1000
       },
       "client": {
         "_base_": "base_sarah_client",
@@ -21,7 +23,8 @@
           "_base_": "base_optimizer_sgd",
           "lr": 0.0138,
           "momentum": 0
-        }
+        },
+        "large_cohort_period": 100
       },
       "users_per_round": 10,
       "train_metrics_reported_per_epoch": 1,
