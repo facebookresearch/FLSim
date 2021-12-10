@@ -9,6 +9,7 @@ from hydra.core.config_store import ConfigStore  #  @manual
 from .sync_dp_servers import SyncDPSGDServerConfig
 from .sync_secagg_servers import SyncSecAggServerConfig
 from .sync_servers import SyncServerConfig
+from .sarah_server import SarahServerConfig
 
 ConfigStore.instance().store(
     name="base_sync_server",
@@ -25,5 +26,11 @@ ConfigStore.instance().store(
 ConfigStore.instance().store(
     name="base_sync_secagg_server",
     node=SyncSecAggServerConfig,
+    group="server",
+)
+
+ConfigStore.instance().store(
+    name="base_sarah_server",
+    node=SarahServerConfig,
     group="server",
 )

@@ -36,7 +36,7 @@ from flsim.utils.fl.stats import RandomVariableStatsTracker
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from tqdm import tqdm
-
+from flsim.clients.sarah_client import SarahClientConfig
 
 class SyncTrainer(FLTrainer):
     """Implements FederatedAveraging: https://arxiv.org/abs/1602.05629
@@ -381,9 +381,14 @@ class SyncTrainer(FLTrainer):
         self.logger.info(f"Round initialization took {time() - t} s.")
 
         def update(client):
-            client_delta, weight = client.generate_local_update(
-                self.global_model(), metric_reporter
-            )
+            if is_target(self.cfg.client, SarahClientConfig)
+                client_delta, weight = client.generate_local_update(
+                    self.global_model(), self.server.previous_global_model, timeline.global_round_num(),  metric_reporter
+                )
+            else:
+                client_delta, weight = client.generate_local_update(
+                    self.global_model(), metric_reporter
+                )
             self.server.receive_update_from_client(Message(client_delta, weight))
 
         t = time()
