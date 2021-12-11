@@ -1,5 +1,9 @@
 # Federated Learning Simulator (FLSim)
 
+<p align="center">
+  <img src="https://github.com/facebookresearch/FLSim/blob/main/assets/logo.png">
+</p>
+
 <!-- [![CircleCI](https://circleci.com/gh/pytorch/flsim.svg?style=svg)](https://circleci.com/gh/pytorch/flsim) -->
 
 Federated Learning Simulator (FLSim) is a flexible, standalone library written in PyTorch that simulates FL settings with a minimal, easy-to-use API. FLSim is domain-agnostic and accommodates many use cases such as computer vision and natural text. Currently FLSim supports cross-device FL, where millions of clients' devices (e.g. phones) traing a model collaboratively together.
@@ -9,6 +13,15 @@ FLSim is scalable and fast. It supports differential privacy (DP), secure aggreg
 In FL, a model is trained collaboratively by multiple clients that each have their own local data, and a central server moderates training, e.g. by aggregating model updates from multiple clients.
 
 In FLSim, developers only need to define a dataset, model, and metrics reporter. All other aspects of FL training are handled internally by the FLSim core library.
+
+## FLSim
+### Library Structure
+
+<p align="center">
+  <img src="https://github.com/facebookresearch/FLSim/blob/main/assets/FLSim_Overview.png">
+</p>
+
+FLSim core components follow the same semantic as FedAvg. The server comprises three main features: selector, aggregator, and optimizer at a high level. The selector selects clients for training, and the aggregate aggregates client updates until a round is complete. Then, the optimizer optimizes the server model based on the aggregated gradients. The server communicates with the clients via the channel. The channel then compresses the message between the server and the clients. Locally, the client composes of a dataset and a local optimizer. This local optimizer can be SGD, FedProx, or a custom Pytorch optimizer.
 
 ## Installation
 The latest release of FLSim can be installed via `pip`:
