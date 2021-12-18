@@ -31,7 +31,6 @@ class LocalOptimizer:
         pass
 
 
-# pyre-ignore[11] Annotation `torch.optim.SGD` is not defined as a type
 class LocalOptimizerSGD(LocalOptimizer, torch.optim.SGD):
     def __init__(self, *, model: Model, **kwargs) -> None:
         init_self_cfg(

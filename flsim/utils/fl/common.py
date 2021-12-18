@@ -167,13 +167,9 @@ class FLModelParamUtils:
         """
         new_model = copy.deepcopy(model)
         return (
-            new_model.float()  # pyre-ignore
+            new_model.float()
             if dtype == torch.float32
-            else (
-                new_model.double()  # pyre-ignore
-                if dtype == torch.float64
-                else new_model
-            )
+            else (new_model.double() if dtype == torch.float64 else new_model)
         )
 
     @classmethod

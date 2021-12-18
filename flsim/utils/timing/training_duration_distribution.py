@@ -137,7 +137,6 @@ class PerUserUniformDurationDistribution(IDurationDistribution):
         pass
 
     def training_duration(self, num_training_examples: int) -> float:
-        # pyre-ignore[20]: default return shape is 1
         return self.generator.sample().item()
 
 
@@ -167,7 +166,6 @@ class PerUserExponentialDurationDistribution(IDurationDistribution):
         pass
 
     def training_duration(self, num_training_examples: int) -> float:
-        # pyre-ignore[20]: default return shape is 1
         return self.generator.sample().item()
 
 

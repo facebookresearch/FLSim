@@ -339,6 +339,8 @@ class FLModel(IFLModel):
         return self.model
 
     def fl_cuda(self) -> None:
+        # pyre-fixme[6]: Expected `Union[None, int, torch.device]` for 1st param but
+        #  got `Optional[str]`.
         self.model = self.model.to(self.device)
 
     def get_eval_metrics(self, batch) -> FLBatchMetrics:

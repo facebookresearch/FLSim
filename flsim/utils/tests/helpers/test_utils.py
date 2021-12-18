@@ -46,6 +46,7 @@ class FLTestUtils:
     @classmethod
     def random_grad(cls, model: nn.Module):
         for param in model.parameters():
+            # pyre-fixme[41]: `grad` cannot be reassigned. It is a read-only property.
             param.grad = torch.rand_like(param)
 
     @classmethod
@@ -159,6 +160,7 @@ class FLTestUtils:
                         metrics_reporter.add_batch_metrics(batch_metrics)
 
                     batch_metrics.loss.backward()
+                    # pyre-fixme[20]: Argument `closure` expected.
                     optimizer.step()
         return global_model, metrics_reporter
 
@@ -186,4 +188,5 @@ class FLTestUtils:
         batch_metrics = model.fl_forward(training_batch)
         loss = batch_metrics.loss
         loss.backward()
+        # pyre-fixme[20]: Argument `closure` expected.
         optimizer.step()
