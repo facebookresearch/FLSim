@@ -339,9 +339,7 @@ class FLModel(IFLModel):
         return self.model
 
     def fl_cuda(self) -> None:
-        # pyre-fixme[6]: Expected `Union[None, int, torch.device]` for 1st param but
-        #  got `Optional[str]`.
-        self.model = self.model.to(self.device)
+        self.model = self.model.to(self.device)  # pyre-ignore
 
     def get_eval_metrics(self, batch) -> FLBatchMetrics:
         with torch.no_grad():
@@ -402,47 +400,6 @@ class MetricsReporter(FLMetricsReporter):
     ) -> Any:
         accuracy = scores[self.ACCURACY]
         return {self.ACCURACY: accuracy}
-
-
-class LEAFDataLoader(IFLDataLoader):
-    SEED = 2137
-    random.seed(SEED)
-
-    def __init__(
-        self,
-        train_dataset: Dataset,
-        eval_dataset: Dataset,
-        test_dataset: Dataset,
-        batch_size: int,
-        drop_last: bool = False,
-    ):
-        self.train_dataset = train_dataset
-        self.eval_dataset = eval_dataset
-        self.test_dataset = test_dataset
-        self.batch_size = batch_size
-        self.drop_last = drop_last
-
-    def fl_train_set(self, **kwargs) -> Iterable[Dict[str, Generator]]:
-        yield from self._batchify(self.train_dataset, self.drop_last)
-
-    def fl_eval_set(self, **kwargs) -> Iterable[Dict[str, Generator]]:
-        yield from self._batchify(self.eval_dataset, drop_last=False)
-
-    def fl_test_set(self, **kwargs) -> Iterable[Dict[str, Generator]]:
-        yield from self._batchify(self.test_dataset, drop_last=False)
-
-    def _batchify(
-        self, dataset: Dataset, drop_last=False
-    ) -> Generator[Dict[str, Generator], None, None]:
-        for one_user_inputs, one_user_labels in dataset:
-            data = list(zip(one_user_inputs, one_user_labels))
-            random.shuffle(data)
-            one_user_inputs, one_user_labels = zip(*data)
-            batch = {
-                "features": batchify(one_user_inputs, self.batch_size, drop_last),
-                "labels": batchify(one_user_labels, self.batch_size, drop_last),
-            }
-            yield batch
 
 
 class LEAFDataProvider(IFLDataProvider):

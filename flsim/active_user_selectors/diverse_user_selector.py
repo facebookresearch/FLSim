@@ -66,17 +66,13 @@ class DiverseUserSelectorUtils:
                     zero_gradient.append(torch.zeros_like(group, requires_grad=False))
             return zero_gradient
 
-        # pyre-fixme[6]: Expected `List[torch.Tensor]` for 1st param but got
-        #  `List[torch.nn.parameter.Parameter]`.
-        gradient_sum = zero_like_grad(params)
+        gradient_sum = zero_like_grad(params)  # pyre-ignore
         norm_of_sum, sum_of_norms = 0.0, 0.0
 
         # Accumulate the gradient over a user's batches, normalized by batch size
         for user_idx in user_indices:
             user_data = data_provider.get_user_data(user_idx)
-            # pyre-fixme[6]: Expected `List[torch.Tensor]` for 1st param but got
-            #  `List[torch.nn.parameter.Parameter]`.
-            accumulated_gradient = zero_like_grad(params)
+            accumulated_gradient = zero_like_grad(params)  # pyre-ignore
 
             for batch in user_data:
                 global_model.fl_get_module().zero_grad()
