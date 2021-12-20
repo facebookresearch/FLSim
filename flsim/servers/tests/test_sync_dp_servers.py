@@ -34,74 +34,101 @@ from flsim.utils.distributed.fl_distributed import FLDistributedUtils
 from hydra.utils import instantiate
 
 
-def init_process(
-    rank,
-    world_size,
-    server,
-    models,
-    file_loc,
-    pipe,
-    usa_cuda,
-):
-    FLDistributedUtils.dist_init(
-        rank=rank,
-        world_size=world_size,
-        init_method=f"file://{file_loc}",
-        use_cuda=usa_cuda and torch.cuda.is_available(),
-    )
-    server.init_round()
-    for i, m in enumerate(models):
-        if i % world_size == rank:
-            weight = i + 1
-            server.receive_update_from_client(
-                Message(model=SampleNet(m), weight=weight)
-            )
-
-    server.step()
-    sums, weights = 0.0, 0.0
-    all_sum = [
-        (p.sum(), p.numel()) for p in server.global_model.fl_get_module().parameters()
-    ]
-    for s, w in all_sum:
-        sums += float(s)
-        weights += float(w)
-    pipe.send(sums / weights)
-    dist.destroy_process_group()
-
-
-def run_multiprocess_server_test(server, num_processes=1, num_models=4, use_cuda=False):
-    _, tmpfile = mkstemp(dir="/tmp")
-    pipe_out, pipe_in = mp.Pipe(False)
-    models = [create_model_with_value(1.0) for i in range(num_models)]
-
-    processes = []
-    results = []
-    FLDistributedUtils.WORLD_SIZE = num_processes
-    for pid in range(num_processes):
-        p = mp.Process(
-            target=init_process,
-            args=(pid, num_processes, server, models, tmpfile, pipe_in, use_cuda),
-        )
-        p.start()
-        processes.append(p)
-        results.append(pipe_out)
-    for p in processes:
-        p.join()
-    res = [r.recv() for r in results]
-    return res
-
-
 class TestSyncDPSGDServer:
-    def _get_num_params(self, model):
+    @classmethod
+    def _get_num_params(cls, model):
         return sum(p.numel() for p in model.parameters())
 
+    @classmethod
+    def init_process(
+        cls,
+        rank,
+        world_size,
+        clip,
+        noise,
+        models,
+        file_loc,
+        pipe,
+        use_cuda,
+    ):
+        use_cuda = use_cuda and torch.cuda.is_available()
+        FLDistributedUtils.dist_init(
+            rank=rank,
+            world_size=world_size,
+            init_method=f"file://{file_loc}",
+            use_cuda=use_cuda,
+        )
+        server_model = create_model_with_value(0)
+        if use_cuda:
+            server_model.cuda()
+        server = cls._create_server(
+            SampleNet(server_model),
+            clipping_value=clip,
+            noise_multiplier=noise,
+        )
+        server.init_round()
+        for i, m in enumerate(models):
+            if i % world_size == rank:
+                weight = i + 1
+                if use_cuda:
+                    m.cuda()
+                server.receive_update_from_client(
+                    Message(model=SampleNet(m), weight=weight)
+                )
+
+        server.step()
+        sums, weights = 0.0, 0.0
+        all_sum = [
+            (p.sum(), p.numel())
+            for p in server.global_model.fl_get_module().parameters()
+        ]
+        for s, w in all_sum:
+            sums += float(s)
+            weights += float(w)
+        pipe.send(sums / weights)
+        dist.destroy_process_group()
+
+    @classmethod
+    def run_multiprocess_server_test(
+        cls, clip, noise, num_processes=1, num_models=4, use_cuda=False
+    ):
+        _, tmpfile = mkstemp(dir="/tmp")
+        pipe_out, pipe_in = mp.Pipe(False)
+        mp.set_start_method("spawn", force=True)
+        models = [create_model_with_value(1.0) for i in range(num_models)]
+
+        processes = []
+        results = []
+        for pid in range(num_processes):
+            p = mp.Process(
+                target=cls.init_process,
+                args=(
+                    pid,
+                    num_processes,
+                    clip,
+                    noise,
+                    models,
+                    tmpfile,
+                    pipe_in,
+                    use_cuda,
+                ),
+            )
+            p.start()
+            processes.append(p)
+            results.append(pipe_out)
+        for p in processes:
+            p.join()
+        res = [r.recv() for r in results]
+        return res
+
+    @classmethod
     def _create_server(
-        self,
+        cls,
         server_model,
-        num_rounds,
-        num_clients,
-        clipping_value,
-        noise_multiplier,
+        num_rounds=1,
+        num_clients=1,
+        clipping_value=1.0,
+        noise_multiplier=1.0,
         channel=None,
     ):
         server = instantiate(
@@ -325,20 +352,25 @@ class TestSyncDPSGDServer:
         "use_cuda",
         [False, True],
     )
-    def test_sync_dp_server_with_multiple_processes(self, noise, clip, use_cuda):
+    @pytest.mark.parametrize(
+        "num_processes",
+        [1, 2, 4],
+    )
+    def test_sync_dp_server_with_multiple_processes(
+        self, noise, clip, use_cuda, num_processes
+    ):
         if use_cuda and not torch.cuda.is_available():
             return
 
-        server = self._create_server(
-            SampleNet(create_model_with_value(0)),
-            num_rounds=1,
-            num_clients=10,
-            clipping_value=clip,
-            noise_multiplier=noise,
+        expected_result = self.run_multiprocess_server_test(
+            clip=clip, noise=noise, num_processes=1, num_models=4, use_cuda=use_cuda
+        )[0]
+        results = self.run_multiprocess_server_test(
+            clip=clip,
+            noise=noise,
+            num_processes=num_processes,
+            num_models=4,
+            use_cuda=use_cuda,
         )
-
-        results = run_multiprocess_server_test(
-            server, num_processes=4, num_models=4, use_cuda=use_cuda
-        )
-        for r, v in zip(results, results[1:]):
-            assertEqual(r, v)
+        for result in results:
+            assertEqual(expected_result, result)
