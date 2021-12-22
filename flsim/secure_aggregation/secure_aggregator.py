@@ -57,7 +57,6 @@ class FixedPointConverter:
         self.min_value = -(2 ** (num_bits - 1))
         self.scaling_factor = self.cfg.scaling_factor
         self._overflows = 0
-        self._underflows = 0
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
@@ -79,10 +78,8 @@ class FixedPointConverter:
         """
 
         numbers = numbers.mul(self.scaling_factor)
-        if (numbers < self.min_value).any():  # pyre-ignore[16]
-            self._underflows = self._underflows + 1
-        if (numbers > self.max_value).any():
-            self._overflows = self._overflows + 1
+        overflow_matrix = torch.gt(torch.abs(numbers), self.max_value)
+        self._overflows += int(torch.sum(overflow_matrix).item())
         numbers = numbers.clamp(self.min_value, self.max_value)
         return torch.round(numbers)
 
@@ -101,17 +98,6 @@ class FixedPointConverter:
             A tensor containing the converted number to floating point.
         """
         return numbers.div(self.scaling_factor)
-
-    def _show_debug_vars(self):
-        """
-        Shows the underflow and overflow counts if debugging is enabled
-        """
-        if self.logger.isEnabledFor(logging.DEBUG):
-            msg = (
-                f"{self._underflows} tensor(s) have underflow and "
-                f"{self._overflows} tensor(s) have overflow during fixed point conversion"
-            )
-            self.logger.warning(msg)
 
 
 def utility_config_flatter(
@@ -195,8 +181,13 @@ class SecureAggregator:
         self._check_converter_dict_items(model)
         state_dict = model.state_dict()
         for name in state_dict.keys():
-            state_dict[name] = self.converters[name].to_fixedpoint(state_dict[name])
-            self.converters[name]._show_debug_vars()
+            converter = self.converters[name]
+            state_dict[name] = converter.to_fixedpoint(state_dict[name])
+            converter.logger.debug(
+                f"{name} has "
+                f"{converter._overflows} overflow(s) during fixed point conversion"
+            )
+
         model.load_state_dict(state_dict)
 
     def params_to_float(self, model: nn.Module) -> None:
