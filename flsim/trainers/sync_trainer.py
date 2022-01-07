@@ -78,7 +78,7 @@ class SyncTrainer(FLTrainer):
 
     def global_model(self) -> IFLModel:
         """This function makes it explicit that self.global_model() is owned
-        by the aggregator, not by SyncTrainer
+        by the server, not by SyncTrainer
         """
         return self.server.global_model
 
