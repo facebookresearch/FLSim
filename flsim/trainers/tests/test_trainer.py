@@ -234,7 +234,7 @@ class TestTrainer:
 
     def test_client_optimizer_creation_from_config(self):
         """
-        Test if trainer can instanciate the correct client optimizer from config
+        Test if trainer can instantiate the correct client optimizer from config
         """
         for optimizer_config, trainer_type in zip(
             [LocalOptimizerSGDConfig(lr=1.0), LocalOptimizerFedProxConfig(mu=1.0)],
@@ -264,7 +264,7 @@ class TestTrainer:
     )
     def test_server_optimizer_creation_from_config(self, config, trainer_type):
         """
-        Test if trainer can instanciate correct aggregator config
+        Test if trainer can instantiate correct aggregator config
         """
         config = (
             SyncTrainerConfig(server=config)
@@ -276,7 +276,7 @@ class TestTrainer:
 
     def test_same_training_results_with_post_aggregation_reporting(self):
         """
-        creat two training instances,
+        create two training instances,
         one with report_train_metrics_after_aggregation=True, another with False,
         check training results match
         """
@@ -358,7 +358,7 @@ class TestTrainer:
 
     def test_different_metrics_with_aggregation_client_reporting(self):
         """
-        creat two training instances,
+        create two training instances,
         one with use_train_clients_for_aggregation_metrics=True, another with False,
         check that the aggregation eval metrics are different
         """
@@ -449,7 +449,7 @@ class TestTrainer:
 
         1. one user who got all the example, and BS = all examples,
         local optimizer LR = 1.0
-        2. number of users = number of examples, and one exampler per user,
+        2. number of users = number of examples, and one example per user,
         users per round = all users, use FedAvg
         """
 
@@ -846,14 +846,14 @@ class TestTrainer:
         where each character appears twice in order. Timeout limit is set to
         just enough for training half of the dataset
 
-        2. UPR=1. User daraset has 26 characters [a,b,c,d ...,x,y,z]. no timeout
+        2. UPR=1. User dataset has 26 characters [a,b,c,d ...,x,y,z]. no timeout
         """
         torch.manual_seed(1)
         # create dummy FL model on alphabet
         global_model = DummyAlphabetFLModel()
         # keep a copy of initial model to trigger another training instance
         global_model_init = copy.deepcopy(global_model)
-        # dummy alphabet dataset, getting each character twrice
+        # dummy alphabet dataset, getting each character twice
         num_rows = 52
         dummy_dataset = DummyAlphabetDataset(num_rows)
         # a single user getting all examples
@@ -870,7 +870,7 @@ class TestTrainer:
         local_optimizer_lr = 1.0
         epochs = 1
         torch.manual_seed(1)
-        # training time just enought for 26 examples, although user has
+        # training time just enough for 26 examples, although user has
         # 52 examples
         sync_trainer_timeout = create_sync_trainer(
             model=copy.deepcopy(global_model),
@@ -905,7 +905,7 @@ class TestTrainer:
             dummy_dataset, shard_size, local_batch_size, global_model
         )
         torch.manual_seed(1)
-        # training time just enought for 26 examples
+        # training time just enough for 26 examples
         sync_trainer_timeout = create_sync_trainer(
             model=copy.deepcopy(global_model),
             local_lr=local_optimizer_lr,
@@ -937,7 +937,7 @@ class TestTrainer:
         torch.manual_seed(1)
         # create dummy FL model on alphabet
         global_model = DummyAlphabetFLModel()
-        # dummy alphabet dataset, getting each character twrice
+        # dummy alphabet dataset, getting each character twice
         num_rows = 52
         num_users = 4
         dummy_dataset = DummyAlphabetDataset(num_rows)

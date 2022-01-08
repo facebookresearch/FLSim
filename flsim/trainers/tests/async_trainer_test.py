@@ -134,7 +134,7 @@ class ConcurrencyMetricsReporter(FLMetricsReporter):
             metrics = [m for m in extra_metrics if m.name == "Concurrency_Rate"]
             assert (
                 len(metrics) == 1
-            ), "Conrrency rate should be one of the extra metrics"
+            ), "Concurrency rate should be one of the extra metrics"
             concurrency_rate = metrics[0]
             self.concurrency_metrics.append(concurrency_rate.value)
         else:
@@ -473,14 +473,14 @@ class TestAsyncTrainer:
              t1: user1 starts training
              t2: user2 starts training
              t3: user2 finishes training (should cause metric reporting with #examples=1)
-             t11: user1 finishes trainig (should cause metric reporting with #examples=8)
+             t11: user1 finishes training (should cause metric reporting with #examples=8)
              We verify the order in which metrics were reported.
              metric_reporter.num_examples_list should be = [1, 8]
         b) Creating training event order as following:
              t1: user1 starts training
              t2: user2 starts training
              t3: user1 finishes training (should cause metric reporting with #examples=8)
-             t10: user2 finishes trainig (should cause metric reporting with #examples=1)
+             t10: user2 finishes training (should cause metric reporting with #examples=1)
              We verify the order in which metrics were reported.
              metric_reporter.num_examples_list should be = [8, 1]
         """

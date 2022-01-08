@@ -128,7 +128,7 @@ class FLTrainer(abc.ABC):
         )
 
         # 1) keep the best model so far if metric_reporter.compare_metrics is specified
-        # 2) if self.always_keep_trained_model is set as true, ignore the metricsa and
+        # 2) if self.always_keep_trained_model is set as true, ignore the metrics and
         #    keep the trained model for each epoch
         if self.cfg.always_keep_trained_model or eval_metric_better_than_prev:
             # last_best_epoch = epoch

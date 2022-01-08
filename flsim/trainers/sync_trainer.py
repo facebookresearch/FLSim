@@ -161,7 +161,7 @@ class SyncTrainer(FLTrainer):
         # set up synchronization utilities for distributed training
         FLDistributedUtils.setup_distributed_training(
             distributed_world_size, use_cuda=self.cuda_enabled
-        )  # TODO do not call dsitributed utils here, this is upstream responsibility
+        )  # TODO do not call distributed utils here, this is upstream responsibility
         self.logger.info(f" dist world size = {distributed_world_size}")
 
         if rank != 0:
