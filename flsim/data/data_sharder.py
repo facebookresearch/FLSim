@@ -57,6 +57,7 @@ class FLDataSharder(abc.ABC):
             name to value.
         """
         shards = defaultdict(list)
+        # pyre-fixme[16]: `Dataset` has no attribute `__iter__`.
         for one_row in data_rows:
             for shard_id in self.shard_for_row(one_row):
                 shards[str(shard_id)].append(one_row)

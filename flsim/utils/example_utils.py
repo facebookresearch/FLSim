@@ -75,6 +75,7 @@ class DataLoader(IFLDataLoader):
         world_size: int = 1,
         rank: int = 0,
     ) -> Generator[Dict[str, Generator], None, None]:
+        # pyre-fixme[16]: `VisionDataset` has no attribute `__iter__`.
         data_rows: List[Dict[str, Any]] = [self.collate_fn(batch) for batch in dataset]
         for _, (_, user_data) in enumerate(self.sharder.shard_rows(data_rows)):
             batch = {}
@@ -161,6 +162,7 @@ class LEAFDataLoader(IFLDataLoader):
     def _batchify(
         self, dataset: Dataset, drop_last=False
     ) -> Generator[Dict[str, Generator], None, None]:
+        # pyre-fixme[16]: `Dataset` has no attribute `__iter__`.
         for one_user_inputs, one_user_labels in dataset:
             data = list(zip(one_user_inputs, one_user_labels))
             random.shuffle(data)
