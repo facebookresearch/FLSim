@@ -84,21 +84,21 @@ class TestSecureAggregationIntegration:
         Tests training with secure aggregation will produce a different
         model than training without secure aggregation
         """
-        # First, call SyncTrainer with SecureRoundReducer
+        # First, call secure trainer
         fixedpoint = FixedPointConfig(num_bytes=1, scaling_factor=1000)
         torch.manual_seed(1)
-        fl_model_with_secure_round_reducer = self._train_fl_model(
+        fl_model_with_secure_trainer = self._train_fl_model(
             sec_agg_enable=True,
             fixedpoint=fixedpoint,
         )
-        # Next, call SyncTrainer (with RoundReducer)
+        # Next, call sync trainer
         torch.manual_seed(1)
-        fl_model_with_round_reducer = self._train_fl_model()
+        fl_model_with_trainer = self._train_fl_model()
         assertNotEqual(
             FLModelParamUtils.get_mismatched_param(
                 [
-                    fl_model_with_round_reducer.fl_get_module(),
-                    fl_model_with_secure_round_reducer.fl_get_module(),
+                    fl_model_with_trainer.fl_get_module(),
+                    fl_model_with_secure_trainer.fl_get_module(),
                 ],
                 1e-6,
             ),
@@ -115,21 +115,21 @@ class TestSecureAggregationIntegration:
         fixedpoint range, we still do rounding when we convert, E.g., 127.1
         (float) becomes 127 (in fixedpoint), no matter how big the range is.
         """
-        # First, call SyncTrainer with SecureRoundReducer
+        # First, call secure trainer
         fixedpoint = FixedPointConfig(num_bytes=8, scaling_factor=1)
         torch.manual_seed(1)
-        fl_model_with_secure_round_reducer = self._train_fl_model(
+        fl_model_with_secure_trainer = self._train_fl_model(
             sec_agg_enable=True,
             fixedpoint=fixedpoint,
         )
-        # Next, call SyncTrainer (with RoundReducer)
+        # Next, call sync trainer
         torch.manual_seed(1)
-        fl_model_with_round_reducer = self._train_fl_model()
+        fl_model_with_trainer = self._train_fl_model()
         assertNotEqual(
             FLModelParamUtils.get_mismatched_param(
                 [
-                    fl_model_with_round_reducer.fl_get_module(),
-                    fl_model_with_secure_round_reducer.fl_get_module(),
+                    fl_model_with_trainer.fl_get_module(),
+                    fl_model_with_secure_trainer.fl_get_module(),
                 ],
                 1e-6,
             ),
