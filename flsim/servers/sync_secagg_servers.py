@@ -118,6 +118,9 @@ class SyncSecAggServer(ISyncServer):
         self._aggregator.add_update(
             delta=message.model.fl_get_module(), weight=message.weight
         )
+        self._secure_aggregator.update_aggr_overflow_and_model(
+            model=self._aggregator._buffer_module
+        )
 
     def step(self):
         aggregated_model = self._aggregator.aggregate()

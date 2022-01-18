@@ -116,7 +116,7 @@ class TestSecureAggregationIntegration:
         (float) becomes 127 (in fixedpoint), no matter how big the range is.
         """
         # First, call secure trainer
-        fixedpoint = FixedPointConfig(num_bytes=8, scaling_factor=1)
+        fixedpoint = FixedPointConfig(num_bytes=7, scaling_factor=1)
         torch.manual_seed(1)
         fl_model_with_secure_trainer = self._train_fl_model(
             sec_agg_enable=True,

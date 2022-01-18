@@ -43,8 +43,6 @@ class TestSyncSecAggServer:
         """
         Tests whether secure aggregator operations work correctly
         when a model update is received and server model is updated
-
-        Same test as https://fburl.com/code/vp7o2clh
         """
         scaling_factor = 100
         fixedpoint = FixedPointConfig(num_bytes=2, scaling_factor=scaling_factor)
@@ -79,8 +77,6 @@ class TestSyncSecAggServer:
         Tests whether secure aggeragtion operations work correctly
         when the step() method is called, and when the num_bytes is
         big, so we do not have a possible fixedpoint overflow
-
-        Same test as https://fburl.com/code/qp7qve2m
         """
         scaling_factor = 10
         num_bytes = 4
@@ -114,8 +110,6 @@ class TestSyncSecAggServer:
         Tests whether secure aggeragtion operations work correctly
         when the step() method is called, and when the num_bytes is
         small so we have possible fixedpoint overflows
-
-        Same test as https://fburl.com/code/qp7qve2m
         """
         scaling_factor = 100
         num_bytes = 1
@@ -136,12 +130,68 @@ class TestSyncSecAggServer:
         for client in clients:
             server.receive_update_from_client(Message(SampleNet(client), weight=1.0))
 
-        # update is 5.877. In current fixedpoint setup, it is 127, as 587.7 > 127
-        # when we reduce, we convert from fixedpoint to floating point, so 127 -> 1.27
-        expected_param = float(global_param - (1.27 * num_clients) / num_clients)
+        # when a client update is converted to fixedpoint: 2.123 -> 212.3 -> 127.
+        # when adding `num_clients` updates, the sum would actually get smaller, i.e.
+        # 127+127+..+127=128-num_clients in bit representation when `num_bytes=1.
+        # So, the update is (128-10)/10 = 11.8 (in fixedpoint). Convert to float is 0.118
+        expected_param = float(global_param - (0.118 * num_clients) / num_clients)
 
         server.step()
         mismatched = model_parameters_equal_to_value(
             server.global_model.fl_get_module(), expected_param
         )
         assertEqual(mismatched, "", mismatched)
+
+        client_param = 0.2
+        clients = [create_model_with_value(client_param) for _ in range(num_clients)]
+
+        server.init_round()
+        for client in clients:
+            server.receive_update_from_client(Message(SampleNet(client), weight=1.0))
+
+        # when a client update is converted to fixedpoint: 0.2 -> 20.
+        # when adding `num_clients` updates, the sum would actually get smaller, i.e.
+        # 20+20+..+20=(200%128)=72 in bit representation when `num_bytes=1.
+        # So, the update is (72)/10 = 7.2 (in fixedpoint). Convert to float is 0.072
+        new_expected_param = float(expected_param - (0.072 * num_clients) / num_clients)
+
+        server.step()
+        mismatched = model_parameters_equal_to_value(
+            server.global_model.fl_get_module(), new_expected_param
+        )
+        assertEqual(mismatched, "", mismatched)
+
+    def test_aggregation_overflow(self):
+        """
+        Tests whether secure aggeragtion overflow
+        variable are updated correctly during aggregation
+        """
+        scaling_factor = 10
+        num_bytes = 1
+        global_param = 6
+        client_param = 2.8
+        num_clients = 10
+
+        fixedpoint = FixedPointConfig(
+            num_bytes=num_bytes, scaling_factor=scaling_factor
+        )
+        server = self._create_server(
+            SampleNet(create_model_with_value(global_param)), fixedpoint=fixedpoint
+        )
+        clients = [create_model_with_value(client_param) for _ in range(num_clients)]
+
+        server.init_round()
+        # model : --[fc1=(2,5)]--[fc2=(5,1)]--
+        for name, _ in server.global_model.fl_get_module().named_parameters():
+            assertEqual(server._secure_aggregator.converters[name]._overflows, 0)
+
+        for client in clients:
+            server.receive_update_from_client(Message(SampleNet(client), weight=1.0))
+
+        # Client update in fixedpoint is 28. When adding `num_clients` updates,
+        # the sum would overflow, i.e. 28+28+..+28=(280%128)=24 in bit representation
+        # when `num_bytes=1, Hence [280/128]=2 overflows occur for all parameters.
+        assertEqual(server._secure_aggregator.converters["fc1.weight"]._overflows, 20)
+        assertEqual(server._secure_aggregator.converters["fc1.bias"]._overflows, 10)
+        assertEqual(server._secure_aggregator.converters["fc2.weight"]._overflows, 10)
+        assertEqual(server._secure_aggregator.converters["fc2.bias"]._overflows, 2)

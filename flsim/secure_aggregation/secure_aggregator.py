@@ -26,7 +26,8 @@ class FixedPointConverter:
     fixed point and floating point.
     """
 
-    MAX_WIDTH = 8
+    MAX_WIDTH_BYTES = 8  # code handles up to 7 bytes, due to division in overflow calc
+
     logger: logging.Logger = Logger.get_logger(__name__)
 
     def __init__(self, **kwargs):
@@ -45,10 +46,10 @@ class FixedPointConverter:
             **kwargs,
         )
 
-        if self.cfg.num_bytes < 1 or self.cfg.num_bytes > self.MAX_WIDTH:
+        if self.cfg.num_bytes < 1 or self.cfg.num_bytes > self.MAX_WIDTH_BYTES:
             error_msg = (
                 f"Width {self.cfg.num_bytes} is not supported. "
-                f"Please enter a width between 1 and {self.MAX_WIDTH}."
+                f"Please enter a width between 1 and {self.MAX_WIDTH_BYTES}."
             )
             raise ValueError(error_msg)
         if self.cfg.scaling_factor <= 0:
@@ -76,10 +77,14 @@ class FixedPointConverter:
 
         Returns:
             A tensor containing the converted numbers to fixed point.
+
+        Notes:
+            It also updates the number of overflows (the number of underflows
+            are not yet considered)
         """
 
         numbers = numbers.mul(self.scaling_factor)
-        overflow_matrix = torch.gt(torch.abs(numbers), self.max_value)
+        overflow_matrix = torch.gt(numbers, self.max_value)
         self._overflows += int(torch.sum(overflow_matrix).item())
         numbers = numbers.clamp(self.min_value, self.max_value)
         return torch.round(numbers)
@@ -98,7 +103,7 @@ class FixedPointConverter:
         Returns:
             A tensor containing the converted number to floating point.
         """
-        return numbers.div(self.scaling_factor)
+        return torch.true_divide(numbers, self.scaling_factor)
 
 
 def utility_config_flatter(
@@ -269,6 +274,51 @@ class SecureAggregator:
             new ``model_aggregate_params``.
         """
         pass
+
+    def update_aggr_overflow_and_model(
+        self,
+        model: nn.Module,
+    ):
+        """
+        This method is called every time after a delta (in fixedpoint format)
+        is received from a client. This method updates the overflow counter
+        due to overflows during aggregation. It also adjusts the values of the
+        ``model`` based on max value related to the fixedpoint (see notes).
+
+        Args:
+            model: the buffered model that holds the current sum, in
+                fixedpoint format.
+
+        Notes:
+            This is an example to show how this method adjusts the input model
+            based on min and max values of fixedpoint. If we have one parameter,
+            and if num_bytes=1 (allowed range is -128 to +127), when in aggregation
+            we add delta=40 to model=90, the input model would be 130. This
+            method adjusts 130 to 2 (i.e. 130%128) since 130 is outside the range.
+            Currently we only keep track of overflows, hence underflows are not
+            monitored.
+        """
+        state_dict = model.state_dict()
+        for name in state_dict.keys():
+            numbers = state_dict[name]
+            converter = self.converters[name]
+            overflow_matrix = torch.div(  # div blows up when MAX_WIDTH_BYTES >7
+                numbers, converter.max_value + 1, rounding_mode="floor"
+            )
+            overflow_matrix = torch.where(
+                overflow_matrix < 0,
+                torch.zeros(overflow_matrix.size()),
+                overflow_matrix,
+            )
+            converter._overflows += int(torch.sum(overflow_matrix).item())
+            numbers = torch.where(
+                numbers >= 0, torch.remainder(numbers, converter.max_value + 1), numbers
+            )
+            numbers = torch.where(
+                numbers < 0, torch.remainder(numbers, converter.min_value), numbers
+            )
+            state_dict[name] = numbers
+        model.load_state_dict(state_dict)
 
 
 @dataclass
