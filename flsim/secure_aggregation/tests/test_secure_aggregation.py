@@ -225,9 +225,9 @@ class TestSecureAggregator:
                 # 832.8 / 80 = 10.41
                 assertTrue(torch.allclose(p, torch.tensor(10.41), rtol=1e-10))
 
-    def test_overflow(self):
+    def test_conversion_overflow(self):
         """
-        Tests whether secure aggeragtion overflow
+        Tests whether secure aggeragtion conversion overflow
         variable gets updated correctly
         """
         model = self._create_model(70.0)
@@ -236,12 +236,12 @@ class TestSecureAggregator:
         secure_aggregator = SecureAggregator(utility_config_flatter(model, config))
 
         for name, _ in model.named_parameters():
-            assertEqual(secure_aggregator.converters[name]._overflows, 0)
+            assertEqual(secure_aggregator.converters[name]._convert_overflows, 0)
 
         secure_aggregator.params_to_fixedpoint(model)
         # 70 * 10 = 700. Overflow occurs for all parameters
         # model : --[fc1=(2,5)]--[fc2=(5,1)]--
-        assertEqual(secure_aggregator.converters["fc1.weight"]._overflows, 10)
-        assertEqual(secure_aggregator.converters["fc1.bias"]._overflows, 5)
-        assertEqual(secure_aggregator.converters["fc2.weight"]._overflows, 5)
-        assertEqual(secure_aggregator.converters["fc2.bias"]._overflows, 1)
+        assertEqual(secure_aggregator.converters["fc1.weight"]._convert_overflows, 10)
+        assertEqual(secure_aggregator.converters["fc1.bias"]._convert_overflows, 5)
+        assertEqual(secure_aggregator.converters["fc2.weight"]._convert_overflows, 5)
+        assertEqual(secure_aggregator.converters["fc2.bias"]._convert_overflows, 1)

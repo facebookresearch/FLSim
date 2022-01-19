@@ -58,7 +58,8 @@ class FixedPointConverter:
         self.max_value = 2 ** (num_bits - 1) - 1
         self.min_value = -(2 ** (num_bits - 1))
         self.scaling_factor = self.cfg.scaling_factor
-        self._overflows = 0
+        self._convert_overflows = 0  # during fixedpoint conversion
+        self._aggregate_overflows = 0  # during aggregation
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
@@ -79,13 +80,13 @@ class FixedPointConverter:
             A tensor containing the converted numbers to fixed point.
 
         Notes:
-            It also updates the number of overflows (the number of underflows
+            It also updates the number of convert overflows (the number of underflows
             are not yet considered)
         """
 
         numbers = numbers.mul(self.scaling_factor)
         overflow_matrix = torch.gt(numbers, self.max_value)
-        self._overflows += int(torch.sum(overflow_matrix).item())
+        self._convert_overflows += int(torch.sum(overflow_matrix).item())
         numbers = numbers.clamp(self.min_value, self.max_value)
         return torch.round(numbers)
 
@@ -191,7 +192,7 @@ class SecureAggregator:
             state_dict[name] = converter.to_fixedpoint(state_dict[name])
             converter.logger.debug(
                 f"{name} has "
-                f"{converter._overflows} overflow(s) during fixed point conversion"
+                f"{converter._convert_overflows} overflow(s) during fixed point conversion"
             )
 
         model.load_state_dict(state_dict)
@@ -302,15 +303,19 @@ class SecureAggregator:
         for name in state_dict.keys():
             numbers = state_dict[name]
             converter = self.converters[name]
-            overflow_matrix = torch.div(  # div blows up when MAX_WIDTH_BYTES >7
+            overflow_matrix = torch.div(  # FIXME: div blows up when MAX_WIDTH_BYTES >7
                 numbers, converter.max_value + 1, rounding_mode="floor"
             )
             overflow_matrix = torch.where(
                 overflow_matrix < 0,
                 torch.zeros(overflow_matrix.size()),
                 overflow_matrix,
+            )  # zero out negative entries since we are only interested in overflows
+            converter._aggregate_overflows += int(torch.sum(overflow_matrix).item())
+            converter.logger.debug(
+                f"{name} has "
+                f"{converter._aggregate_overflows} overflow(s) during aggregation"
             )
-            converter._overflows += int(torch.sum(overflow_matrix).item())
             numbers = torch.where(
                 numbers >= 0, torch.remainder(numbers, converter.max_value + 1), numbers
             )

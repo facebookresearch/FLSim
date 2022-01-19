@@ -109,7 +109,7 @@ class TestSyncSecAggServer:
         """
         Tests whether secure aggeragtion operations work correctly
         when the step() method is called, and when the num_bytes is
-        small so we have possible fixedpoint overflows
+        small so we have possible fixedpoint conversion overflows
         """
         scaling_factor = 100
         num_bytes = 1
@@ -183,15 +183,25 @@ class TestSyncSecAggServer:
         server.init_round()
         # model : --[fc1=(2,5)]--[fc2=(5,1)]--
         for name, _ in server.global_model.fl_get_module().named_parameters():
-            assertEqual(server._secure_aggregator.converters[name]._overflows, 0)
+            assertEqual(
+                server._secure_aggregator.converters[name]._aggregate_overflows, 0
+            )
 
         for client in clients:
             server.receive_update_from_client(Message(SampleNet(client), weight=1.0))
 
         # Client update in fixedpoint is 28. When adding `num_clients` updates,
         # the sum would overflow, i.e. 28+28+..+28=(280%128)=24 in bit representation
-        # when `num_bytes=1, Hence [280/128]=2 overflows occur for all parameters.
-        assertEqual(server._secure_aggregator.converters["fc1.weight"]._overflows, 20)
-        assertEqual(server._secure_aggregator.converters["fc1.bias"]._overflows, 10)
-        assertEqual(server._secure_aggregator.converters["fc2.weight"]._overflows, 10)
-        assertEqual(server._secure_aggregator.converters["fc2.bias"]._overflows, 2)
+        # when `num_bytes=1, Hence [280/128]=2 aggr overflows occur for all parameters.
+        assertEqual(
+            server._secure_aggregator.converters["fc1.weight"]._aggregate_overflows, 20
+        )
+        assertEqual(
+            server._secure_aggregator.converters["fc1.bias"]._aggregate_overflows, 10
+        )
+        assertEqual(
+            server._secure_aggregator.converters["fc2.weight"]._aggregate_overflows, 10
+        )
+        assertEqual(
+            server._secure_aggregator.converters["fc2.bias"]._aggregate_overflows, 2
+        )
