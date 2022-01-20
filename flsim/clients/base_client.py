@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import logging
 import random
-from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple, Iterable
 
@@ -155,7 +154,7 @@ class Client:
         )
         # 4. Store updated model if being tracked
         if self.store_last_updated_model:
-            self._last_updated_model = deepcopy(updated_model)
+            self._last_updated_model = FLModelParamUtils.clone(updated_model)
         # 5. compute delta
         delta = self.compute_delta(
             before=model, after=updated_model, model_to_save=updated_model
@@ -186,9 +185,11 @@ class Client:
         # keep a reference to global model
         self.ref_model = model
 
-        # need to deepcopy the model because it's a reference to the global model
+        # need to clone the model because it's a reference to the global model
         # modifying model will moidify the global model
-        message = self.channel.server_to_client(Message(model=deepcopy(model)))
+        message = self.channel.server_to_client(
+            Message(model=FLModelParamUtils.clone(model))
+        )
 
         return message.model
 
@@ -285,7 +286,7 @@ class Client:
         # pyre-fixme[16]: `Client` has no attribute `cfg`.
         if self.cfg.store_models_and_optimizers:
             self._tracked[self.times_selected] = {
-                "delta": deepcopy(delta),
+                "delta": FLModelParamUtils.clone(delta),
                 "weight": weight,
                 "optimizer": optimizer,
             }

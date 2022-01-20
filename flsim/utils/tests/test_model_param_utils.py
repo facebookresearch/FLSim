@@ -6,7 +6,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import collections
-import copy
 import math
 
 import torch
@@ -162,7 +161,7 @@ class TestFLModelParamUtils:
         torch.manual_seed(1)
         num_models = 4
         models = [FCModel() for i in range(num_models)]
-        temp_model = copy.deepcopy(models[0])
+        temp_model = FLModelParamUtils.clone(models[0])
         # verify that 0 weights work as expected
         FLModelParamUtils.average_models(models, temp_model, [0, 0, 0, 1])
         assertTrue(
@@ -170,20 +169,20 @@ class TestFLModelParamUtils:
         )
         # verify that equal weights work as expected
         FLModelParamUtils.average_models(models, temp_model, [1, 1, 1, 1])
-        temp_model_no_wts = copy.deepcopy(models[0])
+        temp_model_no_wts = FLModelParamUtils.clone(models[0])
         FLModelParamUtils.average_models(models, temp_model_no_wts)
         assertTrue(
             FLModelParamUtils.get_mismatched_param([temp_model, temp_model_no_wts])
             == ""
         )
         # verify that unequal weights work as expected
-        temp_model_1 = copy.deepcopy(models[0])
+        temp_model_1 = FLModelParamUtils.clone(models[0])
         FLModelParamUtils.average_models(models, temp_model_1, [1, 1, 2, 2])
-        temp_model_2 = copy.deepcopy(models[0])
+        temp_model_2 = FLModelParamUtils.clone(models[0])
         FLModelParamUtils.average_models(models, temp_model_2, [2, 2, 1, 1])
-        temp_model_3 = copy.deepcopy(models[0])
+        temp_model_3 = FLModelParamUtils.clone(models[0])
         FLModelParamUtils.average_models([temp_model_1, temp_model_2], temp_model_3)
-        temp_model_4 = copy.deepcopy(models[0])
+        temp_model_4 = FLModelParamUtils.clone(models[0])
         FLModelParamUtils.average_models(models, temp_model_4, [1, 1, 1, 1])
 
         mismatched_param = FLModelParamUtils.get_mismatched_param(

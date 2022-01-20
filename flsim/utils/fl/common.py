@@ -7,9 +7,10 @@
 
 import copy
 import math
-from typing import List, Optional
+from typing import Union, List, Optional
 
 import torch
+from flsim.interfaces.model import IFLModel
 from flsim.utils.fl.personalized_model import FLModelWithPrivateModules
 from torch import nn
 from torch.optim.optimizer import Optimizer
@@ -161,17 +162,26 @@ class FLModelParamUtils:
             cls.load_state_dict(m, from_state_dict, only_federated_params)
 
     @classmethod
-    def clone(cls, model: nn.Module, dtype: Optional[torch.dtype] = None):
+    def clone(
+        cls, model: Union[nn.Module, IFLModel], dtype: Optional[torch.dtype] = None
+    ):
         """
         Clones a pytorch module, and allows for a change of precision.
         TODO If needed we can also add device here.
         """
         new_model = copy.deepcopy(model)
-        return (
-            new_model.float()
-            if dtype == torch.float32
-            else (new_model.double() if dtype == torch.float64 else new_model)
-        )
+        if isinstance(new_model, IFLModel):
+            if dtype == torch.float32:
+                new_model.fl_get_module().float()
+            elif dtype == torch.float64:
+                new_model.fl_get_module().double()
+            return new_model
+        else:
+            return (
+                new_model.float()
+                if dtype == torch.float32
+                else (new_model.double() if dtype == torch.float64 else new_model)
+            )
 
     @classmethod
     def set_gradient(cls, model: nn.Module, reference_gradient: nn.Module) -> None:

@@ -5,7 +5,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 from typing import Any, List, Dict
 
 import numpy as np
@@ -45,6 +44,7 @@ from flsim.utils.async_trainer.training_event_generator import (
     AsyncTrainingEventGeneratorFromListConfig,
     EventTimingInfo,
 )
+from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.sample_model import DummyAlphabetFLModel, ConstantGradientFLModel
 from flsim.utils.tests.helpers.async_trainer_test_utils import (
     async_train_one_user,
@@ -403,7 +403,7 @@ class TestAsyncTrainer:
         )
 
         def get_base_optimizer_and_trained_model():
-            init_model_local = copy.deepcopy(init_model)
+            init_model_local = FLModelParamUtils.clone(init_model)
             async_trainer = create_async_trainer(
                 model=init_model_local,
                 local_lr=base_lr,
@@ -423,7 +423,7 @@ class TestAsyncTrainer:
             return trained_fl_model
 
         def get_lrnorm_optimizer_and_trained_model():
-            init_model_local = copy.deepcopy(init_model)
+            init_model_local = FLModelParamUtils.clone(init_model)
             async_trainer = create_async_trainer(
                 model=init_model_local,
                 local_lr=upweighted_lr,
@@ -575,7 +575,7 @@ class TestAsyncTrainer:
         user2 starts training
         user2 finishes training. Global model update
         """
-        global_model = copy.deepcopy(initial_model)
+        global_model = FLModelParamUtils.clone(initial_model)
         # sequential training. user1 finishes first. user2 takes user1 trained model, and trains
         for batches in [first_user_batches, second_user_batches]:
             updated_global_model = async_train_one_user(
@@ -584,7 +584,7 @@ class TestAsyncTrainer:
                 batches=batches,
                 local_lr=local_lr,
             )
-            global_model = copy.deepcopy(updated_global_model)
+            global_model = FLModelParamUtils.clone(updated_global_model)
         return global_model
 
     def _run_parallel_training_two_users(
@@ -607,7 +607,7 @@ class TestAsyncTrainer:
             they are much easier to read as separate functions. Trading off code duplication
             for readability.
         """
-        global_model = copy.deepcopy(initial_model)
+        global_model = FLModelParamUtils.clone(initial_model)
         for batches in [first_user_batches, second_user_batches]:
             # both users start training with the same initial model
             # loop iteration 1 will handle first_user_batches, which will change
@@ -619,7 +619,7 @@ class TestAsyncTrainer:
                 batches=batches,
                 local_lr=local_lr,
             )
-            global_model = copy.deepcopy(updated_global_model)
+            global_model = FLModelParamUtils.clone(updated_global_model)
         return global_model
 
     def test_num_examples_computation(self):
@@ -654,7 +654,7 @@ class TestAsyncTrainer:
         num_examples_user2 = 2
         batch_size = 2
         for num_examples_user1 in [2, 4, 6]:
-            fl_model = copy.deepcopy(initial_model)
+            fl_model = FLModelParamUtils.clone(initial_model)
             fl_data_provider, nonfl_data_loader = get_data(
                 num_examples=num_examples_user1 + num_examples_user2,
                 num_fl_users=2,

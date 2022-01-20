@@ -5,7 +5,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 from enum import Enum
 from typing import Union
 
@@ -37,6 +36,7 @@ from flsim.tests.utils import (
 from flsim.trainers.async_trainer import AsyncTrainerConfig
 from flsim.trainers.sync_trainer import SyncTrainerConfig
 from flsim.utils.config_utils import is_target
+from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.sample_model import DummyAlphabetFLModel
 from flsim.utils.tests.helpers.async_trainer_test_utils import (
     create_async_trainer,
@@ -209,9 +209,9 @@ class HybridFLTestUtils:
         # to train the model we want to compare with
         global_model = DummyAlphabetFLModel()
         # to train hybrid model
-        global_model_hybrid_copy = copy.deepcopy(global_model)
+        global_model_hybrid_copy = FLModelParamUtils.clone(global_model)
         # to verify training indeed took place
-        global_model_init_copy = copy.deepcopy(global_model)
+        global_model_init_copy = FLModelParamUtils.clone(global_model)
 
         data_provider = HybridFLTestUtils.get_data_provider(
             num_examples=num_examples,
@@ -302,9 +302,9 @@ class HybridFLTestUtils:
         # to verify training indeed took place
         reference_untrained_model = DummyAlphabetFLModel()
         # to train hybrid model
-        hybrid_model = copy.deepcopy(reference_untrained_model)
+        hybrid_model = FLModelParamUtils.clone(reference_untrained_model)
         # to train nonfl
-        nonfl_model = copy.deepcopy(reference_untrained_model)
+        nonfl_model = FLModelParamUtils.clone(reference_untrained_model)
 
         nonfl_data_provider = HybridFLTestUtils.get_data_provider(
             num_examples=total_examples,
@@ -370,9 +370,9 @@ class HybridFLTestUtils:
         # to verify training indeed took place
         reference_untrained_model = DummyAlphabetFLModel()
         # to train hybrid model
-        hybrid_model = copy.deepcopy(reference_untrained_model)
+        hybrid_model = FLModelParamUtils.clone(reference_untrained_model)
         # to train async
-        async_model = copy.deepcopy(reference_untrained_model)
+        async_model = FLModelParamUtils.clone(reference_untrained_model)
 
         async_data_provider = HybridFLTestUtils.get_data_provider(
             num_examples=total_examples,

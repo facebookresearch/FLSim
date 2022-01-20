@@ -202,7 +202,7 @@ class TestTrainer:
         )
 
         sync_trainer_report = create_sync_trainer(
-            model=copy.deepcopy(global_model),
+            model=FLModelParamUtils.clone(global_model),
             local_lr=local_optimizer_lr,
             users_per_round=users_per_round,
             epochs=3,
@@ -456,9 +456,9 @@ class TestTrainer:
         torch.manual_seed(1)
         # create dummy FL model on alphabet
         global_model = DummyAlphabetFLModel()
-        global_model_init = copy.deepcopy(global_model)
+        global_model_init = FLModelParamUtils.clone(global_model)
         # will be used later to verify training indeed took place
-        global_model_init_copy = copy.deepcopy(global_model)
+        global_model_init_copy = FLModelParamUtils.clone(global_model)
         metrics_reporter = FakeMetricReporter()
 
         num_training_examples = 32
@@ -546,9 +546,9 @@ class TestTrainer:
         torch.manual_seed(1)
         # create dummy FL model on alphabet
         global_model = DummyAlphabetFLModel()
-        global_model_init = copy.deepcopy(global_model)
+        global_model_init = FLModelParamUtils.clone(global_model)
         # will be used later to verify training indeed took place
-        global_model_init_copy = copy.deepcopy(global_model)
+        global_model_init_copy = FLModelParamUtils.clone(global_model)
         metrics_reporter = FakeMetricReporter()
 
         # one user, who got 26 examples
@@ -636,7 +636,7 @@ class TestTrainer:
         # create dummy FL model on alphabet
         global_model = DummyAlphabetFLModel()
         # will be used later to verify training indeed took place
-        global_model_init_copy = copy.deepcopy(global_model)
+        global_model_init_copy = FLModelParamUtils.clone(global_model)
         # num_fl_users users, each with num_examples/num_fl_users training examples
         assertTrue(
             num_examples % num_fl_users == 0,
@@ -677,7 +677,7 @@ class TestTrainer:
         data_loader = torch.utils.data.DataLoader(
             dummy_dataset, batch_size=batch_size, shuffle=False
         )
-        nonfl_model = copy.deepcopy(global_model_init_copy)
+        nonfl_model = FLModelParamUtils.clone(global_model_init_copy)
 
         optimizer = instantiate(
             config=server_config.server_optimizer,
@@ -761,7 +761,7 @@ class TestTrainer:
         # create dummy FL model on alphabet
         global_model = DummyAlphabetFLModel()
         # keep a copy of initial model to trigger another training instance
-        global_model_init = copy.deepcopy(global_model)
+        global_model_init = FLModelParamUtils.clone(global_model)
         # dummy alphabet dataset
         dummy_dataset = DummyAlphabetDataset()
         # two users, one gets 1 more example than the other
@@ -811,7 +811,7 @@ class TestTrainer:
         data_provider._users.pop(1)
         # only a single user after remove user 0
         assertEqual(data_provider.num_users(), 1)
-        global_model = copy.deepcopy(global_model_init)
+        global_model = FLModelParamUtils.clone(global_model_init)
         torch.manual_seed(1)
         dropout_rate = 1.0
         epochs = 2
@@ -852,7 +852,7 @@ class TestTrainer:
         # create dummy FL model on alphabet
         global_model = DummyAlphabetFLModel()
         # keep a copy of initial model to trigger another training instance
-        global_model_init = copy.deepcopy(global_model)
+        global_model_init = FLModelParamUtils.clone(global_model)
         # dummy alphabet dataset, getting each character twice
         num_rows = 52
         dummy_dataset = DummyAlphabetDataset(num_rows)
@@ -873,7 +873,7 @@ class TestTrainer:
         # training time just enough for 26 examples, although user has
         # 52 examples
         sync_trainer_timeout = create_sync_trainer(
-            model=copy.deepcopy(global_model),
+            model=FLModelParamUtils.clone(global_model),
             local_lr=local_optimizer_lr,
             users_per_round=users_per_round,
             epochs=epochs,
@@ -907,7 +907,7 @@ class TestTrainer:
         torch.manual_seed(1)
         # training time just enough for 26 examples
         sync_trainer_timeout = create_sync_trainer(
-            model=copy.deepcopy(global_model),
+            model=FLModelParamUtils.clone(global_model),
             local_lr=local_optimizer_lr,
             users_per_round=users_per_round,
             epochs=epochs,

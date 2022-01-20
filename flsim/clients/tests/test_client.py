@@ -5,7 +5,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from copy import deepcopy
 from unittest.mock import MagicMock
 
 import pytest
@@ -36,6 +35,7 @@ from flsim.optimizers.optimizer_scheduler import ConstantLRScheduler
 from flsim.optimizers.optimizer_scheduler import ConstantLRSchedulerConfig
 from flsim.privacy.common import PrivacySetting
 from flsim.tests import utils
+from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.timing.training_duration_distribution import (
     PerExampleGaussianDurationDistributionConfig,
 )
@@ -141,7 +141,7 @@ class TestBaseClient(ClientTestBase):
         model0 = utils.SampleNet(utils.TwoFC())
         model1 = utils.SampleNet(utils.TwoFC())
         delta1, weight1 = client.generate_local_update(model0)
-        delta1 = deepcopy(delta1)
+        delta1 = FLModelParamUtils.clone(delta1)
 
         delta2, weight2 = client.generate_local_update(model1)
         assertEqual(client.times_selected, 2)
@@ -186,7 +186,7 @@ class TestBaseClient(ClientTestBase):
         clnt = self._get_client(data)
         model = utils.SampleNet(utils.TwoFC())
         model, optim, optim_sch = clnt.prepare_for_training(model)
-        model2, optim2, _ = clnt.prepare_for_training(deepcopy(model))
+        model2, optim2, _ = clnt.prepare_for_training(FLModelParamUtils.clone(model))
         # value chekd in previous test
         try:
             # should work
@@ -247,8 +247,12 @@ class TestBaseClient(ClientTestBase):
         )
 
         init_model = utils.SampleNet(utils.TwoFC())
-        delta, weight = client.generate_local_update(deepcopy(init_model))
-        prox_delta, weight = prox_client.generate_local_update(deepcopy(init_model))
+        delta, weight = client.generate_local_update(
+            FLModelParamUtils.clone(init_model)
+        )
+        prox_delta, weight = prox_client.generate_local_update(
+            FLModelParamUtils.clone(init_model)
+        )
         mismatched = utils.verify_models_equivalent_after_training(
             prox_delta, delta, init_model
         )
@@ -275,8 +279,10 @@ class TestBaseClient(ClientTestBase):
             ),
         )
 
-        delta, _ = client.generate_local_update(deepcopy(init_model))
-        prox_delta, _ = prox_client.generate_local_update(deepcopy(init_model))
+        delta, _ = client.generate_local_update(FLModelParamUtils.clone(init_model))
+        prox_delta, _ = prox_client.generate_local_update(
+            FLModelParamUtils.clone(init_model)
+        )
 
         mismatched = utils.verify_models_equivalent_after_training(
             prox_delta, delta, init_model
@@ -305,8 +311,10 @@ class TestBaseClient(ClientTestBase):
             ),
         )
 
-        delta, _ = client.generate_local_update(deepcopy(init_model))
-        prox_delta, _ = prox_client.generate_local_update(deepcopy(init_model))
+        delta, _ = client.generate_local_update(FLModelParamUtils.clone(init_model))
+        prox_delta, _ = prox_client.generate_local_update(
+            FLModelParamUtils.clone(init_model)
+        )
 
         mismatched = utils.verify_models_equivalent_after_training(
             prox_delta, delta, init_model
@@ -424,7 +432,7 @@ class TestBaseClient(ClientTestBase):
         torch.manual_seed(0)
         model_init = utils.SampleNet(utils.TwoFC())
         model1, optim1, optim_sch1 = clnt_gaussian_timeout.prepare_for_training(
-            deepcopy(model_init)
+            FLModelParamUtils.clone(model_init)
         )
         torch.manual_seed(0)
         partial_model, partial_weight = clnt_gaussian_timeout.train(
@@ -436,7 +444,9 @@ class TestBaseClient(ClientTestBase):
         n_batches = int(n_batches / 2)
         data = self._fake_data(num_batches=n_batches, batch_size=bs)
         clnt = self._get_client(data)
-        model2, optim2, optim_sch2 = clnt.prepare_for_training(deepcopy(model_init))
+        model2, optim2, optim_sch2 = clnt.prepare_for_training(
+            FLModelParamUtils.clone(model_init)
+        )
         torch.manual_seed(0)
         full_model, full_weight = clnt.train(model2, optim2, optim_sch2, None)
         assertEqual(full_weight, expected_processed_samples)
@@ -507,7 +517,7 @@ class TestDPClient(ClientTestBase):
     def test_no_noise_no_clip(self):
         data = self._fake_data(3, 4)
         model = utils.SampleNet(utils.TwoFC())
-        private_model = deepcopy(model)
+        private_model = FLModelParamUtils.clone(model)
 
         clnt = self._get_client(data)
         delta, weight = clnt.generate_local_update(model)
@@ -530,7 +540,7 @@ class TestDPClient(ClientTestBase):
     def test_only_clip(self):
         data = self._fake_data(4, 4)
         model = utils.SampleNet(utils.TwoFC())
-        private_model = deepcopy(model)
+        private_model = FLModelParamUtils.clone(model)
 
         clnt = self._get_client(data)
         delta, weight = clnt.generate_local_update(model)
@@ -548,7 +558,7 @@ class TestDPClient(ClientTestBase):
     def test_noise_and_clip(self):
         data = self._fake_data(4, 4)
         model = utils.SampleNet(utils.TwoFC())
-        private_model = deepcopy(model)
+        private_model = FLModelParamUtils.clone(model)
 
         clnt = self._get_client(data)
         delta, weight = clnt.generate_local_update(model)

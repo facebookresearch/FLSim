@@ -5,7 +5,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 from typing import Any, Dict, Optional
 
 import numpy as np
@@ -645,7 +644,7 @@ class TestDifferentialPrivacyIntegration:
         global_lr = np.random.sample()
 
         dp_model = DummyAlphabetFLModel()
-        nondp_model = copy.deepcopy(dp_model)
+        nondp_model = FLModelParamUtils.clone(dp_model)
         staleness_config = PolynomialStalenessWeightConfig(
             exponent=0.5, avg_staleness=0
         )

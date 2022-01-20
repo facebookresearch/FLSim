@@ -5,7 +5,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 import math
 from dataclasses import dataclass
 from tempfile import mkstemp
@@ -45,6 +44,7 @@ from flsim.utils.async_trainer.async_staleness_weights import (
 )
 from flsim.utils.async_trainer.async_weights import AsyncWeight, AsyncWeightConfig
 from flsim.utils.distributed.fl_distributed import FLDistributedUtils
+from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
@@ -405,7 +405,7 @@ class TestDPRoundReducer(TestRoundReducerBase):
         )
         ref_model = create_ref_model(ref_model_param_value=global_value)
 
-        ref_model_before = copy.deepcopy(ref_model)
+        ref_model_before = FLModelParamUtils.clone(ref_model)
         dp_rr = get_dp_round_reducer(
             ref_model,
             clipping_value=10.0,

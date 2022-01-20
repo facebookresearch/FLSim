@@ -5,7 +5,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 import random
 from dataclasses import dataclass
 from typing import List
@@ -57,8 +56,8 @@ class TestAsyncAggregator:
         init_val = 1
         global_model = MockQuadratic1DFL(Quadratic1D())
         async_aggregator = instantiate(config, global_model=global_model)
-        local_model = copy.deepcopy(global_model)
-        delta = copy.deepcopy(global_model)
+        local_model = FLModelParamUtils.clone(global_model)
+        delta = FLModelParamUtils.clone(global_model)
         # local training, x becomes param_after_local_training
         local_model.fl_get_module().x.data = torch.Tensor([param_after_local_training])
         # global update from another user, x becomes param_after_global_training
@@ -163,7 +162,7 @@ class TestAsyncAggregator:
     def _symmetry_test(self, num_users, hybrid_config):
 
         hybrid_global_model_1 = SampleNet(TwoFC())
-        hybrid_global_model_2 = copy.deepcopy(hybrid_global_model_1)
+        hybrid_global_model_2 = FLModelParamUtils.clone(hybrid_global_model_1)
 
         hybrid_aggregator_1 = instantiate(
             hybrid_config, global_model=hybrid_global_model_1
@@ -203,7 +202,7 @@ class TestAsyncAggregator:
 
     def _equivalence_test(self, num_users, hybrid_config, async_config):
         async_global_model = SampleNet(TwoFC())
-        hybrid_global_model = copy.deepcopy(async_global_model)
+        hybrid_global_model = FLModelParamUtils.clone(async_global_model)
 
         async_aggregator = instantiate(async_config, global_model=async_global_model)
 
@@ -381,7 +380,7 @@ class TestAsyncAggregator:
         torch.manual_seed(1)
         np.random.seed(1)
         global_model_trained1 = self.train_async_with_zero_weight(
-            initial_model=copy.deepcopy(initial_model),
+            initial_model=FLModelParamUtils.clone(initial_model),
             client_models=client_models,
             num_epochs=num_epochs,
             num_total_users=num_total_users,
@@ -391,7 +390,7 @@ class TestAsyncAggregator:
         torch.manual_seed(1)
         np.random.seed(1)
         global_model_trained2 = self.train_async_with_zero_weight(
-            initial_model=copy.deepcopy(initial_model),
+            initial_model=FLModelParamUtils.clone(initial_model),
             client_models=client_models,
             num_epochs=num_epochs,
             num_total_users=num_total_users,
@@ -434,7 +433,9 @@ class TestAsyncAggregator:
         torch.manual_seed(1)
         np.random.seed(1)
         config = FedAvgWithLRWithMomentumAsyncAggregatorConfig(lr=lr, momentum=momentum)
-        aggregator = instantiate(config, global_model=copy.deepcopy(initial_model))
+        aggregator = instantiate(
+            config, global_model=FLModelParamUtils.clone(initial_model)
+        )
         for _ in range(num_epochs):
             for client in client_models:
                 aggregator.on_client_training_end(
@@ -444,7 +445,7 @@ class TestAsyncAggregator:
         # run SGD training
         torch.manual_seed(1)
         np.random.seed(1)
-        sgd_model = copy.deepcopy(initial_model)
+        sgd_model = FLModelParamUtils.clone(initial_model)
         sgd_optimizer = torch.optim.SGD(
             sgd_model.fl_get_module().parameters(), lr=lr, momentum=momentum
         )

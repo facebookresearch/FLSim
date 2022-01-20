@@ -5,7 +5,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 import itertools
 import math
 from tempfile import mkstemp
@@ -32,6 +31,7 @@ from flsim.tests.utils import (
     SampleNet,
 )
 from flsim.utils.distributed.fl_distributed import FLDistributedUtils
+from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 
 
@@ -336,7 +336,7 @@ class TestSyncDPSGDServer:
             channel=channel,
         )
         delta = create_model_with_value(1)
-        init = copy.deepcopy(delta)
+        init = FLModelParamUtils.clone(delta)
         server.receive_update_from_client(Message(model=SampleNet(delta), weight=1.0))
         error_msg = verify_models_equivalent_after_training(delta, init)
         assertEmpty(error_msg, msg=error_msg)

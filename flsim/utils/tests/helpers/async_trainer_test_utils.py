@@ -5,7 +5,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 from typing import Any, Optional, Tuple
 
 import numpy as np
@@ -188,8 +187,8 @@ def assert_fl_nonfl_same(
     Return value: model parameters that don't match between fl and non-fl training
     """
     # will be used later to verify training indeed took place
-    reference_untrained_model = copy.deepcopy(global_model)
-    nonfl_model = copy.deepcopy(reference_untrained_model)
+    reference_untrained_model = FLModelParamUtils.clone(global_model)
+    nonfl_model = FLModelParamUtils.clone(reference_untrained_model)
     nonfl_optimizer = get_nonfl_optimizer(
         nonfl_model=nonfl_model,
         fl_local_lr=local_lr,
@@ -526,7 +525,7 @@ def async_train_one_user(
     batches,
     local_lr: float,
 ) -> IFLModel:
-    local_model = copy.deepcopy(global_model_at_training_start)
+    local_model = FLModelParamUtils.clone(global_model_at_training_start)
     local_optimizer = torch.optim.SGD(
         local_model.fl_get_module().parameters(), lr=local_lr
     )
@@ -548,7 +547,7 @@ def simulate_async_global_model_update(
     local_model_after_training: IFLModel,
 ):
     # TODO: use AsyncAggregator._update_global_model, after John's refactoring
-    reconstructed_grad = copy.deepcopy(global_model)
+    reconstructed_grad = FLModelParamUtils.clone(global_model)
     FLModelParamUtils.reconstruct_gradient(
         old_model=local_model_before_training.fl_get_module(),
         new_model=local_model_after_training.fl_get_module(),

@@ -40,6 +40,7 @@ from flsim.utils.async_trainer.training_event_generator import (
     AsyncTrainingEventGeneratorFromListConfig,
     EventTimingInfo,
 )
+from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.sample_model import DummyAlphabetFLModel
 from flsim.utils.tests.helpers.async_trainer_test_utils import (
     async_train_one_user,
@@ -110,8 +111,8 @@ class TestAsyncTrainerWeights:
 
         global_model = DummyAlphabetFLModel()
         # will be used later to verify training indeed took place
-        global_model_init_copy = copy.deepcopy(global_model)
-        nonfl_model = copy.deepcopy(global_model_init_copy)
+        global_model_init_copy = FLModelParamUtils.clone(global_model)
+        nonfl_model = FLModelParamUtils.clone(global_model_init_copy)
 
         (
             fl_local_learning_rate,
@@ -224,7 +225,7 @@ class TestAsyncTrainerWeights:
         dataset_size = 26  # number of examples in DummyAlphabetDataset
         for replication_factor in [1, 2]:
             num_examples = replication_factor * dataset_size  # either 26 or 52
-            fl_model = copy.deepcopy(initial_model)
+            fl_model = FLModelParamUtils.clone(initial_model)
             fl_data_provider = self._get_fl_data_round_robin_sharding(
                 num_examples=num_examples,
                 num_fl_users=num_users,
@@ -272,7 +273,7 @@ class TestAsyncTrainerWeights:
         initial_model = DummyAlphabetFLModel()
         local_lr = np.random.random_sample() * 10
         global_lr = 1.0
-        fl_model = copy.deepcopy(initial_model)
+        fl_model = FLModelParamUtils.clone(initial_model)
         num_examples = 26
         num_fl_users = 2
         fl_data_provider, nonfl_data_loader = get_equal_split_data(
@@ -297,7 +298,7 @@ class TestAsyncTrainerWeights:
         data_loader_iter = iter(nonfl_data_loader)
         user1_batch = next(data_loader_iter)
         user2_batch = next(data_loader_iter)
-        simulated_global_model = copy.deepcopy(initial_model)
+        simulated_global_model = FLModelParamUtils.clone(initial_model)
         # train user1
         simulated_global_model = async_train_one_user(
             global_model_at_training_start=simulated_global_model,
@@ -369,7 +370,7 @@ class TestAsyncTrainerWeights:
             one_batch_per_user_only=False,
         )
         fl_trained_model_with_staleness, _ = run_fl_training(
-            fl_model=copy.deepcopy(initial_model),
+            fl_model=FLModelParamUtils.clone(initial_model),
             fl_data_provider=fl_data_provider_with_staleness,
             epochs=num_epochs,
             local_lr=local_lr,
@@ -392,7 +393,7 @@ class TestAsyncTrainerWeights:
             one_batch_per_user_only=False,
         )
         fl_trained_model_sequential, _ = run_fl_training(
-            fl_model=copy.deepcopy(initial_model),
+            fl_model=FLModelParamUtils.clone(initial_model),
             fl_data_provider=fl_data_provider_sequential,
             epochs=num_epochs,
             local_lr=local_lr,
@@ -493,7 +494,7 @@ class TestAsyncTrainerWeights:
         )
 
         poly_staleness_wt_model = run_fl_training_with_event_generator(
-            fl_model=copy.deepcopy(initial_model),
+            fl_model=FLModelParamUtils.clone(initial_model),
             fl_data_provider=data_provider,
             epochs=num_epochs,
             local_lr=local_lr,
@@ -508,7 +509,7 @@ class TestAsyncTrainerWeights:
         )
 
         equal_staleness_wt_model = run_fl_training_with_event_generator(
-            fl_model=copy.deepcopy(initial_model),
+            fl_model=FLModelParamUtils.clone(initial_model),
             fl_data_provider=data_provider,
             epochs=num_epochs,
             local_lr=local_lr,
@@ -558,7 +559,7 @@ class TestAsyncTrainerWeights:
         training_std = 1
         buffer_size = 5
 
-        example_wt_off_model = copy.deepcopy(init_model)
+        example_wt_off_model = FLModelParamUtils.clone(init_model)
         example_wt_off_global_lr = 1.0
         example_wt_off_model, _ = run_fl_training(
             fl_model=example_wt_off_model,
@@ -577,7 +578,7 @@ class TestAsyncTrainerWeights:
             example_weight_config=EqualExampleWeightConfig(avg_num_examples=1),
         )
 
-        example_wt_on_model = copy.deepcopy(init_model)
+        example_wt_on_model = FLModelParamUtils.clone(init_model)
         example_wt_on_global_lr = example_wt_off_global_lr / examples_per_user
         example_wt_on_model, _ = run_fl_training(
             fl_model=example_wt_on_model,

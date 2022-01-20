@@ -5,7 +5,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 from typing import Any, Dict, List, NamedTuple, Optional, Union, Tuple
 from unittest.mock import MagicMock
 
@@ -417,7 +416,7 @@ class RandomEvalMetricsReporter(IFLMetricsReporter):
             print(
                 f"MetricReporter current_eval:{eval_result}, best_eval: {self._best_eval_result}"
             )
-            self._best_eval_model = copy.deepcopy(model)
+            self._best_eval_model = FLModelParamUtils.clone(model)
             self._best_eval_result = eval_result
             return (eval_result, True)
         else:
