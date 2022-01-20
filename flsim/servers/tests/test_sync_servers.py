@@ -264,7 +264,7 @@ class TestSyncServer:
     def test_select_clients_for_training(self):
         """
         Selects 10 clients out of 100. SyncServer with seed = 0 should
-        return the same indicies as those of uniform random selector.
+        return the same indices as those of uniform random selector.
         """
         selector_config = UniformlyRandomActiveUserSelectorConfig(user_selector_seed=0)
         uniform_selector = instantiate(selector_config)

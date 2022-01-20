@@ -74,7 +74,7 @@ class TestSyncSecAggServer:
 
     def test_secure_aggregator_step_large_range(self):
         """
-        Tests whether secure aggeragtion operations work correctly
+        Tests whether secure aggregation operations work correctly
         when the step() method is called, and when the num_bytes is
         big, so we do not have a possible fixedpoint overflow
         """
@@ -107,7 +107,7 @@ class TestSyncSecAggServer:
 
     def test_secure_aggregator_step_small_range(self):
         """
-        Tests whether secure aggeragtion operations work correctly
+        Tests whether secure aggregation operations work correctly
         when the step() method is called, and when the num_bytes is
         small so we have possible fixedpoint conversion overflows
         """
@@ -163,7 +163,7 @@ class TestSyncSecAggServer:
 
     def test_aggregation_overflow(self):
         """
-        Tests whether secure aggeragtion overflow
+        Tests whether secure aggregation overflow
         variable are updated correctly during aggregation
         """
         scaling_factor = 10

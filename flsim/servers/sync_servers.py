@@ -38,7 +38,7 @@ class ISyncServer(abc.ABC):
     """
     Interface for Sync servers, all sync server should
     implement this interface.
-    Responsiblities:
+    Responsibilities:
         Wrapper for aggregator and optimizer.
         Collects client updates and sends to aggregator.
         Changes the global model using aggregator and optimizer.
@@ -88,7 +88,7 @@ class ISyncServer(abc.ABC):
             is high loss. Defaults to None.
 
         Returns:
-            List[int]: A list of client indicies
+            List[int]: A list of client indices
         """
         pass
 

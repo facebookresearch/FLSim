@@ -140,7 +140,7 @@ class SyncDPSGDServer(ISyncServer):
         )
 
     def step(self):
-        assert self._privacy_engine is not None, "PrivacyEngine is not intialized"
+        assert self._privacy_engine is not None, "PrivacyEngine is not initialized"
 
         aggregated_model = self._aggregator.aggregate(distributed_op=OperationType.SUM)
 
