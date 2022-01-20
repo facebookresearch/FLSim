@@ -137,13 +137,11 @@ class SyncTrainer(FLTrainer):
             3. Calculate metrics based on evaluation results and select best model
 
         Args:
-            train_iter (List[Iterable[Any]]): list of batch iterators of training data,
-                each batch iterator represents data from a single 'user'
-            eval_iter (Iterable[Any]): batch iterator of evaluation data
-            model (Model): model to be trained
+            data_provider (IFLDataProvider): provide training, evaluation, and test data
+                iterables and get a user's data based on user ID
             metric_reporter (IFLMetricsReporter): compute metric based on training
-                output and report results to console, file.. etc
-            train_config (PyTextConfig): training config
+                output and report results to console, file, etc.
+            num_total_users (int): number of total users for training
 
         Returns:
             model, best_metric: the trained model together with the best metric
