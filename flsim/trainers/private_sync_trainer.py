@@ -99,13 +99,10 @@ class PrivateSyncTrainer(SyncTrainer):
         self,
         clients: Iterable[Client],
         model: IFLModel,
-        timeline: Timeline,
         metric_reporter: Optional[IFLMetricsReporter],
     ) -> List[Metric]:
 
-        metrics = super().calc_post_aggregation_train_metrics(
-            clients, model, timeline, metric_reporter
-        )
+        metrics = super()._calc_privacy_metrics(clients, model, metric_reporter)
 
         # calculate sample level dp privacy loss statistics.
         all_client_eps = torch.Tensor(

@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple
 
 from flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorConfig,
@@ -132,6 +132,15 @@ class SyncSecAggServer(ISyncServer):
             reference_gradient=aggregated_model,
         )
         self._optimizer.step()
+
+    def calc_avg_overflow_percentage(
+        self,
+        num_users: int,
+        model: IFLModel,
+    ) -> Tuple[float, float]:
+        return self._secure_aggregator.calc_avg_overflow_percentage(
+            num_users, model.fl_get_module()
+        )
 
 
 @dataclass

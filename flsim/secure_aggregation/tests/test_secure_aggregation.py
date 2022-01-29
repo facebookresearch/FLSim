@@ -236,12 +236,21 @@ class TestSecureAggregator:
         secure_aggregator = SecureAggregator(utility_config_flatter(model, config))
 
         for name, _ in model.named_parameters():
-            assertEqual(secure_aggregator.converters[name]._convert_overflows, 0)
+            assertEqual(secure_aggregator.converters[name].get_convert_overflow(), 0)
 
         secure_aggregator.params_to_fixedpoint(model)
         # 70 * 10 = 700. Overflow occurs for all parameters
         # model : --[fc1=(2,5)]--[fc2=(5,1)]--
-        assertEqual(secure_aggregator.converters["fc1.weight"]._convert_overflows, 10)
-        assertEqual(secure_aggregator.converters["fc1.bias"]._convert_overflows, 5)
-        assertEqual(secure_aggregator.converters["fc2.weight"]._convert_overflows, 5)
-        assertEqual(secure_aggregator.converters["fc2.bias"]._convert_overflows, 1)
+        assertEqual(
+            secure_aggregator.converters["fc1.weight"].get_convert_overflow(), 10
+        )
+        assertEqual(secure_aggregator.converters["fc1.bias"].get_convert_overflow(), 5)
+        assertEqual(
+            secure_aggregator.converters["fc2.weight"].get_convert_overflow(), 5
+        )
+        assertEqual(secure_aggregator.converters["fc2.bias"].get_convert_overflow(), 1)
+
+        # test reset conversion overflow
+        for name, _ in model.named_parameters():
+            secure_aggregator.converters[name].get_convert_overflow(reset=True)
+            assertEqual(secure_aggregator.converters[name].get_convert_overflow(), 0)

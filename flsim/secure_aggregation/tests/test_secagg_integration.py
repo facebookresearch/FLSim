@@ -12,6 +12,7 @@ from flsim.servers.aggregator import AggregationType
 from flsim.servers.sync_secagg_servers import SyncSecAggServerConfig
 from flsim.servers.sync_servers import SyncServerConfig
 from flsim.tests.utils import (
+    MetricsReporterWithMockedChannels,
     FakeMetricReporter,
 )
 from flsim.utils.fl.common import FLModelParamUtils
@@ -46,6 +47,12 @@ class TestSecureAggregationIntegration:
         sec_agg_enable: bool = False,
         fixedpoint=None,
         num_users: int = 26,
+        users_per_round=26,
+        epochs=1,
+        metrics_reporter=None,
+        report_train_metrics=False,
+        report_train_metrics_after_aggregation=False,
+        train_metrics_reported_per_epoch=1,
     ):
         """
         Trains an FL model, with or without Secure Aggregation
@@ -57,8 +64,8 @@ class TestSecureAggregationIntegration:
         sync_trainer = create_sync_trainer(
             model=global_fl_model,
             local_lr=0.1,
-            users_per_round=num_users,
-            epochs=1,
+            users_per_round=users_per_round,
+            epochs=epochs,
             user_epochs_per_round=1,
             do_eval=True,
             server_config=SyncSecAggServerConfig(
@@ -69,7 +76,15 @@ class TestSecureAggregationIntegration:
                 aggregation_type=AggregationType.AVERAGE,
             ),
         )
-        metrics_reporter = FakeMetricReporter()
+        sync_trainer.cfg.train_metrics_reported_per_epoch = (
+            train_metrics_reported_per_epoch
+        )
+        sync_trainer.cfg.report_train_metrics = report_train_metrics
+        sync_trainer.cfg.report_train_metrics_after_aggregation = (
+            report_train_metrics_after_aggregation
+        )
+        if metrics_reporter is None:
+            metrics_reporter = FakeMetricReporter()
         global_fl_model, _eval_metric = sync_trainer.train(
             data_provider,
             metrics_reporter,
@@ -134,4 +149,42 @@ class TestSecureAggregationIntegration:
                 1e-6,
             ),
             "",
+        )
+
+    def test_overflow_reporting(self) -> None:
+        """
+        Tests whether the overflow parameters are reported enough
+        """
+        fixedpoint = FixedPointConfig(num_bytes=1, scaling_factor=100)
+
+        metrics_reporter = MetricsReporterWithMockedChannels()
+        self._train_fl_model(
+            sec_agg_enable=True,
+            fixedpoint=fixedpoint,
+            users_per_round=2,
+            epochs=3,
+            metrics_reporter=metrics_reporter,
+            report_train_metrics=True,
+            report_train_metrics_after_aggregation=True,
+            train_metrics_reported_per_epoch=26,
+        )
+
+        def count_word(result, word):
+            return str(result).count(word)
+
+        # We have 26 users, 2 users_per_round, which makes 13 rounds per epoch
+        # we also have 3 epochs. So we should get 39 reports for overflow.
+        # (train_metrics_reported_per_epoch is large so we don't miss a report)
+        assertEqual(
+            count_word(metrics_reporter.stdout_results, "overflow per round"),
+            39,
+            metrics_reporter.stdout_results,
+        )
+
+        # for tensorboard results, we write 39*2 results related to overflow,
+        # as we report each {covert, aggregate} overflow once
+        assertEqual(
+            count_word(metrics_reporter.tensorboard_results, "overflow per round"),
+            78,
+            metrics_reporter.tensorboard_results,
         )

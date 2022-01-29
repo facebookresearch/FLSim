@@ -182,26 +182,30 @@ class TestSyncSecAggServer:
 
         server.init_round()
         # model : --[fc1=(2,5)]--[fc2=(5,1)]--
-        for name, _ in server.global_model.fl_get_module().named_parameters():
-            assertEqual(
-                server._secure_aggregator.converters[name]._aggregate_overflows, 0
-            )
+        assertEqual(
+            server._secure_aggregator.get_aggregate_overflow(),
+            0,
+        )
 
         for client in clients:
             server.receive_update_from_client(Message(SampleNet(client), weight=1.0))
+        num_params = sum(
+            p.numel()
+            for p in server.global_model.fl_get_module().parameters()
+            if p.requires_grad
+        )
 
         # Client update in fixedpoint is 28. When adding `num_clients` updates,
         # the sum would overflow, i.e. 28+28+..+28=(280%128)=24 in bit representation
-        # when `num_bytes=1, Hence [280/128]=2 aggr overflows occur for all parameters.
+        # when `num_bytes=1, Hence [280/128]=2 aggr overflows occur for any parameter.
         assertEqual(
-            server._secure_aggregator.converters["fc1.weight"]._aggregate_overflows, 20
+            server._secure_aggregator.get_aggregate_overflow(),
+            2 * num_params,
         )
+
+        # test reset aggregation overflow
+        server._secure_aggregator.get_aggregate_overflow(reset=True)
         assertEqual(
-            server._secure_aggregator.converters["fc1.bias"]._aggregate_overflows, 10
-        )
-        assertEqual(
-            server._secure_aggregator.converters["fc2.weight"]._aggregate_overflows, 10
-        )
-        assertEqual(
-            server._secure_aggregator.converters["fc2.bias"]._aggregate_overflows, 2
+            server._secure_aggregator.get_aggregate_overflow(),
+            0,
         )

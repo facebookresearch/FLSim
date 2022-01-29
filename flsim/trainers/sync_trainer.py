@@ -22,6 +22,7 @@ from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.metrics_reporter import IFLMetricsReporter, Metric, TrainingStage
 from flsim.interfaces.model import IFLModel
 from flsim.servers.sync_dp_servers import SyncDPSGDServerConfig
+from flsim.servers.sync_secagg_servers import SyncSecAggServerConfig
 from flsim.servers.sync_servers import (
     ISyncServer,
     SyncServerConfig,
@@ -89,6 +90,10 @@ class SyncTrainer(FLTrainer):
     @property
     def is_sample_level_dp(self):
         return is_target(self.cfg.client, DPClientConfig)
+
+    @property
+    def is_secure_aggregation_enabled(self):
+        return is_target(self.cfg.server, SyncSecAggServerConfig)
 
     def create_or_get_client_for_data(self, dataset_id: int, datasets: Any):
         """This function is used to create clients in a round. Thus, it
@@ -232,6 +237,7 @@ class SyncTrainer(FLTrainer):
                     timeline=timeline,
                     clients=clients,
                     agg_metric_clients=agg_metric_clients,
+                    users_per_round=users_per_round,
                     metric_reporter=metric_reporter
                     if self.cfg.report_train_metrics
                     else None,
@@ -367,6 +373,7 @@ class SyncTrainer(FLTrainer):
         timeline: Timeline,
         clients: Iterable[Client],
         agg_metric_clients: Iterable[Client],
+        users_per_round: int,
         metric_reporter: Optional[IFLMetricsReporter],
     ) -> None:
         """Args:
@@ -404,6 +411,7 @@ class SyncTrainer(FLTrainer):
             clients=agg_metric_clients,
             model=self.global_model(),
             timeline=timeline,
+            users_per_round=users_per_round,
             metric_reporter=metric_reporter,
         )
         self._calc_post_epoch_communication_metrics(
@@ -440,18 +448,15 @@ class SyncTrainer(FLTrainer):
         ]
         return agg_metric_clients
 
-    def calc_post_aggregation_train_metrics(
+    def _calc_privacy_metrics(
         self,
         clients: Iterable[Client],
         model: IFLModel,
-        timeline: Timeline,
         metric_reporter: Optional[IFLMetricsReporter],
     ) -> List[Metric]:
         """
-        Calculates post-server aggregation metrics.
+        Calculates privacy metrics.
         """
-        for client in clients:
-            client.eval(model=model, metric_reporter=metric_reporter)
 
         metrics = []
         if self.is_user_level_dp:
@@ -473,6 +478,34 @@ class SyncTrainer(FLTrainer):
                 median=p50_client_eps,
             )
             metrics.append(Metric("sample level dp (eps)", sample_dp_metrics))
+
+        return metrics
+
+    def _calc_overflow_metrics(
+        self,
+        clients: Iterable[Client],
+        model: IFLModel,
+        users_per_round: int,
+        metric_reporter: Optional[IFLMetricsReporter],
+    ) -> List[Metric]:
+        """
+        Calculates overflow metrics.
+        """
+        metrics = []
+        if self.is_secure_aggregation_enabled:
+            for client in clients:
+                client.eval(model=model, metric_reporter=metric_reporter)
+            (
+                convert_overflow_perc,
+                aggregate_overflow_perc,
+            ) = self.server.calc_avg_overflow_percentage(  # pyre-fixme
+                users_per_round, model
+            )
+            overflow_metrics: List[Metric] = Metric.from_args(
+                convert_overflow_percentage=convert_overflow_perc,
+                aggregate_overflow_percentage=aggregate_overflow_perc,
+            )
+            metrics.append(Metric("overflow per round", overflow_metrics))
 
         return metrics
 
@@ -506,9 +539,9 @@ class SyncTrainer(FLTrainer):
         clients: Iterable[Client],
         model: IFLModel,
         timeline: Timeline,
+        users_per_round: int,
         metric_reporter: Optional[IFLMetricsReporter],
     ):
-
         if (
             metric_reporter is not None
             # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
@@ -516,9 +549,15 @@ class SyncTrainer(FLTrainer):
             and self.cfg.report_train_metrics_after_aggregation
             and timeline.tick(1.0 / self.cfg.train_metrics_reported_per_epoch)
         ):
+            for client in clients:
+                client.eval(model=model, metric_reporter=metric_reporter)
+
             print(f"reporting {timeline} for aggregation")
-            metrics = self.calc_post_aggregation_train_metrics(
-                clients, model, timeline, metric_reporter
+            privacy_metrics = self._calc_privacy_metrics(
+                clients, model, metric_reporter
+            )
+            overflow_metrics = self._calc_overflow_metrics(
+                clients, model, users_per_round, metric_reporter
             )
 
             metric_reporter.report_metrics(
@@ -528,7 +567,7 @@ class SyncTrainer(FLTrainer):
                 timeline=timeline,
                 epoch=timeline.global_round_num(),  # for legacy
                 print_to_channels=True,
-                extra_metrics=metrics,
+                extra_metrics=privacy_metrics + overflow_metrics,
             )
 
     def _validate_users_per_round(
