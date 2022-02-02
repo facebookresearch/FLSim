@@ -91,7 +91,7 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
         )
         # for pyre; declare instance variables (https://fburl.com/88n6i71r)
         # pyre-fixme[8]: Attribute has type `IFLMetricsReporter`; used as `None`.
-        self.metric_reporter = None  # type: IFLMetricsReporter
+        self.metric_reporter: "IFLMetricsReporter" = None
         self.best_metric = None
         self.best_model_state = self.global_model().fl_get_module().state_dict()
 
