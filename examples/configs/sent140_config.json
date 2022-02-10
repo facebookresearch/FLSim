@@ -15,16 +15,16 @@
         }
       },
       "client": {
-        "epochs": 1,
+        "epochs": 5,
         "optimizer": {
           "_base_": "base_optimizer_sgd",
-          "lr": 1,
+          "lr": 0.01,
           "momentum": 0
         }
       },
       "users_per_round": 10,
       "epochs": 1,
-      "train_metrics_reported_per_epoch": 10,
+      "train_metrics_reported_per_epoch": 100,
       "always_keep_trained_model": false,
       "eval_epoch_frequency": 1,
       "do_eval": true,
@@ -37,7 +37,7 @@
     "model": {
       "num_classes": 2,
       "n_hidden": 100,
-      "dropout_rate": 0.1
+      "dropout_rate": 0
     }
   }
 }
