@@ -52,7 +52,7 @@ class FLModelParamUtils:
         abs_epsilon: Optional[float] = None,
     ) -> str:
         """Compare all the models in the given list of models.
-        It returns an empty string if all the models have same parameters.
+        It returns an empty string if all the models have the same parameters.
         It returns the name of the first parameter that is different if any.
         """
         if rel_epsilon is None and abs_epsilon is not None:
@@ -122,7 +122,7 @@ class FLModelParamUtils:
             none
         """
         assert weights is None or len(weights) == len(models), (
-            "Weights should have same length as models. len(wts):"
+            "Weights should have the same length as models. len(wts):"
             + str(len(weights))
             + ", len(models):"
             + str(len(models))
@@ -190,7 +190,7 @@ class FLModelParamUtils:
             model: nn.Module
             reference_gradient: nn.Module - gradient is the parameters of this model
         """
-        # Use parameters() since state_dict() may inlude non-learnable params.
+        # Use parameters() since state_dict() may include non-learnable params.
         for m, ref in zip(model.parameters(), reference_gradient.parameters()):
             m.grad = ref.detach().clone().type(m.type())
 
