@@ -44,6 +44,7 @@ def create_sync_trainer(
     timeout_simulator_config: TimeOutSimulatorConfig = NEVER_TIMEOUT_CONFIG,
     local_lr_scheduler: OptimizerSchedulerConfig = CONSTANT_LR_SCHEDULER_CONFIG,
     report_train_metrics: bool = False,
+    report_train_metrics_after_aggregation: bool = False,
     dropout_rate: float = 1.0,
 ):
     # first disable report_train_metrics_after_aggregation. we will call
@@ -61,7 +62,7 @@ def create_sync_trainer(
                 train_metrics_reported_per_epoch=1,
                 eval_epoch_frequency=1,
                 report_train_metrics=report_train_metrics,
-                report_train_metrics_after_aggregation=False,
+                report_train_metrics_after_aggregation=report_train_metrics_after_aggregation,
                 client=ClientConfig(
                     epochs=user_epochs_per_round,
                     optimizer=LocalOptimizerSGDConfig(

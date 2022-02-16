@@ -77,11 +77,38 @@ class FLDatasetDataLoaderWithBatch(IFLDataLoader):
         rank = kwargs.get("rank", 0)
         world_size = kwargs.get("world_size", 1)
 
-        train_batches = [
-            user_data for _, user_data in self.sharder.shard_rows(self.train_dataset)
-        ]
+        final_train_batches, self._num_total_users = self._create_batches_from_dataset(
+            self.train_dataset, rank=rank, world_size=world_size
+        )
+        return final_train_batches
+
+    def fl_eval_set(self, **kwargs) -> Iterable[Any]:
+        collate_fn = kwargs.get("collate_fn", None)
+        if collate_fn is not None:
+            raise ValueError("collate fn is not used")
+
+        final_eval_batches, _ = self._create_batches_from_dataset(
+            self.eval_dataset, rank=0, world_size=1
+        )
+        return final_eval_batches
+
+    def fl_test_set(self, **kwargs) -> Iterable[Any]:
+        collate_fn = kwargs.get("collate_fn", None)
+        if collate_fn is not None:
+            raise ValueError("collate fn is not used")
+
+        final_test_batches, _ = self._create_batches_from_dataset(
+            self.test_dataset, rank=0, world_size=1
+        )
+        return final_test_batches
+
+    def _create_batches_from_dataset(
+        self, dataset: Dataset, rank: int, world_size: int
+    ):
+        train_batches = [user_data for _, user_data in self.sharder.shard_rows(dataset)]
         # batch train_batches collected above
         final_train_batches = []
+        num_total_users = 0
         # fetch attributes for each row
         keys = list(train_batches[0][0].keys())
         for one_user_data in train_batches:
@@ -105,21 +132,8 @@ class FLDatasetDataLoaderWithBatch(IFLDataLoader):
 
                 new_batched_user_data.append(batched_data_rows)
             # divide the total number of users evenly into world_size # of workers
-            if self.num_total_users % world_size == rank:
+            if num_total_users % world_size == rank:
                 final_train_batches.append(new_batched_user_data)
             # count the total number of users
-            self._num_total_users += 1
-
-        return final_train_batches
-
-    def fl_eval_set(self, **kwargs) -> Iterable[Any]:
-        collate_fn = kwargs.get("collate_fn", None)  # identity function
-        return DataLoader(
-            self.eval_dataset, batch_size=self.eval_batch_size, collate_fn=collate_fn
-        )
-
-    def fl_test_set(self, **kwargs) -> Iterable[Any]:
-        collate_fn = kwargs.get("collate_fn", None)  # identity function
-        return DataLoader(
-            self.test_dataset, batch_size=self.test_batch_size, collate_fn=collate_fn
-        )
+            num_total_users += 1
+        return final_train_batches, num_total_users

@@ -105,7 +105,7 @@ class SyncTrainer(FLTrainer):
             client = DPClient(
                 # pyre-ignore[16]
                 **OmegaConf.structured(self.cfg.client),
-                dataset=datasets[dataset_id],
+                dataset=datasets.get_train_user(dataset_id),
                 name=f"client_{dataset_id}",
                 timeout_simulator=self._timeout_simulator,
                 store_last_updated_model=self.cfg.report_client_metrics,
@@ -115,7 +115,7 @@ class SyncTrainer(FLTrainer):
         else:
             client = Client(
                 **OmegaConf.structured(self.cfg.client),
-                dataset=datasets[dataset_id],
+                dataset=datasets.get_train_user(dataset_id),
                 name=f"client_{dataset_id}",
                 timeout_simulator=self._timeout_simulator,
                 store_last_updated_model=self.cfg.report_client_metrics,
@@ -180,7 +180,7 @@ class SyncTrainer(FLTrainer):
 
         self.data_provider = data_provider
         num_rounds_in_epoch = self.rounds_in_one_epoch(num_total_users, users_per_round)
-        num_users_on_worker = data_provider.num_users()
+        num_users_on_worker = data_provider.num_train_users()
         self.logger.debug(
             f"num_users_on_worker: {num_users_on_worker}, "
             f"users_per_round: {users_per_round}, "
@@ -267,13 +267,13 @@ class SyncTrainer(FLTrainer):
                         )
 
                     t = time()
-                    (best_metric, best_model_state,) = self._maybe_run_evaluation(
-                        self.global_model(),
-                        timeline,
-                        data_provider.eval_data(),
-                        metric_reporter,
-                        best_metric,
-                        best_model_state,
+                    best_metric, best_model_state = self._maybe_run_evaluation(
+                        model=self.global_model(),
+                        timeline=timeline,
+                        data_provider=data_provider,
+                        metric_reporter=metric_reporter,
+                        best_metric=best_metric,
+                        best_model_state=best_model_state,
                     )
                     self.logger.info(f"Evaluation took {time() - t} s.")
 
@@ -407,7 +407,7 @@ class SyncTrainer(FLTrainer):
             timeline=timeline,
             metric_reporter=metric_reporter,
         )
-        self._report_post_aggregation_train_metrics(
+        self._evaluate_global_model_after_aggregation(
             clients=agg_metric_clients,
             model=self.global_model(),
             timeline=timeline,
@@ -524,7 +524,6 @@ class SyncTrainer(FLTrainer):
                 metric_reporter.reset()
                 client.eval(
                     model=model,
-                    dataset=self.data_provider.eval_data(),
                     metric_reporter=metric_reporter,
                 )
                 # pyre-fixme[16]: `IFLMetricsReporter` has no attribute
@@ -534,13 +533,13 @@ class SyncTrainer(FLTrainer):
 
         return client_metrics
 
-    def _report_post_aggregation_train_metrics(
+    def _evaluate_global_model_after_aggregation(
         self,
         clients: Iterable[Client],
         model: IFLModel,
         timeline: Timeline,
         users_per_round: int,
-        metric_reporter: Optional[IFLMetricsReporter],
+        metric_reporter: Optional[IFLMetricsReporter] = None,
     ):
         if (
             metric_reporter is not None
@@ -549,10 +548,16 @@ class SyncTrainer(FLTrainer):
             and self.cfg.report_train_metrics_after_aggregation
             and timeline.tick(1.0 / self.cfg.train_metrics_reported_per_epoch)
         ):
-            for client in clients:
-                client.eval(model=model, metric_reporter=metric_reporter)
+            with torch.no_grad():
+                model.fl_get_module().eval()
+                for eval_user in self.data_provider.eval_users():
+                    for batch in eval_user.eval_data():
+                        batch_metrics = model.get_eval_metrics(batch)
+                        if metric_reporter is not None:
+                            metric_reporter.add_batch_metrics(batch_metrics)
+                model.fl_get_module().train()
 
-            print(f"reporting {timeline} for aggregation")
+            print(f"Reporting {timeline} for aggregation")
             privacy_metrics = self._calc_privacy_metrics(
                 clients, model, metric_reporter
             )

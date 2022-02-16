@@ -106,7 +106,7 @@ class TestDifferentialPrivacyIntegration:
             dummy_dataset, shard_size, local_batch_size, DummyAlphabetFLModel()
         )
         assertEqual(data_loader.num_total_users, data_size / shard_size)
-        assertEqual(data_loader.num_total_users, data_provider.num_users())
+        assertEqual(data_loader.num_total_users, data_provider.num_train_users())
         self.data_size = data_size  # pyre-ignore
         return data_provider, data_loader.train_batch_size
 
@@ -133,8 +133,8 @@ class TestDifferentialPrivacyIntegration:
             train_batch_size,
         )
         model_wrapper.model.train()
-        for one_user_data in data_provider.train_data():
-            for batch in one_user_data:
+        for one_user_data in data_provider.train_users():
+            for batch in one_user_data.train_data():
                 batch_metrics = model_wrapper.fl_forward(batch)
                 loss = batch_metrics.loss
                 loss.backward()
@@ -225,7 +225,7 @@ class TestDifferentialPrivacyIntegration:
         global_fl_model, _eval_metric = sync_trainer.train(
             data_provider,
             metrics_reporter,
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=world_size,
         )
 

@@ -22,8 +22,8 @@ def prepare_dataset_data_loader_with_batch(request):
     request.cls.test_csv_path = "test_resources/data.csv"
     request.cls.total_data_count = 15
     request.cls.train_batch_size = 1
-    request.cls.eval_batch_size = 3
-    request.cls.test_batch_size = 5
+    request.cls.eval_batch_size = 1
+    request.cls.test_batch_size = 1
 
 
 class TestDataset(FLCSVDataset):

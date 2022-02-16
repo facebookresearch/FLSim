@@ -211,7 +211,7 @@ def main_worker(
     final_model, eval_score = trainer.train(
         data_provider=data_provider,
         metric_reporter=metrics_reporter,
-        num_total_users=data_provider.num_users(),
+        num_total_users=data_provider.num_train_users(),
         distributed_world_size=distributed_world_size,
     )
 

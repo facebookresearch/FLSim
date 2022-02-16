@@ -46,7 +46,7 @@ class AsyncClientFactory:
     ):
         user_info = user_selector.get_random_user()
         training_schedule = TrainingScheduleFactory.create(
-            current_time, event_generator, user_info.user_data.num_examples()
+            current_time, event_generator, user_info.user_data.num_train_examples()
         )
         client = Client(
             **OmegaConf.structured(client_config),

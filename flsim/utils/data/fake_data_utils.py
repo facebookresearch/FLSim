@@ -52,16 +52,30 @@ class FakeUserData(IFLUserData):
         self.batch_size = batch_size
         self.val = val
 
-    def __iter__(self) -> Iterator[Any]:
+    def train_data(self) -> Iterator[Any]:
         # TODO add flag for a final batch being incomplete
         for _ in range(self._num_batches):
             yield self.gen_batch(self.batch_size, self.val)
 
-    def num_examples(self) -> int:
+    def num_train_examples(self) -> int:
         return self._num_batches * self.batch_size
 
     def num_batches(self) -> int:
         return self._num_batches
+
+    def eval_data(self):
+        # TODO add flag for a final batch being incomplete
+        for _ in range(self._num_batches):
+            yield self.gen_batch(self.batch_size, self.val)
+
+    def num_eval_batches(self):
+        return 0
+
+    def num_train_batches(self):
+        return self._num_batches
+
+    def num_eval_examples(self):
+        return 0
 
 
 class FakeDataProvider(IFLDataProvider):
@@ -93,23 +107,23 @@ class FakeDataProvider(IFLDataProvider):
     def __getitem__(self, index) -> IFLUserData:
         return self.user_data[index]
 
-    def user_ids(self) -> List[int]:
+    def train_user_ids(self) -> List[int]:
         return list(range(self._num_users))
 
-    def num_users(self) -> int:
+    def num_train_users(self) -> int:
         return self._num_users
 
     def num_total_users(self) -> int:
         return self._num_total_users
 
-    def get_user_data(self, user_index: int) -> IFLUserData:
-        return self[user_index]
+    def get_train_user(self, user_index: int) -> IFLUserData:
+        return self.user_data[user_index]
 
-    def train_data(self) -> Iterable[IFLUserData]:
+    def train_users(self) -> Iterable[IFLUserData]:
         return self.user_data
 
-    def eval_data(self) -> Iterable[Any]:
-        return self.eval
+    def eval_users(self) -> Iterable[IFLUserData]:
+        return [self.eval]
 
-    def test_data(self) -> Iterable[Any]:
-        return self.eval
+    def test_users(self) -> Iterable[IFLUserData]:
+        return [self.eval]

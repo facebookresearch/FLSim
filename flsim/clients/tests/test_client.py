@@ -19,6 +19,7 @@ from flsim.common.pytest_helper import (
     assertTrue,
     assertFalse,
     assertAlmostEqual,
+    assertNotEmpty,
 )
 from flsim.common.timeout_simulator import (
     GaussianTimeOutSimulator,
@@ -26,6 +27,7 @@ from flsim.common.timeout_simulator import (
     NeverTimeOutSimulator,
     NeverTimeOutSimulatorConfig,
 )
+from flsim.data.data_provider import IFLUserData
 from flsim.optimizers.local_optimizers import (
     LocalOptimizerSGD,
     LocalOptimizerFedProxConfig,
@@ -64,9 +66,7 @@ class ClientTestBase:
         num_batches = num_batches or self.num_batches
         batch_size = batch_size or self.batch_size
         torch.manual_seed(0)
-        dataset = [
-            ([None] * batch_size, torch.rand(batch_size, 2)) for _ in range(num_batches)
-        ]
+        dataset = [torch.rand(batch_size, 2) for _ in range(num_batches)]
         dataset = utils.DatasetFromList(dataset)
         return utils.DummyUserData(dataset, utils.SampleNet(utils.TwoFC()))
 
@@ -102,10 +102,10 @@ class ClientTestBase:
             **OmegaConf.structured(config), dataset=(data or self._fake_data())
         )
 
-    def _train(self, batches, model, optim):
+    def _train(self, data: IFLUserData, model, optim):
         # basically re-write training logic
         model.fl_get_module().train()
-        for batch in batches:
+        for batch in data.train_data():
             optim.zero_grad()
             _batch = model.fl_create_training_batch(batch)
             loss = model.fl_forward(_batch).loss
@@ -125,13 +125,11 @@ class ClientTestBase:
                 ), "Client should call eval after setting model.eval()"
                 return self.sample_nn(batch)
 
-        n_batches = 2
         input_dim = 2
-        data = [torch.randn(input_dim, requires_grad=True) for _ in range(n_batches)]
         model = Net(nn.Linear(input_dim, 1))
 
         model.fl_get_module().train()
-        client.eval(model=model, dataset=data)
+        client.eval(model=model)
         assert model.fl_get_module().training
 
 
@@ -464,6 +462,17 @@ class TestBaseClient(ClientTestBase):
     def test_base_client_eval(self):
         client = self._get_client()
         self._run_client_eval_test(client)
+
+    def test_client_fine_tuning(self):
+        client = self._get_client()
+        model = utils.SampleNet(utils.TwoFC())
+        model.fl_get_module().fill_all(0.1)
+        fine_tuned_model, _, _ = client.copy_and_train_model(model)
+        mismatched = utils.verify_models_equivalent_after_training(
+            model, fine_tuned_model
+        )
+        client.eval(model)
+        assertNotEmpty(mismatched)
 
 
 class TestDPClient(ClientTestBase):

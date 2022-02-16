@@ -93,7 +93,7 @@ class DataLoader(IFLDataLoader):
 
 
 class UserData(IFLUserData):
-    def __init__(self, user_data: Dict[str, Generator]):
+    def __init__(self, user_data: Dict[str, Generator], eval_split=0.0):
         self._user_batches = []
         self._num_batches = 0
         self._num_examples = 0
@@ -102,24 +102,33 @@ class UserData(IFLUserData):
             self._num_examples += UserData.get_num_examples(labels)
             self._user_batches.append(UserData.fl_training_batch(features, labels))
 
-    def __iter__(self) -> Iterator[Dict[str, torch.Tensor]]:
+    def train_data(self) -> Iterator[Dict[str, torch.Tensor]]:
         """
         Iterator to return a user batch data
         """
         for batch in self._user_batches:
             yield batch
 
-    def num_examples(self) -> int:
+    def eval_data(self):
+        return []
+
+    def num_train_examples(self) -> int:
         """
         Returns the number of examples
         """
         return self._num_examples
 
-    def num_batches(self) -> int:
+    def num_train_batches(self) -> int:
         """
         Returns the number of batches
         """
         return self._num_batches
+
+    def num_eval_batches(self):
+        return 0
+
+    def num_eval_examples(self):
+        return 0
 
     @staticmethod
     def get_num_examples(batch: List) -> int:
@@ -187,7 +196,7 @@ class DataProvider(IFLDataProvider):
     def num_users(self) -> int:
         return len(self.train_users)
 
-    def get_user_data(self, user_index: int) -> IFLUserData:
+    def get_train_user(self, user_index: int) -> IFLUserData:
         if user_index in self.train_users:
             return self.train_users[user_index]
         else:
@@ -199,15 +208,13 @@ class DataProvider(IFLDataProvider):
         for user_data in self.train_users.values():
             yield user_data
 
-    def eval_data(self) -> Iterable[Dict[str, torch.Tensor]]:
+    def eval_data(self) -> Iterable[IFLUserData]:
         for user_data in self.eval_users.values():
-            for batch in user_data:
-                yield batch
+            yield user_data
 
-    def test_data(self) -> Iterable[Dict[str, torch.Tensor]]:
+    def test_data(self) -> Iterable[IFLUserData]:
         for user_data in self.test_users.values():
-            for batch in user_data:
-                yield batch
+            yield user_data
 
     def _create_fl_users(self, iterator: Iterator) -> Dict[int, IFLUserData]:
         return {
@@ -251,7 +258,7 @@ def build_data_provider(local_batch_size, examples_per_user, image_size):
 
     # 4. Wrap the data loader with a data provider.
     data_provider = DataProvider(fl_data_loader)
-    print(f"Clients in total: {data_provider.num_users()}")
+    print(f"Clients in total: {data_provider.num_train_users()}")
     return data_provider
 
 
@@ -408,39 +415,39 @@ class MetricsReporter(FLMetricsReporter):
 class LEAFDataProvider(IFLDataProvider):
     def __init__(self, data_loader):
         self.data_loader = data_loader
-        self.train_users = self._create_fl_users(data_loader.fl_train_set())
-        self.eval_users = self._create_fl_users(data_loader.fl_eval_set())
-        self.test_users = self._create_fl_users(data_loader.fl_test_set())
+        self._train_users = self._create_fl_users(data_loader.fl_train_set())
+        self._eval_users = self._create_fl_users(data_loader.fl_eval_set())
+        self._test_users = self._create_fl_users(data_loader.fl_test_set())
 
-    def user_ids(self) -> List[int]:
-        return list(self.train_users.keys())
+    def train_user_ids(self) -> List[int]:
+        return list(self._train_users.keys())
 
-    def num_users(self) -> int:
-        return len(self.train_users)
+    def num_train_users(self) -> int:
+        return len(self._train_users)
 
-    def get_user_data(self, user_index: int) -> IFLUserData:
-        if user_index in self.train_users:
-            return self.train_users[user_index]
+    def get_train_user(self, user_index: int) -> IFLUserData:
+        if user_index in self._train_users:
+            return self._train_users[user_index]
         else:
             raise IndexError(
-                f"Index {user_index} is out of bound for list with len {self.num_users()}"
+                f"Index {user_index} is out of bound for list with len {self.num_train_users()}"
             )
 
-    def train_data(self) -> Iterable[IFLUserData]:
-        for user_data in self.train_users.values():
+    def train_users(self) -> Iterable[IFLUserData]:
+        for user_data in self._train_users.values():
             yield user_data
 
-    def eval_data(self) -> Iterable[Dict[str, torch.Tensor]]:
-        for user_data in self.eval_users.values():
-            for batch in user_data:
-                yield batch
+    def eval_users(self) -> Iterable[IFLUserData]:
+        for user_data in self._eval_users.values():
+            yield user_data
 
-    def test_data(self) -> Iterable[Dict[str, torch.Tensor]]:
-        for user_data in self.test_users.values():
-            for batch in user_data:
-                yield batch
+    def test_users(self) -> Iterable[IFLUserData]:
+        for user_data in self._test_users.values():
+            yield user_data
 
-    def _create_fl_users(self, iterator: Iterator) -> Dict[int, IFLUserData]:
+    def _create_fl_users(
+        self, iterator: Iterator, eval_split
+    ) -> Dict[int, IFLUserData]:
         return {
             user_index: UserData(user_data)
             for user_index, user_data in tqdm(

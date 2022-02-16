@@ -58,7 +58,7 @@ def build_data_provider(local_batch_size, examples_per_user, drop_last=False):
         train_dataset, test_dataset, test_dataset, sharder, local_batch_size, drop_last
     )
     data_provider = DataProvider(fl_data_loader)
-    print(f"Clients in total: {data_provider.num_users()}")
+    print(f"Clients in total: {data_provider.num_train_users()}")
     return data_provider
 
 
@@ -86,7 +86,7 @@ def main(
     final_model, eval_score = trainer.train(
         data_provider=data_provider,
         metric_reporter=metrics_reporter,
-        num_total_users=data_provider.num_users(),
+        num_total_users=data_provider.num_train_users(),
         distributed_world_size=1,
     )
 

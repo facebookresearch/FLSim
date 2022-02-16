@@ -113,6 +113,8 @@ class TrainingStage(Enum):
     TEST = auto()
     EVAL = auto()
     PER_CLIENT_EVAL = auto()
+    PERSONALIZED_EVAL = auto()  # personalized eval on eval users
+    PERSONALIZED_TEST = auto()  # personalized eval on test users
 
 
 class IFLMetricsReporter(abc.ABC):

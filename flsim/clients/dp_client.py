@@ -74,11 +74,11 @@ class DPClient(Client):
         pass
 
     def _get_dataset_stats(self, model: IFLModel):
-        for batch in self.dataset:
+        batch_size = 0
+        for batch in self.dataset.train_data():
             batch_size = model.get_num_examples(batch)
             break
-        # pyre-fixme[61]: `batch_size` may not be initialized here.
-        return batch_size, self.dataset.num_examples()
+        return batch_size, self.dataset.num_train_examples()
 
     @property
     def privacy_budget(self) -> PrivacyBudget:

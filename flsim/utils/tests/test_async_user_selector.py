@@ -48,7 +48,7 @@ class TestAsyncUserSelectorUtils:
                 random_user_info.user_index,
             )
             assertTrue(user_index >= 0 and user_index < num_users)
-            assertEqual(random_user.num_examples(), user_index + 1)
+            assertEqual(random_user.num_train_examples(), user_index + 1)
 
     def test_round_robin_user_selector(self, num_users, num_trials):
         # users are 0....n-1
@@ -76,4 +76,4 @@ class TestAsyncUserSelectorUtils:
                 random_user_info.user_index,
             )
             assertEqual(user_index, num_trial % num_users)
-            assertEqual(random_user.num_examples(), (user_index + 1) * multiplier)
+            assertEqual(random_user.num_train_examples(), (user_index + 1) * multiplier)

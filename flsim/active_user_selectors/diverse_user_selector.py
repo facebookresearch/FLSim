@@ -72,10 +72,10 @@ class DiverseUserSelectorUtils:
 
         # Accumulate the gradient over a user's batches, normalized by batch size
         for user_idx in user_indices:
-            user_data = data_provider.get_user_data(user_idx)
+            user_data = data_provider.get_train_user(user_idx)
             accumulated_gradient = zero_like_grad(params)  # pyre-ignore
 
-            for batch in user_data:
+            for batch in user_data.train_data():
                 global_model.fl_get_module().zero_grad()
                 batch_metrics = global_model.fl_forward(batch)
                 batch_metrics.loss.backward()
@@ -88,7 +88,7 @@ class DiverseUserSelectorUtils:
 
             for group_in, group_out in zip(accumulated_gradient, gradient_sum):
                 if client_gradient_scaling == "mean":
-                    group_in = group_in / user_data.num_examples()
+                    group_in = group_in / user_data.num_train_examples()
 
                 group_out += group_in
                 sum_of_norms += torch.sum(group_in * group_in).item()

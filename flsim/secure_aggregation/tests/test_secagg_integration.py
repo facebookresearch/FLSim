@@ -39,7 +39,7 @@ class TestSecureAggregationIntegration:
             dummy_dataset, shard_size, local_batch_size, DummyAlphabetFLModel()
         )
         assertEqual(data_loader.num_total_users, num_users / shard_size)
-        assertEqual(data_loader.num_total_users, data_provider.num_users())
+        assertEqual(data_loader.num_total_users, data_provider.num_train_users())
         return data_provider, data_loader.train_batch_size
 
     def _train_fl_model(
@@ -88,7 +88,7 @@ class TestSecureAggregationIntegration:
         global_fl_model, _eval_metric = sync_trainer.train(
             data_provider,
             metrics_reporter,
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=world_size,
         )
 

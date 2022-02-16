@@ -149,8 +149,8 @@ class FLTestUtils:
             global_model.fl_cuda()
 
         for _ in range(epochs):
-            for one_user_data in data_provider.train_data():
-                for batch in one_user_data:
+            for one_user_data in data_provider.train_users():
+                for batch in one_user_data.train_data():
                     optimizer.zero_grad()
                     batch_metrics = global_model.fl_forward(batch)
 

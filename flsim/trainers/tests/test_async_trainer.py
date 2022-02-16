@@ -533,7 +533,7 @@ class TestAsyncTrainer:
             fl_model, _ = async_trainer.train(
                 data_provider=fl_data_provider,
                 metric_reporter=metric_reporter,
-                num_total_users=fl_data_provider.num_users(),
+                num_total_users=fl_data_provider.num_train_users(),
                 distributed_world_size=1,
             )
             assertEqual(

@@ -53,21 +53,31 @@ class DummyUserData(IFLUserData):
         self._num_batches: int = 0
         self.model = model
         self.from_data_provider = from_data_provider
-        for _, batch in self.data:
+        for batch in self.data:
             self._num_examples += (
                 batch["label"].shape[0] if self.from_data_provider else batch.shape[0]
             )
             self._num_batches += 1
 
-    def __iter__(self):
-        for _, batch in self.data:
-            yield self.model.fl_create_training_batch(batch=batch)
-
-    def num_batches(self):
+    def num_train_batches(self):
         return self._num_batches
 
-    def num_examples(self):
+    def num_train_examples(self):
         return self._num_examples
+
+    def train_data(self):
+        for batch in self.data:
+            yield self.model.fl_create_training_batch(batch=batch)
+
+    def eval_data(self):
+        for batch in self.data:
+            yield self.model.fl_create_training_batch(batch=batch)
+
+    def num_eval_batches(self):
+        return 0
+
+    def num_eval_examples(self):
+        return 0
 
 
 class Quadratic1D(nn.Module):

@@ -98,7 +98,7 @@ class HybridFLTestUtils:
             model_to_compare, _ = trainer.train(
                 data_provider=data_provider,
                 metric_reporter=metric_reporter,
-                num_total_users=data_provider.num_users(),
+                num_total_users=data_provider.num_train_users(),
                 distributed_world_size=1,
             )
         elif trainer_to_compare_hybrid_fl_with == TrainerType.ASYNC:
@@ -116,7 +116,7 @@ class HybridFLTestUtils:
             model_to_compare, _ = trainer.train(
                 data_provider=data_provider,
                 metric_reporter=metric_reporter,
-                num_total_users=data_provider.num_users(),
+                num_total_users=data_provider.num_train_users(),
                 distributed_world_size=1,
             )
         elif trainer_to_compare_hybrid_fl_with == TrainerType.NONFL:
@@ -251,7 +251,7 @@ class HybridFLTestUtils:
             hybrid_model, _ = hybrid_fl_trainer.train(
                 data_provider=data_provider,
                 metric_reporter=MetricsReporterWithMockedChannels(),
-                num_total_users=data_provider.num_users(),
+                num_total_users=data_provider.num_train_users(),
                 distributed_world_size=1,
             )
             return hybrid_model

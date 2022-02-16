@@ -40,9 +40,9 @@ class TestDataUtils:
         expected_batch_size,
         expected_num_batches,
     ):
-        assertEqual(user_dataset.num_examples(), expected_num_examples)
+        assertEqual(user_dataset.num_train_examples(), expected_num_examples)
 
-        for i, batch in enumerate(user_dataset):
+        for i, batch in enumerate(user_dataset.train_data()):
             assertLessEqual(len(batch["data"]), expected_batch_size)
             last_batch = i
         assertEqual(last_batch + 1, expected_num_batches)
@@ -68,16 +68,16 @@ class TestDataUtils:
             gen_batch, num_batches, batch_size, num_users
         )
 
-        assertEqual(fl_data_provider.num_users(), num_users)
-        assertEqual(fl_data_provider.user_ids(), list(range(num_users)))
+        assertEqual(fl_data_provider.num_train_users(), num_users)
+        assertEqual(fl_data_provider.train_user_ids(), list(range(num_users)))
         ad_hoc_users = [0, 3, 10, 50, 99]
         num_examples = num_batches * batch_size
         for user in ad_hoc_users:
-            user_dataset = fl_data_provider.get_user_data(user)
+            user_dataset = fl_data_provider.get_train_user(user)
             self.user_data_test_util(
                 user_dataset, num_examples, batch_size, num_batches
             )
 
         self.user_data_test_util(
-            fl_data_provider.test_data(), num_examples, batch_size, num_batches
+            fl_data_provider.test_users()[0], num_examples, batch_size, num_batches
         )

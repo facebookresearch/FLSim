@@ -224,7 +224,7 @@ class TestTrainer:
             model, _ = trainer.train(
                 data_provider,
                 metrics_reporter,
-                num_total_users=data_provider.num_users(),
+                num_total_users=data_provider.num_train_users(),
                 distributed_world_size=world_size,
             )
             modules.append(model.fl_get_module())
@@ -316,14 +316,14 @@ class TestTrainer:
             data_loader.fl_test_set(),
             global_model_1,
         )
-        assertEqual(data_provider.num_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_train_users(), data_loader.num_total_users)
         # training with reporting the train metrics after aggregation
         sync_trainer_1.cfg.report_train_metrics = True
         sync_trainer_1.cfg.report_train_metrics_after_aggregation = True
         global_model_1, best_metric_1 = sync_trainer_1.train(
             data_provider,
             metrics_reporter_1,
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=world_size,
         )
 
@@ -344,7 +344,7 @@ class TestTrainer:
         global_model_2, best_metric_2 = sync_trainer_2.train(
             data_provider,
             metrics_reporter_2,
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=world_size,
         )
 
@@ -398,7 +398,7 @@ class TestTrainer:
             data_loader.fl_test_set(),
             global_model_1,
         )
-        assertEqual(data_provider.num_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_train_users(), data_loader.num_total_users)
         # training with using training clients for aggregation training metrics
         sync_trainer_1.cfg.report_train_metrics_after_aggregation = True
         sync_trainer_1.cfg.use_train_clients_for_aggregation_metrics = True
@@ -406,7 +406,7 @@ class TestTrainer:
         global_model_1, best_metric_1 = sync_trainer_1.train(
             data_provider,
             metrics_reporter_1,
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=world_size,
         )
 
@@ -428,7 +428,7 @@ class TestTrainer:
         global_model_2, best_metric_2 = sync_trainer_2.train(
             data_provider,
             metrics_reporter_2,
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=world_size,
         )
 
@@ -490,7 +490,7 @@ class TestTrainer:
         one_user_global_model, _eval_metric_one_user = sync_trainer.train(
             data_provider,
             metrics_reporter,
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=world_size,
         )
         metrics_reporter.reset()
@@ -509,9 +509,9 @@ class TestTrainer:
         assertEqual(
             data_loader.num_total_users, math.ceil(num_training_examples / shard_size)
         )
-        assertEqual(data_provider.num_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_train_users(), data_loader.num_total_users)
         # select all users to train in each round
-        users_per_round = data_provider.num_users()
+        users_per_round = data_provider.num_train_users()
         torch.manual_seed(1)
         sync_trainer = create_sync_trainer(
             model=global_model_init,
@@ -522,7 +522,7 @@ class TestTrainer:
         all_users_global_model, _eval_metric_all_user = sync_trainer.train(
             data_provider,
             metrics_reporter,
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=world_size,
         )
         assertEqual(
@@ -563,7 +563,7 @@ class TestTrainer:
             dummy_dataset, shard_size, local_batch_size, global_model
         )
         assertEqual(data_loader.num_total_users, math.ceil(26 / shard_size))
-        assertEqual(data_provider.num_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_train_users(), data_loader.num_total_users)
         users_per_round = 1
         local_optimizer_lr = 1.0
         epochs = 5
@@ -578,7 +578,7 @@ class TestTrainer:
         constant_lr_model, _ = sync_trainer.train(
             data_provider,
             metrics_reporter,
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=world_size,
         )
         metrics_reporter.reset()
@@ -600,7 +600,7 @@ class TestTrainer:
         armijo_ls_model, _ = sync_trainer_with_scheduler.train(
             data_provider,
             metrics_reporter,
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=world_size,
         )
         metrics_reporter.reset()
@@ -653,7 +653,7 @@ class TestTrainer:
             dummy_dataset, shard_size, batch_size, global_model
         )
         assertEqual(data_loader.num_total_users, math.ceil(num_examples / shard_size))
-        assertEqual(data_provider.num_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_train_users(), data_loader.num_total_users)
 
         torch.manual_seed(1)
 
@@ -668,7 +668,7 @@ class TestTrainer:
         fl_model, _ = sync_trainer.train(
             data_provider,
             metric_reporter=FakeMetricReporter(),
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=world_size,
         )
 
@@ -773,11 +773,17 @@ class TestTrainer:
         ) = DummyAlphabetDataset.create_data_provider_and_loader(
             dummy_dataset, shard_size, local_batch_size, global_model
         )
-        assertEqual(data_provider.num_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_train_users(), data_loader.num_total_users)
         # assert first user gets (dummy_dataset.num_rows / 2) + 1 data point,
         # the second user gets (dummy_dataset.num_rows / 2) - 1 data point
-        assertEqual(data_provider[0].num_examples(), dummy_dataset.num_rows / 2 + 1)
-        assertEqual(data_provider[1].num_examples(), dummy_dataset.num_rows / 2 - 1)
+        assertEqual(
+            data_provider.get_train_user(0).num_train_examples(),
+            dummy_dataset.num_rows / 2 + 1,
+        )
+        assertEqual(
+            data_provider.get_train_user(1).num_train_examples(),
+            dummy_dataset.num_rows / 2 - 1,
+        )
         # shared trainer config between two training instance
         users_per_round = 1
         local_optimizer_lr = 1.0
@@ -802,15 +808,15 @@ class TestTrainer:
         model_with_overselection, _ = sync_trainer_overselection.train(
             data_provider,
             metric_reporter=FakeMetricReporter(),
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=1,
         )
         # another training instance: only user[1] in the user population
         # removing user 0 from dataset, assign user 1 to be user 0
-        data_provider._users[0] = copy.deepcopy(data_provider._users[1])
-        data_provider._users.pop(1)
+        data_provider._train_users[0] = copy.deepcopy(data_provider._train_users[1])
+        data_provider._train_users.pop(1)
         # only a single user after remove user 0
-        assertEqual(data_provider.num_users(), 1)
+        assertEqual(data_provider.num_train_users(), 1)
         global_model = FLModelParamUtils.clone(global_model_init)
         torch.manual_seed(1)
         dropout_rate = 1.0
@@ -825,7 +831,7 @@ class TestTrainer:
         model_single_user, _ = sync_trainer_single_user.train(
             data_provider,
             metric_reporter=FakeMetricReporter(),
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=1,
         )
         assertEqual(
@@ -888,7 +894,7 @@ class TestTrainer:
         model_with_timeout, _ = sync_trainer_timeout.train(
             data_provider,
             metric_reporter=FakeMetricReporter(),
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=1,
         )
         # dummy alphabet dataset, getting each character once
@@ -915,7 +921,7 @@ class TestTrainer:
         model_no_timeout, _ = sync_trainer_timeout.train(
             data_provider,
             metric_reporter=FakeMetricReporter(),
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=1,
         )
         assertEqual(
@@ -992,7 +998,7 @@ class TestTrainer:
         model, _ = sync_trainer_with_client_reports.train(
             data_provider,
             metric_reporter=metrics_reporter,
-            num_total_users=data_provider.num_users(),
+            num_total_users=data_provider.num_train_users(),
             distributed_world_size=1,
         )
 
@@ -1017,20 +1023,20 @@ class TestTrainer:
         shard_size = int(math.ceil(26 / num_total_users))
         local_batch_size = 4
         dummy_dataset = DummyAlphabetDataset()
-        fl_data_sharder = SequentialSharder(examples_per_shard=shard_size)
-        data_loader = FLDatasetDataLoaderWithBatch(
+        global_model = DummyAlphabetFLModel()
+
+        (
+            data_provider,
+            data_loader,
+        ) = DummyAlphabetDataset.create_data_provider_and_loader(
             dummy_dataset,
-            dummy_dataset,
-            dummy_dataset,
-            fl_data_sharder,
-            local_batch_size,
-            local_batch_size,
-            local_batch_size,
+            examples_per_user=shard_size,
+            batch_size=local_batch_size,
+            model=global_model,
         )
 
+        assertEqual(data_provider.num_train_users(), data_loader.num_total_users)
         torch.manual_seed(1)
-        # first training instance
-        global_model = DummyAlphabetFLModel()
         metrics_reporter = MetricsReporterWithMockedChannels()
         sync_trainer = create_sync_trainer(
             model=global_model,
@@ -1038,16 +1044,10 @@ class TestTrainer:
             users_per_round=users_per_round,
             epochs=num_epochs,
             user_epochs_per_round=1,
+            report_train_metrics=True,
+            report_train_metrics_after_aggregation=True,
         )
-        data_provider = FLDataProviderFromList(
-            data_loader.fl_train_set(),
-            data_loader.fl_eval_set(),
-            data_loader.fl_test_set(),
-            global_model,
-        )
-        assertEqual(data_provider.num_users(), data_loader.num_total_users)
-        sync_trainer.cfg.report_train_metrics = True
-        sync_trainer.cfg.report_train_metrics_after_aggregation = True
+
         global_model, best_metric = sync_trainer.train(
             data_provider,
             metrics_reporter,
@@ -1203,7 +1203,7 @@ class TestTrainer:
             data_provider,
             metric_reporter=FakeMetricReporter(),
             # Note: We're using num_total_users and
-            # not data_provider.num_users()
+            # not data_provider.num_train_users()
             num_total_users=num_total_users,
             distributed_world_size=1,
         )
