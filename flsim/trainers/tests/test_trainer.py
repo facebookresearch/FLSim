@@ -28,9 +28,6 @@ from flsim.common.timeout_simulator import GaussianTimeOutSimulatorConfig
 from flsim.data.data_provider import FLDataProviderFromList
 from flsim.data.data_sharder import SequentialSharder
 from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
-from flsim.fb.data.hive_data_utils import create_dataloader
-from flsim.fb.data.hive_dataset import InlineDatasetConfig
-from flsim.fb.data.paged_dataloader import PagedDataProvider
 from flsim.interfaces.metrics_reporter import TrainingStage
 from flsim.optimizers.async_aggregators import FedAdamAsyncAggregatorConfig
 from flsim.optimizers.local_optimizers import (
