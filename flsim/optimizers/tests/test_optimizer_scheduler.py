@@ -16,7 +16,7 @@ from omegaconf import OmegaConf
 
 
 class TestOptimizerScheduler:
-    def test_armijo_line_search_on_parabola(self):
+    def test_armijo_line_search_on_parabola(self) -> None:
         """
             a toy optimization example:
                 min f(x) = 100 x^2 - 1

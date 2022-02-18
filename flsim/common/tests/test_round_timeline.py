@@ -15,7 +15,7 @@ from flsim.common.timeline import Timeline
 
 
 class TestTimeline:
-    def test_global_round_num(self):
+    def test_global_round_num(self) -> None:
         # test first round
         tl = Timeline(epoch=1, round=1)
         assertEqual(tl.global_round_num(), 1)
@@ -32,7 +32,7 @@ class TestTimeline:
         tl = Timeline(epoch=1, round=1, rounds_per_epoch=1, global_round=123)
         assertEqual(tl.global_round_num(), tl.global_round)
 
-    def test_as_float(self):
+    def test_as_float(self) -> None:
         # test first round
         tl = Timeline(epoch=1, round=1)
         assertAlmostEqual(tl.as_float(), 1.0)  # float starts from 1
@@ -66,7 +66,7 @@ class TestTimeline:
         tl = Timeline(epoch=5, round=2, rounds_per_epoch=3)
         assertAlmostEqual(tl.as_float(), 4.66, delta=0.01)
 
-    def test_string(self):
+    def test_string(self) -> None:
         tl = Timeline(epoch=2, round=2, rounds_per_epoch=10)
         assertEqual(f"{tl}", "(epoch = 2, round = 2, global round = 12)")
 
@@ -76,7 +76,7 @@ class TestTimeline:
         tl = Timeline(global_round=10, rounds_per_epoch=10)
         assertEqual(f"{tl}", "(epoch = 1, round = 10, global round = 10)")
 
-    def test_tick_simple(self):
+    def test_tick_simple(self) -> None:
         # test every epoch, i.e.  tick_interval = 1
         tl = Timeline(epoch=1, round=1, rounds_per_epoch=10)
         assertFalse(tl.tick(tick_interval=1))
@@ -127,7 +127,7 @@ class TestTimeline:
         assertFalse(tl.tick(tick_interval=3))
         assertTrue(tl.tick(tick_interval=2))
 
-    def test_tick_complex(self):
+    def test_tick_complex(self) -> None:
         # doing 100 epochs, 10 rounds per epoch, ticking interval = 10 epochs
         sum = 0
         for e in range(1, 101):

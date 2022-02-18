@@ -62,7 +62,7 @@ class Globals:
 
 
 @pytest.fixture(scope="class")
-def prepare_training_simulator_test_utils(request):
+def prepare_training_simulator_test_utils(request) -> None:
     torch.random.manual_seed(0)
     request.cls.shared_client_config = ClientConfig(
         epochs=1,
@@ -101,7 +101,7 @@ class TestTrainingSimulatorUtils:
         exp_start_time: int,
         exp_end_time: int,
         exp_training_state: TrainingState,
-    ):
+    ) -> None:
         assertEqual(
             # pyre-fixme[16]: `TrainingState` has no attribute `training_start_time`.
             training_event[Globals.DEVICE_STATE_IDX].training_schedule.start_time,
@@ -113,7 +113,7 @@ class TestTrainingSimulatorUtils:
         )
         assertEqual(training_event[Globals.TRAINING_STATE_IDX], exp_training_state)
 
-    def test_training_simulator(self):
+    def test_training_simulator(self) -> None:
         """Check that the priority queue in the training simulator works as
         expected by creating a training simulator with a known list of
         event start times and event durations.
@@ -151,6 +151,8 @@ class TestTrainingSimulatorUtils:
             job_scheduler=job_scheduler,
             user_selector=self.random_user_selector(data_provider=data_provider),
             event_generator=distr,
+            # pyre-fixme[16]: `TestTrainingSimulatorUtils` has no attribute
+            #  `shared_client_config`.
             shared_client_config=self.shared_client_config,
             num_train_end_events_per_epoch=len(event_list) - 1,
         )
@@ -221,7 +223,7 @@ class TestTrainingSimulatorUtils:
         assertAlmostEqual(job_scheduler.seqnum_diff_mean(), 2 / 3)
         assertAlmostEqual(job_scheduler.seqnum_std(), math.sqrt(24 / 27))
 
-    def test_async_stats(self):
+    def test_async_stats(self) -> None:
         """Check that the priority JobQueueStats functionality in the training
         simulator works as expected by creating a training simulator with a
         known list of event start times and event durations.
@@ -253,6 +255,8 @@ class TestTrainingSimulatorUtils:
             job_scheduler=job_scheduler,
             user_selector=self.random_user_selector(data_provider=data_provider),
             event_generator=distr,
+            # pyre-fixme[16]: `TestTrainingSimulatorUtils` has no attribute
+            #  `shared_client_config`.
             shared_client_config=self.shared_client_config,
             num_train_end_events_per_epoch=len(event_list) - 1,
         )
@@ -526,19 +530,19 @@ class TestTrainingSimulatorUtils:
             [i[ds_idx].user_info.user_index for i in last_n_events], user_finishing_seq
         )
 
-    def test_training_duration_per_example_gaussian(self):
+    def test_training_duration_per_example_gaussian(self) -> None:
         pass
 
-    def test_training_duration_per_user_gaussian(self):
+    def test_training_duration_per_user_gaussian(self) -> None:
         pass
 
-    def test_training_end_training_start_relative_priority(self):
+    def test_training_end_training_start_relative_priority(self) -> None:
         r"""
         Test that when training end and training start events have the same time,
         training end event happens earlier (has lower priority)
         """
 
-    def test_logging_level(self):
+    def test_logging_level(self) -> None:
         num_users = 50
         training_start_time_distr = PoissonAsyncTrainingStartTimeDistrConfig(
             training_rate=10
@@ -562,6 +566,8 @@ class TestTrainingSimulatorUtils:
             job_scheduler=job_scheduler,
             user_selector=self.random_user_selector(data_provider=data_provider),
             event_generator=distr,
+            # pyre-fixme[16]: `TestTrainingSimulatorUtils` has no attribute
+            #  `shared_client_config`.
             shared_client_config=self.shared_client_config,
             num_train_end_events_per_epoch=num_users,
         )
@@ -571,9 +577,9 @@ class TestTrainingSimulatorUtils:
     def _training_staleness_distribution(
         self,
         duration_distr,
-        training_rate=1000,
-        num_users=10000,
-        examples_per_user=1,
+        training_rate: int = 1000,
+        num_users: int = 10000,
+        examples_per_user: int = 1,
     ):
         data_provider = self._create_data_provider(
             num_users=num_users, examples_per_user=examples_per_user
@@ -595,13 +601,15 @@ class TestTrainingSimulatorUtils:
             job_scheduler=handler,
             user_selector=RandomAsyncUserSelector(data_provider=data_provider),
             event_generator=distr,
+            # pyre-fixme[16]: `TestTrainingSimulatorUtils` has no attribute
+            #  `shared_client_config`.
             shared_client_config=self.shared_client_config,
             num_train_end_events_per_epoch=num_users,
         )
         training_sim.run_one_epoch()
         return np.array(handler.num_unseen_global_model_updates)
 
-    def test_per_user_half_normal_training_duration(self):
+    def test_per_user_half_normal_training_duration(self) -> None:
         """
         Test for staleness with half normal
 
@@ -633,7 +641,7 @@ class TestTrainingSimulatorUtils:
         # 2e-11 = e^(−k^2/2) = exp(-7^2/2)
         assertLessEqual(max(staleness), mean + 7 * sd)
 
-    def test_per_user_uniform_training_duration(self):
+    def test_per_user_uniform_training_duration(self) -> None:
         num_users = 2000
         training_rate = 10
         training_min = 0.0
@@ -655,7 +663,7 @@ class TestTrainingSimulatorUtils:
         assertLessEqual(max(staleness), mean + 4 * sd)
         assertGreaterEqual(min(staleness), mean - 4 * sd)
 
-    def test_per_user_exponential_training_duration(self):
+    def test_per_user_exponential_training_duration(self) -> None:
         for training_mean in [0.5, 1, 2]:
             num_users = 2000
             training_rate = 10

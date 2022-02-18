@@ -18,14 +18,14 @@ from omegaconf import OmegaConf
 
 
 @pytest.fixture(scope="class")
-def prepare_lars_optimizer_test(request):
+def prepare_lars_optimizer_test(request) -> None:
     request.cls.quadratic1D_lars = MockQuadratic1DFL(Quadratic1D())
     request.cls.quadratic1D_sgd = MockQuadratic1DFL(Quadratic1D())
 
 
 @pytest.mark.usefixtures("prepare_lars_optimizer_test")
 class TestLarsOptimizer:
-    def test_lars_multiple_steps(self):
+    def test_lars_multiple_steps(self) -> None:
         """
             a toy optimization example:
                 min f(x) = 100 x^2 - 1
@@ -35,7 +35,13 @@ class TestLarsOptimizer:
         # set up quadratic parabola objective and optimizer
         dict_config_lars = {"lr": 0.01, "weight_decay": 0}
         lars_aggregator = FedLARSSyncAggregator(
+            # pyre-fixme[6]: Expected `bool` for 1st param but got `float`.
+            # pyre-fixme[6]: Expected `IFLRoundReducerConfig` for 1st param but got
+            #  `float`.
+            # pyre-fixme[6]: Expected `int` for 1st param but got `float`.
+            # pyre-fixme[6]: Expected `str` for 1st param but got `float`.
             **OmegaConf.structured(FedLARSSyncAggregatorConfig(**dict_config_lars)),
+            # pyre-fixme[16]: `TestLarsOptimizer` has no attribute `quadratic1D_lars`.
             global_model=self.quadratic1D_lars,
         )
 
@@ -73,8 +79,15 @@ class TestLarsOptimizer:
             dict_config_sgd = {"lr": equivalent_sgd_lr}
             sgd_aggregator = FedAvgWithLRSyncAggregator(
                 **OmegaConf.structured(
+                    # pyre-fixme[6]: Expected `bool` for 1st param but got `float`.
+                    # pyre-fixme[6]: Expected `IFLRoundReducerConfig` for 1st param
+                    #  but got `float`.
+                    # pyre-fixme[6]: Expected `int` for 1st param but got `float`.
+                    # pyre-fixme[6]: Expected `str` for 1st param but got `float`.
                     FedAvgWithLRSyncAggregatorConfig(**dict_config_sgd)
                 ),
+                # pyre-fixme[16]: `TestLarsOptimizer` has no attribute
+                #  `quadratic1D_sgd`.
                 global_model=self.quadratic1D_sgd,
             )
 

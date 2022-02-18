@@ -51,8 +51,8 @@ class TestDifferentialPrivacyIntegration:
         noise,
         clipping,
         reduction_type=ReductionType.WEIGHTED_SUM,
-        min_weight=1e-6,
-        max_weight=1.0,
+        min_weight: float = 1e-6,
+        max_weight: float = 1.0,
     ):
         return WeightedDPRoundReducerConfig(
             reduction_type=reduction_type,
@@ -150,7 +150,7 @@ class TestDifferentialPrivacyIntegration:
         dp_config: Optional[Dict[str, Any]] = None,
         noise_func_seed: Optional[int] = None,
         data_size: int = 26,
-        **kwargs,
+        **kwargs
     ):
         """
         Trains an FL model, with or without DP
@@ -638,7 +638,7 @@ class TestDifferentialPrivacyIntegration:
         clip_norm,
         data_provider,
         buffer_size,
-        epochs=1,
+        epochs: int = 1,
     ):
         local_lr = np.random.sample()
         global_lr = np.random.sample()

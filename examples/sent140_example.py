@@ -159,7 +159,7 @@ class Sent140Dataset(Dataset):
         return list(itertools.chain.from_iterable(nested_list))
 
 
-def build_data_provider(data_config, drop_last=False):
+def build_data_provider(data_config, drop_last: bool = False):
 
     train_dataset = Sent140Dataset(
         data_root="leaf/data/sent140/data/train/all_data_0_01_keep_1_train_9.json",
@@ -178,6 +178,7 @@ def build_data_provider(data_config, drop_last=False):
         drop_last=drop_last,
     )
 
+    # pyre-fixme[45]: Cannot instantiate abstract class `DataProvider`.
     data_provider = DataProvider(dataloader)
     return data_provider, train_dataset.num_letters
 
@@ -186,9 +187,9 @@ def main_worker(
     trainer_config,
     model_config,
     data_config,
-    use_cuda_if_available=True,
-    distributed_world_size=1,
-):
+    use_cuda_if_available: bool = True,
+    distributed_world_size: int = 1,
+) -> None:
     data_provider, num_letters = build_data_provider(data_config)
 
     model = CharLSTM(
@@ -201,6 +202,7 @@ def main_worker(
     )
     cuda_enabled = torch.cuda.is_available() and use_cuda_if_available
     device = torch.device(f"cuda:{0}" if cuda_enabled else "cpu")
+    # pyre-fixme[6]: Expected `Optional[str]` for 2nd param but got `device`.
     global_model = FLModel(model, device)
     if cuda_enabled:
         global_model.fl_cuda()
@@ -222,7 +224,7 @@ def main_worker(
 
 
 @hydra.main(config_path=None, config_name="sent140_tutorial")
-def run(cfg: DictConfig):
+def run(cfg: DictConfig) -> None:
     print(OmegaConf.to_yaml(cfg))
 
     trainer_config = cfg.trainer

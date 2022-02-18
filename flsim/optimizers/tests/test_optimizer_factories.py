@@ -29,7 +29,7 @@ from omegaconf import OmegaConf
 
 
 @pytest.fixture(scope="class")
-def prepare_optimizer_factory_test(request):
+def prepare_optimizer_factory_test(request) -> None:
     request.cls.model = TwoLayerNet(10, 5, 1)
 
 
