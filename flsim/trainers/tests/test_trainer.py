@@ -1146,6 +1146,7 @@ class TestTrainer:
             f"Actual global steps: {global_steps_reported_actual}, Expected global steps:{global_steps_reported_expected}",
         )
 
+    @pytest.mark.xfail
     @pytest.mark.parametrize(
         "page_turn_freq,users_per_round, pages_used",
         [
