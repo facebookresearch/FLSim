@@ -92,7 +92,7 @@ class TestTrainer:
     )
     def test_trainer_creation_from_json_config(
         self, json_file_name: str, trainer_class: type
-    ):
+    ) -> None:
         trainer = None
         file_path = pkg_resources.resource_filename(__name__, json_file_name)
         with open(file_path, "r") as parameters_file:
@@ -105,7 +105,7 @@ class TestTrainer:
         )
         assertIsInstance(trainer, trainer_class)
 
-    def test_trainer_sync_server_creation_from_json_config(self):
+    def test_trainer_sync_server_creation_from_json_config(self) -> None:
         file_path = pkg_resources.resource_filename(__name__, SYNC_TRAINER_JSON)
         with open(file_path, "r") as parameters_file:
             json_cfg = json.load(parameters_file)
@@ -128,7 +128,7 @@ class TestTrainer:
     )
     def test_trainer_creation_from_yaml_config(
         self, yaml_file_name: str, trainer_class: type
-    ):
+    ) -> None:
         trainer = None
         with initialize(config_path=CONFIG_PATH):
             cfg = compose(config_name=yaml_file_name)
@@ -139,7 +139,7 @@ class TestTrainer:
             )
         assertIsInstance(trainer, trainer_class)
 
-    def test_async_trainer_with_dp_creation_from_json_config(self):
+    def test_async_trainer_with_dp_creation_from_json_config(self) -> None:
         trainer = None
         file_path = pkg_resources.resource_filename(__name__, ASYNC_TRAINER_JSON)
         with open(file_path, "r") as parameters_file:
@@ -153,7 +153,7 @@ class TestTrainer:
         assertIsInstance(trainer, AsyncTrainer)
         assertTrue(trainer.aggregator.is_private)
 
-    def test_async_trainer_with_dp_creation_from_yaml_config(self):
+    def test_async_trainer_with_dp_creation_from_yaml_config(self) -> None:
         trainer = None
         with initialize(config_path=CONFIG_PATH):
             cfg = compose(config_name=ASYNC_TRAINER_YAML)
@@ -165,7 +165,7 @@ class TestTrainer:
         assertIsInstance(trainer, AsyncTrainer)
         assertTrue(trainer.aggregator.is_private)
 
-    def test_global_model_unchanged_after_metrics_reporting(self):
+    def test_global_model_unchanged_after_metrics_reporting(self) -> None:
         """
         reporting metrics after aggregation should NOT update the global model
         """
@@ -229,7 +229,7 @@ class TestTrainer:
         # make sure metrics reporting after aggregation does not change global model
         assertEqual(FLModelParamUtils.get_mismatched_param(modules), "")
 
-    def test_client_optimizer_creation_from_config(self):
+    def test_client_optimizer_creation_from_config(self) -> None:
         """
         Test if trainer can instantiate the correct client optimizer from config
         """
@@ -259,7 +259,7 @@ class TestTrainer:
             (FedAdamAsyncAggregatorConfig(beta1=0.1), AsyncTrainer),
         ],
     )
-    def test_server_optimizer_creation_from_config(self, config, trainer_type):
+    def test_server_optimizer_creation_from_config(self, config, trainer_type) -> None:
         """
         Test if trainer can instantiate correct aggregator config
         """
@@ -271,7 +271,7 @@ class TestTrainer:
         trainer = instantiate(config, model=DummyAlphabetFLModel(), cuda_enabled=False)
         assertTrue(isinstance(trainer, trainer_type))
 
-    def test_same_training_results_with_post_aggregation_reporting(self):
+    def test_same_training_results_with_post_aggregation_reporting(self) -> None:
         """
         create two training instances,
         one with report_train_metrics_after_aggregation=True, another with False,
@@ -353,7 +353,7 @@ class TestTrainer:
             "",
         )
 
-    def test_different_metrics_with_aggregation_client_reporting(self):
+    def test_different_metrics_with_aggregation_client_reporting(self) -> None:
         """
         create two training instances,
         one with use_train_clients_for_aggregation_metrics=True, another with False,
@@ -440,7 +440,7 @@ class TestTrainer:
                 return
         assert True, "Batch metrics same whether using training or random clients"
 
-    def test_one_user_sequential_user_equivalent(self):
+    def test_one_user_sequential_user_equivalent(self) -> None:
         """
         test equivalence of the following scenario,
 
@@ -533,7 +533,7 @@ class TestTrainer:
             "",
         )
 
-    def test_training_with_armijo_line_search(self):
+    def test_training_with_armijo_line_search(self) -> None:
         """
         test Armijo line-search for local LR scheduling
 
@@ -619,7 +619,7 @@ class TestTrainer:
         epochs: int,
         local_lr: float,
         server_config: SyncServerConfig,
-    ):
+    ) -> None:
         """
         Given:
             data_for_fl={user1:batch1, user2:batch2}
@@ -697,7 +697,7 @@ class TestTrainer:
         )
         assertEmpty(error_msg, msg=error_msg)
 
-    def test_fl_nonfl_equivalent_global_optimizer_sgd(self):
+    def test_fl_nonfl_equivalent_global_optimizer_sgd(self) -> None:
         """
         Given:
             batch_size=13
@@ -719,7 +719,7 @@ class TestTrainer:
             ),
         )
 
-    def test_fl_nonfl_equivalent_global_optimizer_adam(self):
+    def test_fl_nonfl_equivalent_global_optimizer_adam(self) -> None:
         """
         Given:
             batch_size=16 (bs=num_examples/num_fl_users)
@@ -741,7 +741,7 @@ class TestTrainer:
             ),
         )
 
-    def test_client_overselection(self):
+    def test_client_overselection(self) -> None:
         """
         test client overselection by equivalence of the two setups:
 
@@ -842,7 +842,7 @@ class TestTrainer:
             "",
         )
 
-    def test_partial_update_from_clients(self):
+    def test_partial_update_from_clients(self) -> None:
         """
         test the equivalence of these two training instance
         1. UPR=1. User dataset has 52 characters [a,b,c,d .... x, y ,z, a, b, c... x,y,z],
@@ -932,7 +932,7 @@ class TestTrainer:
             "",
         )
 
-    def test_client_metric_reporting(self):
+    def test_client_metric_reporting(self) -> None:
         """
         Test that per-client reporting reports exactly every
         ``client_metrics_reported_per_epoch`` as defined in the config.
@@ -1011,7 +1011,7 @@ class TestTrainer:
         )
 
     def _get_tensorboard_results_from_training(
-        self, num_total_users, num_epochs, users_per_round
+        self, num_total_users: int, num_epochs: int, users_per_round: int
     ) -> List[MockRecord]:
         # dataset has 26 rows
         assertTrue(num_total_users <= 26, "Can't have more than 26 users")
@@ -1053,7 +1053,7 @@ class TestTrainer:
         )
         return metrics_reporter.tensorboard_results
 
-    def test_tensorboard_metrics_reporting_simple(self):
+    def test_tensorboard_metrics_reporting_simple(self) -> None:
         """Train with tensorboard metrics reporter for one epoch, 5 rounds per epoch.
         Test for 2 things:
         a) Train, Aggregation and Eval metrics are reported once
@@ -1093,7 +1093,7 @@ class TestTrainer:
             f"Actual global steps: {global_steps_reported_actual}, Expected global steps:{global_steps_reported_expected}",
         )
 
-    def test_tensorboard_metrics_reporting_complex(self):
+    def test_tensorboard_metrics_reporting_complex(self) -> None:
         """Train with tensorboard metrics reporter. Ensure eval and train metrics are
         correctly reported to tensorboard
         """
@@ -1156,8 +1156,8 @@ class TestTrainer:
         ],
     )
     def test_sync_trainer_with_page_data_provider(
-        self, page_turn_freq, users_per_round, pages_used
-    ):
+        self, page_turn_freq, users_per_round: int, pages_used
+    ) -> None:
         """
         Test if sync trainer works properly with paged data loader
         Assumptions:

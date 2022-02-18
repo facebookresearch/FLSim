@@ -26,7 +26,9 @@ from flsim.utils.tests.helpers.test_models import (
 )
 from flsim.utils.tests.helpers.test_utils import FLTestUtils
 
-PRIVATE_SLOPE_MODULE_NAME = FLModelWithPrivateModules.USER_PRIVATE_MODULE_PREFIX + "_a"
+PRIVATE_SLOPE_MODULE_NAME: str = (
+    FLModelWithPrivateModules.USER_PRIVATE_MODULE_PREFIX + "_a"
+)
 
 
 class TestFLModelParamUtils:
@@ -107,18 +109,18 @@ class TestFLModelParamUtils:
             {PRIVATE_SLOPE_MODULE_NAME: torch.tensor([0.0]), "b": torch.tensor([0.0])},
         )
 
-    def test_get_trainable_params(self):
+    def test_get_trainable_params(self) -> None:
         fc_model = FCModel()
         assertEqual(len(list(FLModelParamUtils.get_trainable_params(fc_model))), 6)
 
-    def test_get_num_trainable_params(self):
+    def test_get_num_trainable_params(self) -> None:
         fc_model = FCModel()
         assertEqual(
             FLModelParamUtils.get_num_trainable_params(fc_model),
             10 * 5 + 5 * 3 + 3 * 1 + 5 + 3 + 1,
         )
 
-    def test_get_gradient_l2_norm_raw(self):
+    def test_get_gradient_l2_norm_raw(self) -> None:
         fc_model = FCModel()
         # set all gradients to 0, l2 norm should be zero
         for p in FLModelParamUtils.get_trainable_params(fc_model):
@@ -143,11 +145,11 @@ class TestFLModelParamUtils:
             FLModelParamUtils.get_gradient_l2_norm_normalized(fc_model), 1, delta=1e-1
         )
 
-    def test_model_linear_comb(self):
+    def test_model_linear_comb(self) -> None:
         """Test that computing linear comibination works for a model"""
         FLTestUtils.compare_model_linear_comb(FCModel(), FCModel())
 
-    def test_gradient_reconstruction(self):
+    def test_gradient_reconstruction(self) -> None:
         """Test that gradient reconstruction works with a model.
         Create model, run some operations on it.
         """
@@ -156,20 +158,26 @@ class TestFLModelParamUtils:
             model, copy_model, reconstructed_grad
         )
 
-    def test_fed_async_aggregation_with_weights(self):
+    def test_fed_async_aggregation_with_weights(self) -> None:
         """Test that weights work for FedAsync aggregation"""
         torch.manual_seed(1)
         num_models = 4
         models = [FCModel() for i in range(num_models)]
         temp_model = FLModelParamUtils.clone(models[0])
         # verify that 0 weights work as expected
+        # pyre-fixme[6]: Expected `List[nn.modules.module.Module]` for 1st param but
+        #  got `List[FCModel]`.
         FLModelParamUtils.average_models(models, temp_model, [0, 0, 0, 1])
         assertTrue(
             FLModelParamUtils.get_mismatched_param([temp_model, models[3]]) == ""
         )
         # verify that equal weights work as expected
+        # pyre-fixme[6]: Expected `List[nn.modules.module.Module]` for 1st param but
+        #  got `List[FCModel]`.
         FLModelParamUtils.average_models(models, temp_model, [1, 1, 1, 1])
         temp_model_no_wts = FLModelParamUtils.clone(models[0])
+        # pyre-fixme[6]: Expected `List[nn.modules.module.Module]` for 1st param but
+        #  got `List[FCModel]`.
         FLModelParamUtils.average_models(models, temp_model_no_wts)
         assertTrue(
             FLModelParamUtils.get_mismatched_param([temp_model, temp_model_no_wts])
@@ -177,12 +185,18 @@ class TestFLModelParamUtils:
         )
         # verify that unequal weights work as expected
         temp_model_1 = FLModelParamUtils.clone(models[0])
+        # pyre-fixme[6]: Expected `List[nn.modules.module.Module]` for 1st param but
+        #  got `List[FCModel]`.
         FLModelParamUtils.average_models(models, temp_model_1, [1, 1, 2, 2])
         temp_model_2 = FLModelParamUtils.clone(models[0])
+        # pyre-fixme[6]: Expected `List[nn.modules.module.Module]` for 1st param but
+        #  got `List[FCModel]`.
         FLModelParamUtils.average_models(models, temp_model_2, [2, 2, 1, 1])
         temp_model_3 = FLModelParamUtils.clone(models[0])
         FLModelParamUtils.average_models([temp_model_1, temp_model_2], temp_model_3)
         temp_model_4 = FLModelParamUtils.clone(models[0])
+        # pyre-fixme[6]: Expected `List[nn.modules.module.Module]` for 1st param but
+        #  got `List[FCModel]`.
         FLModelParamUtils.average_models(models, temp_model_4, [1, 1, 1, 1])
 
         mismatched_param = FLModelParamUtils.get_mismatched_param(
@@ -200,19 +214,21 @@ class TestFLModelParamUtils:
 
     def _compute_difference_in_norm(
         self, model1: torch.nn.Module, model2: torch.nn.Module
-    ):
+    ) -> float:
         total_difference = 0.0
         for (parameter1, parameter2) in zip(model1.parameters(), model2.parameters()):
             total_difference += torch.norm(parameter1.data - parameter2.data)
         return total_difference
 
-    def test_simple_model_copy(self):
+    def test_simple_model_copy(self) -> None:
         """Test that FedAsync aggregation works for a simple Model"""
         num_models = 4
         orig_models = [FCModel() for i in range(num_models)]
+        # pyre-fixme[6]: Expected `List[nn.modules.module.Module]` for 1st param but
+        #  got `List[FCModel]`.
         FLTestUtils.average_and_verify_models(orig_models)
 
-    def test_debug_model_norm(self):
+    def test_debug_model_norm(self) -> None:
         fc_model = FCModel()
         for p in fc_model.parameters():
             torch.nn.init.constant_(p, 0.0)
@@ -224,10 +240,12 @@ class TestFLModelParamUtils:
             FLModelParamUtils.get_num_trainable_params(fc_model),
         )
 
-    def test_set_gradient(self):
+    def test_set_gradient(self) -> None:
         model = LinearRegression()
         reconstructed_gradient = LinearRegression()
+        # pyre-fixme[41]: `data` cannot be reassigned. It is a read-only property.
         reconstructed_gradient.a.data = torch.FloatTensor([0.5])
+        # pyre-fixme[41]: `data` cannot be reassigned. It is a read-only property.
         reconstructed_gradient.b.data = torch.FloatTensor([1.0])
         FLModelParamUtils.set_gradient(
             model=model, reference_gradient=reconstructed_gradient
@@ -235,7 +253,7 @@ class TestFLModelParamUtils:
         assertEqual(model.a.grad, reconstructed_gradient.a)
         assertEqual(model.b.grad, reconstructed_gradient.b)
 
-    def test_get_mismatched_param(self):
+    def test_get_mismatched_param(self) -> None:
         a_val, b_val = 0.5, 1.0
 
         class MismatchingLinearRegression(nn.Module):
@@ -248,10 +266,12 @@ class TestFLModelParamUtils:
                 return self.a + self.c * x
 
         model_1, model_2 = LinearRegression(), LinearRegression()
+        # pyre-fixme[41]: `data` cannot be reassigned. It is a read-only property.
         model_1.a.data, model_1.b.data = (
             torch.FloatTensor([a_val]),
             torch.FloatTensor([b_val]),
         )
+        # pyre-fixme[41]: `data` cannot be reassigned. It is a read-only property.
         model_2.a.data, model_2.b.data = (
             torch.FloatTensor([a_val]),
             torch.FloatTensor([b_val]),
@@ -261,10 +281,12 @@ class TestFLModelParamUtils:
         assertEqual(FLModelParamUtils.get_mismatched_param([model_1, model_2]), "")
 
         # 2) only param 'a' is different => return 'a'
+        # pyre-fixme[41]: `data` cannot be reassigned. It is a read-only property.
         model_2.a.data = torch.FloatTensor([b_val])
         assertEqual(FLModelParamUtils.get_mismatched_param([model_1, model_2]), "a")
 
         # 3) only param 'b' is different => return 'b'
+        # pyre-fixme[41]: `data` cannot be reassigned. It is a read-only property.
         model_2.a.data, model_2.b.data = (
             torch.FloatTensor([a_val]),
             torch.FloatTensor([a_val]),
@@ -273,6 +295,7 @@ class TestFLModelParamUtils:
 
         # 4) both param 'a' and 'b' are different
         # => return the first mismatched param, which is 'a'
+        # pyre-fixme[41]: `data` cannot be reassigned. It is a read-only property.
         model_2.a.data = torch.FloatTensor([b_val])
         assertEqual(FLModelParamUtils.get_mismatched_param([model_1, model_2]), "a")
 
@@ -285,7 +308,7 @@ class TestFLModelParamUtils:
             "b",
         )
 
-    def test_copy_models(self):
+    def test_copy_models(self) -> None:
         torch.manual_seed(1)
         fc_model = FCModel()
         torch.manual_seed(2)

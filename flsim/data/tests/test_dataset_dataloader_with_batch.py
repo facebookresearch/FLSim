@@ -18,7 +18,7 @@ from hydra.utils import instantiate
 
 
 @pytest.fixture(scope="class")
-def prepare_dataset_data_loader_with_batch(request):
+def prepare_dataset_data_loader_with_batch(request) -> None:
     request.cls.test_csv_path = "test_resources/data.csv"
     request.cls.total_data_count = 15
     request.cls.train_batch_size = 1

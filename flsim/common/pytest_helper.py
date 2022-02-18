@@ -18,7 +18,7 @@ def assertIsInstance(o: object, t: type) -> None:
     assert isinstance(o, t)
 
 
-def assertAlmostEqual(first, second, places=None, msg=None, delta=None):
+def assertAlmostEqual(first, second, places=None, msg=None, delta=None) -> None:
     """Assert that ``first`` and ``second`` is almost equal to each other.
 
     The equality of ``first`` and ``second`` is determined in a similar way to
@@ -27,6 +27,7 @@ def assertAlmostEqual(first, second, places=None, msg=None, delta=None):
     if delta is not None and places is not None:
         raise TypeError("specify delta or places - not both")
 
+    # pyre-fixme[35]: Target cannot be annotated.
     msg: str = ""
     diff = abs(second - first)
     if delta is not None:

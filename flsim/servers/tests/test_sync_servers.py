@@ -45,7 +45,7 @@ class MockClientUpdate:
 
 
 class TestSyncServer:
-    def _create_client_updates(self, num_clients, aggregation_type):
+    def _create_client_updates(self, num_clients, aggregation_type) -> MockClientUpdate:
         deltas = [i + 1 for i in range(num_clients)]
         weights = [i + 1 for i in range(num_clients)]
 
@@ -57,6 +57,9 @@ class TestSyncServer:
             expected_value = float(sum(d * w for d, w in zip(deltas, weights)))
         elif aggregation_type == AggregationType.SUM:
             expected_value = float(sum(deltas))
+        # pyre-fixme[6]: Expected `List[float]` for 1st param but got `List[int]`.
+        # pyre-fixme[6]: Expected `List[float]` for 2nd param but got `List[int]`.
+        # pyre-fixme[61]: `expected_value` is undefined, or not always defined.
         return MockClientUpdate(deltas, weights, expected_value)
 
     def _run_one_round_comparison(
@@ -82,7 +85,9 @@ class TestSyncServer:
         server.step()
         return server_model, optim_model
 
-    def _compare_optim_and_server(self, opt_config, num_rounds, num_clients, agg_type):
+    def _compare_optim_and_server(
+        self, opt_config, num_rounds, num_clients, agg_type
+    ) -> None:
         server_model = SampleNet(create_model_with_value(0))
         optim_model = create_model_with_value(0)
         server = instantiate(
@@ -261,7 +266,7 @@ class TestSyncServer:
             num_clients=num_clients,
         )
 
-    def test_select_clients_for_training(self):
+    def test_select_clients_for_training(self) -> None:
         """
         Selects 10 clients out of 100. SyncServer with seed = 0 should
         return the same indices as those of uniform random selector.
@@ -286,7 +291,7 @@ class TestSyncServer:
         "channel",
         [HalfPrecisionChannel(), IdentityChannel()],
     )
-    def test_server_channel_integration(self, channel):
+    def test_server_channel_integration(self, channel) -> None:
         """From Client to Server, the channel should quantize and then dequantize the message
         therefore there should be no change in the model
         """

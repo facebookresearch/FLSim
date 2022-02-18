@@ -9,7 +9,7 @@ import logging
 import sys
 
 
-LOGGING_LEVEL = logging.WARNING
+LOGGING_LEVEL: int = logging.WARNING
 # If this flag is true logging will be printed to both stdout and stderr
 PRINT_TO_STDOUT = False
 

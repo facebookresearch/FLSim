@@ -24,7 +24,7 @@ from omegaconf import OmegaConf
 
 
 class TestTrainingTimeOutSimulator:
-    def test_online_stat_computation_correct(self):
+    def test_online_stat_computation_correct(self) -> None:
         timeout_simulator = GaussianTimeOutSimulator(
             **OmegaConf.structured(
                 GaussianTimeOutSimulatorConfig(
@@ -65,7 +65,7 @@ class TestTrainingTimeOutSimulator:
             )
         )
 
-    def test_fl_stops_small_stopping_time(self):
+    def test_fl_stops_small_stopping_time(self) -> None:
         """
         create a dummy "training loop" (loop through users and rounds
         without actual training) and stops the training loop by explicitly
@@ -132,9 +132,13 @@ class TestTrainingTimeOutSimulator:
             timeout_simulator._fl_total_elapse_time,
             delta=1e-6,
         )
+        # pyre-fixme[61]: `fl_stopping_round_ground_truth` is undefined, or not
+        #  always defined.
+        # pyre-fixme[61]: `fl_stopping_round_simulator` is undefined, or not always
+        #  defined.
         assertEqual(fl_stopping_round_ground_truth, fl_stopping_round_simulator)
 
-    def test_fl_stops_small_stopping_time_2(self):
+    def test_fl_stops_small_stopping_time_2(self) -> None:
         r"""
         training time should not be negative
         """

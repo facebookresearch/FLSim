@@ -20,7 +20,7 @@ from flsim.common.pytest_helper import (
 
 
 class TestDiversityStatistics:
-    def test_initialize_diversity_statistics(self):
+    def test_initialize_diversity_statistics(self) -> None:
         n_test_cases = 1000
         num_cohorts_per_test = 10
         std_dev = 500.0
@@ -94,7 +94,7 @@ class TestDiversityStatistics:
 
 
 class TestDiversityMetrics:
-    def test_initialize_diversity_metrics(self):
+    def test_initialize_diversity_metrics(self) -> None:
         diversity_metrics = DiversityMetrics(norm_of_sum=1.0, sum_of_norms=2.0)
         assertTrue(isinstance(diversity_metrics, DiversityMetrics))
         assertEqual(

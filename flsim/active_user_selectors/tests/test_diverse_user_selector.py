@@ -31,7 +31,7 @@ class TestDiverseUserSelector:
 
     # Since diversity statistics reporting selector chooses uniformly randomly, replicate the tests
     # for that class. select_diverse_cohort is tested separately.
-    def test_diversity_statistics_reporting_user_selector(self):
+    def test_diversity_statistics_reporting_user_selector(self) -> None:
         null_selector = instantiate(
             DiversityStatisticsReportingUserSelectorConfig(num_candidate_cohorts=2)
         )
@@ -75,7 +75,7 @@ class TestDiverseUserSelector:
             )
             assertEqual(selection_1, selection_2)
 
-    def test_diversity_maximizing_user_selector(self):
+    def test_diversity_maximizing_user_selector(self) -> None:
         # Check that the selector actually chooses the cohort with maximum GD.
         # For cohort size 3 our of 4 users, there are 4 possible cohorts.
         # With 100 candidate cohorts we will try all 4 with very high probability.
@@ -153,7 +153,7 @@ class TestDiverseUserSelector:
         assertTrue(counts[0] > 400)
         assertTrue(counts[0] < 600)
 
-    def test_user_selector_diversity_metric_type(self):
+    def test_user_selector_diversity_metric_type(self) -> None:
         # Test that the created user selector uses the specified diversity metric
 
         metric_type_strings = [
@@ -182,7 +182,7 @@ class TestDiverseUserSelectorUtils:
 
     tolerence = 1e-5
 
-    def test_calculate_diversity_metrics(self):
+    def test_calculate_diversity_metrics(self) -> None:
         # We construct nonoverlapping data for each user so that the gradient diversity will be 1
         num_total_users, users_per_round = 10, 3
         num_nonzeros_per_user, num_data_per_user = 4, 6
@@ -203,7 +203,10 @@ class TestDiverseUserSelectorUtils:
         available_users = range(num_total_users)
         rng = torch.Generator()
         diversity_metrics = DiverseUserSelectorUtils.calculate_diversity_metrics(
-            data_provider, linear_model, available_users
+            data_provider,
+            linear_model,
+            # pyre-fixme[6]: Expected `List[int]` for 3rd param but got `range`.
+            available_users,
         )
         assertTrue(
             math.isclose(diversity_metrics.gradient_diversity, 1.0, rel_tol=1e-04)
@@ -247,7 +250,10 @@ class TestDiverseUserSelectorUtils:
         available_users = range(num_total_users)
         rng = torch.Generator()
         diversity_metrics = DiverseUserSelectorUtils.calculate_diversity_metrics(
-            data_provider, linear_model, available_users
+            data_provider,
+            linear_model,
+            # pyre-fixme[6]: Expected `List[int]` for 3rd param but got `range`.
+            available_users,
         )
         assertTrue(diversity_metrics.gradient_diversity >= 1.0 / num_total_users)
 
@@ -272,7 +278,7 @@ class TestDiverseUserSelectorUtils:
                 idx for idx in available_users if idx not in user_indices
             ]
 
-    def test_select_diverse_cohort(self):
+    def test_select_diverse_cohort(self) -> None:
 
         # Use dataset in which the gradient diversity is 1 for any cohort and
         # Check max, avg, and min GD = 1
@@ -304,6 +310,7 @@ class TestDiverseUserSelectorUtils:
             data_provider=data_provider,
             global_model=linear_model,
             users_per_round=users_per_round,
+            # pyre-fixme[6]: Expected `List[int]` for 4th param but got `range`.
             available_users=available_users,
             rng=rng,
             num_search_samples=num_candidate_cohorts,
@@ -353,6 +360,7 @@ class TestDiverseUserSelectorUtils:
             data_provider=data_provider,
             global_model=linear_model,
             users_per_round=num_total_users,
+            # pyre-fixme[6]: Expected `List[int]` for 4th param but got `range`.
             available_users=available_users,
             rng=rng,
             num_search_samples=num_candidate_cohorts,
@@ -386,6 +394,8 @@ class TestDiverseUserSelectorUtils:
                 data_provider=data_provider,
                 global_model=linear_model,
                 users_per_round=users_per_round,
+                # pyre-fixme[6]: Expected `List[int]` for 4th param but got
+                #  `Union[typing.List[int], range]`.
                 available_users=available_users,
                 rng=rng,
                 num_search_samples=num_candidate_cohorts,
@@ -481,6 +491,7 @@ class TestDiverseUserSelectorUtils:
             data_provider=data_provider,
             global_model=linear_model,
             users_per_round=num_total_users,
+            # pyre-fixme[6]: Expected `List[int]` for 4th param but got `range`.
             available_users=available_users,
             rng=rng,
             num_search_samples=num_candidate_cohorts,
@@ -514,6 +525,8 @@ class TestDiverseUserSelectorUtils:
                 data_provider=data_provider,
                 global_model=linear_model,
                 users_per_round=users_per_round,
+                # pyre-fixme[6]: Expected `List[int]` for 4th param but got
+                #  `Union[typing.List[int], range]`.
                 available_users=available_users,
                 rng=rng,
                 num_search_samples=num_candidate_cohorts,

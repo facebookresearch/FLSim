@@ -10,7 +10,7 @@ from flsim.utils.config_utils import _flatten_dict, fl_json_to_dotlist
 
 
 class TestConfigUtils:
-    def test_flatten_dict(self):
+    def test_flatten_dict(self) -> None:
         assertEqual(_flatten_dict({}), {})
         assertEqual(_flatten_dict({"a": 1}), {"a": 1})
         assertEqual(_flatten_dict({"a": None}), {"a": None})
@@ -92,7 +92,7 @@ class TestConfigUtils:
             },
         )
 
-    def test_json_to_dotlist(self):
+    def test_json_to_dotlist(self) -> None:
         assertEqual(fl_json_to_dotlist({}, append_or_override=False), [])
         assertEqual(fl_json_to_dotlist({"a": 1}, append_or_override=False), ["a=1"])
         assertEqual(
@@ -195,7 +195,7 @@ class TestConfigUtils:
             ],
         )
 
-    def test_json_to_dotlist_append_or_override(self):
+    def test_json_to_dotlist_append_or_override(self) -> None:
 
         assertEqual(fl_json_to_dotlist({}), [])
         assertEqual(fl_json_to_dotlist({"a": 1}), ["++a=1"])

@@ -26,7 +26,7 @@ class TestSecureAggregator:
         fl_model.fl_get_module().fill_all(model_param_value)
         return fl_model.fl_get_module()
 
-    def test_fixedpoint_init(self):
+    def test_fixedpoint_init(self) -> None:
         """
         Tests that FixedPointConverter init works correctly
         """
@@ -51,7 +51,7 @@ class TestSecureAggregator:
                 )
             )
 
-    def test_floating_to_fixedpoint(self):
+    def test_floating_to_fixedpoint(self) -> None:
         """
         Tests whether conversion from floating point to fixed point works
         """
@@ -96,7 +96,7 @@ class TestSecureAggregator:
         # y = x * scaling_factor = -32769 ==> adjust to minValue -32768
         assertEqual(y, torch.tensor(-32768))
 
-    def test_fixed_to_floating_point(self):
+    def test_fixed_to_floating_point(self) -> None:
         """
         Tests whether conversion from fixed point to floating point works
         """
@@ -115,7 +115,7 @@ class TestSecureAggregator:
         # y = x / scaling_factor = 1.847058823529412
         assertTrue(torch.allclose(y, torch.tensor(1.847058823529412), rtol=1e-10))
 
-    def test_params_floating_to_fixedpoint(self):
+    def test_params_floating_to_fixedpoint(self) -> None:
         """
         Tests whether the parameters of a model are converted correctly
         from floating point to fixed point
@@ -136,7 +136,7 @@ class TestSecureAggregator:
         mismatched = utils.model_parameters_equal_to_value(model, -383.0)
         assertEqual(mismatched, "", mismatched)
 
-    def test_params_floating_to_fixedpoint_different_config_for_layers(self):
+    def test_params_floating_to_fixedpoint_different_config_for_layers(self) -> None:
         """
         Tests whether the parameters of a model are converted correctly
         from floating point to fixed point, when we have different
@@ -166,7 +166,7 @@ class TestSecureAggregator:
                 # round 54.728 to 55
                 assertTrue(torch.allclose(p, torch.tensor(55.0), rtol=1e-10))
 
-    def test_error_raised_per_layer_config_not_set(self):
+    def test_error_raised_per_layer_config_not_set(self) -> None:
         """
         Tests whether all layers have their corresponding configs, when
         per layer fixed point converter is used.
@@ -187,7 +187,7 @@ class TestSecureAggregator:
         with assertRaises(ValueError):
             secure_aggregator.params_to_fixedpoint(model)
 
-    def test_params_fixed_to_floating_point(self):
+    def test_params_fixed_to_floating_point(self) -> None:
         """
         Tests whether the parameters of a model are converted correctly
         from fixed point to floating point
@@ -199,7 +199,7 @@ class TestSecureAggregator:
         mismatched = utils.model_parameters_equal_to_value(model, 22.0)
         assertEqual(mismatched, "", mismatched)
 
-    def test_params_fixed_to_floating_point_different_config_for_layers(self):
+    def test_params_fixed_to_floating_point_different_config_for_layers(self) -> None:
         """
         Tests whether the parameters of a model are converted correctly
         from fixed point to floating point, when we have different
@@ -225,7 +225,7 @@ class TestSecureAggregator:
                 # 832.8 / 80 = 10.41
                 assertTrue(torch.allclose(p, torch.tensor(10.41), rtol=1e-10))
 
-    def test_conversion_overflow(self):
+    def test_conversion_overflow(self) -> None:
         """
         Tests whether secure aggeragtion conversion overflow
         variable gets updated correctly

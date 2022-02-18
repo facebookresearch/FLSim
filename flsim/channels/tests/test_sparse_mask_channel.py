@@ -28,7 +28,7 @@ from torch.nn.utils import prune
 
 class TestSparseMaskChannel:
     @classmethod
-    def calc_model_sparsity(cls, state_dict: OrderedDict):
+    def calc_model_sparsity(cls, state_dict: OrderedDict) -> float:
         """
         Calculates model sparsity (fraction of zeroed weights in state_dict).
         """

@@ -39,7 +39,7 @@ class TestSyncSecAggServer:
             server._secure_aggregator.converters["fc2.bias"].scaling_factor, 100
         )
 
-    def test_secure_aggregator_receive_update_from_client(self):
+    def test_secure_aggregator_receive_update_from_client(self) -> None:
         """
         Tests whether secure aggregator operations work correctly
         when a model update is received and server model is updated
@@ -72,7 +72,7 @@ class TestSyncSecAggServer:
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_secure_aggregator_step_large_range(self):
+    def test_secure_aggregator_step_large_range(self) -> None:
         """
         Tests whether secure aggregation operations work correctly
         when the step() method is called, and when the num_bytes is
@@ -105,7 +105,7 @@ class TestSyncSecAggServer:
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_secure_aggregator_step_small_range(self):
+    def test_secure_aggregator_step_small_range(self) -> None:
         """
         Tests whether secure aggregation operations work correctly
         when the step() method is called, and when the num_bytes is
@@ -161,7 +161,7 @@ class TestSyncSecAggServer:
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_aggregation_overflow(self):
+    def test_aggregation_overflow(self) -> None:
         """
         Tests whether secure aggregation overflow
         variable are updated correctly during aggregation

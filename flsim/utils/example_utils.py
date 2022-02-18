@@ -225,7 +225,9 @@ class DataProvider(IFLDataProvider):
         }
 
 
-def build_data_provider(local_batch_size, examples_per_user, image_size):
+def build_data_provider(
+    local_batch_size, examples_per_user, image_size
+) -> DataProvider:
 
     # 1. Create training, eval, and test datasets like in non-federated learning.
     transform = transforms.Compose(
@@ -257,6 +259,7 @@ def build_data_provider(local_batch_size, examples_per_user, image_size):
     )
 
     # 4. Wrap the data loader with a data provider.
+    # pyre-fixme[45]: Cannot instantiate abstract class `DataProvider`.
     data_provider = DataProvider(fl_data_loader)
     print(f"Clients in total: {data_provider.num_train_users()}")
     return data_provider
