@@ -39,7 +39,7 @@ class TestDataUtils:
         expected_num_examples,
         expected_batch_size,
         expected_num_batches,
-    ):
+    ) -> None:
         assertEqual(user_dataset.num_train_examples(), expected_num_examples)
 
         for i, batch in enumerate(user_dataset.train_data()):
@@ -47,7 +47,7 @@ class TestDataUtils:
             last_batch = i
         assertEqual(last_batch + 1, expected_num_batches)
 
-    def test_fake_user_data(self):
+    def test_fake_user_data(self) -> None:
         def gen_batch(n, value=None):
             return {"data": [torch.ones(n, 10)], "label": [1] * n}
 
@@ -57,7 +57,7 @@ class TestDataUtils:
         user_dataset = FakeUserData(gen_batch, num_batches, batch_size)
         self.user_data_test_util(user_dataset, num_examples, batch_size, num_batches)
 
-    def test_fake_data_provider(self):
+    def test_fake_data_provider(self) -> None:
         def gen_batch(n, value=None):
             return {"data": [torch.ones(n, 10)], "label": [1] * n}
 
@@ -79,5 +79,9 @@ class TestDataUtils:
             )
 
         self.user_data_test_util(
-            fl_data_provider.test_users()[0], num_examples, batch_size, num_batches
+            # pyre-fixme[16]: `Iterable` has no attribute `__getitem__`.
+            fl_data_provider.test_users()[0],
+            num_examples,
+            batch_size,
+            num_batches,
         )

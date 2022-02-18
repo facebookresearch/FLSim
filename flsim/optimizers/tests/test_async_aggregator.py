@@ -43,7 +43,7 @@ class TestAsyncAggregator:
         param_after_global_training: float,
         weight: float,
         config: AsyncAggregatorConfig,
-    ):
+    ) -> None:
         """
         Test async aggregator by:
         1. Create AsyncAggregator of given type (fed_buff_aggregation or fed_async_aggregation)
@@ -94,7 +94,7 @@ class TestAsyncAggregator:
             )
         )
 
-    def test_fed_buff_aggregation(self):
+    def test_fed_buff_aggregation(self) -> None:
         """
         Test that AsyncAggregator with 'fed_buff_aggregation' works as expected
         1. Create global_model, some_param=1
@@ -125,7 +125,7 @@ class TestAsyncAggregator:
                         config=config,
                     )
 
-    def test_fed_async_aggregation(self):
+    def test_fed_async_aggregation(self) -> None:
         """
         Test that AsyncAggregator with 'fed_async_aggregation' works as expected
         1. Create global_model, some_param=1
@@ -159,7 +159,7 @@ class TestAsyncAggregator:
             for _ in range(num_clients)
         ]
 
-    def _symmetry_test(self, num_users, hybrid_config):
+    def _symmetry_test(self, num_users, hybrid_config) -> str:
 
         hybrid_global_model_1 = SampleNet(TwoFC())
         hybrid_global_model_2 = FLModelParamUtils.clone(hybrid_global_model_1)
@@ -200,7 +200,7 @@ class TestAsyncAggregator:
             abs_epsilon=1e-6,
         )
 
-    def _equivalence_test(self, num_users, hybrid_config, async_config):
+    def _equivalence_test(self, num_users, hybrid_config, async_config) -> str:
         async_global_model = SampleNet(TwoFC())
         hybrid_global_model = FLModelParamUtils.clone(async_global_model)
 
@@ -235,7 +235,7 @@ class TestAsyncAggregator:
             abs_epsilon=1e-6,
         )
 
-    def test_hybrid_async_symmetry(self):
+    def test_hybrid_async_symmetry(self) -> None:
         """
         Test for symmetry:
         To satisfy symmetry, a hybrid async aggregation algorithm should be invariant to the order of user updates
@@ -257,7 +257,7 @@ class TestAsyncAggregator:
         )
         assertEmpty(error_msg, msg=error_msg)
 
-    def test_hybrid_async_equivalence(self):
+    def test_hybrid_async_equivalence(self) -> None:
         """
         To satisfy equivalence,
         1. Assume both mechanisms have the same starting point
@@ -278,7 +278,7 @@ class TestAsyncAggregator:
         )
         assertEmpty(error_msg, msg=error_msg)
 
-    def test_global_update(self):
+    def test_global_update(self) -> None:
         """
         Test the aggregator only updates global model if
         threshold is reached
@@ -360,8 +360,8 @@ class TestAsyncAggregator:
         [(1, 2, 0.5), (10, 10, 0.5), (10, 10, 0)],
     )
     def test_momentum_implementation_zero_weight(
-        self, num_total_users, num_epochs, momentum
-    ):
+        self, num_total_users: int, num_epochs: int, momentum: float
+    ) -> None:
         """In FedAsyncAggregatorWithMomentum.on_client_training_end, when weight=0,
         neither velocity nor model should be updated
         We test this by comparing two training runs:
@@ -412,8 +412,8 @@ class TestAsyncAggregator:
         [(1, 2, 0.5, 10), (10, 10, 0.5, 10), (10, 10, 0, 10)],
     )
     def test_momentum_implementation_one_weight(
-        self, num_total_users, num_epochs, momentum, lr
-    ):
+        self, num_total_users: int, num_epochs: int, momentum: float, lr: float
+    ) -> None:
         """FedAsyncAggregatorWithMomentum.on_client_training_end should behave
         exactly like SGD with momentum when weight = 1
         We test this by

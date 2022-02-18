@@ -46,7 +46,9 @@ from opacus.accountants.analysis import rdp as privacy_analysis
 from opacus.optimizers import DPOptimizer
 
 
-def calc_eps(sample_rate, noise_multiplier, steps, alphas, delta):
+def calc_eps(
+    sample_rate: float, noise_multiplier: float, steps: int, alphas, delta: float
+) -> float:
     rdp = privacy_analysis.compute_rdp(
         q=sample_rate, noise_multiplier=noise_multiplier, steps=steps, orders=alphas
     )
@@ -55,7 +57,7 @@ def calc_eps(sample_rate, noise_multiplier, steps, alphas, delta):
 
 
 @pytest.fixture(scope="class")
-def prepare_client_test(request):
+def prepare_client_test(request) -> None:
     request.cls.num_batches = 2
     request.cls.batch_size = 10
 
@@ -71,7 +73,10 @@ class ClientTestBase:
         return utils.DummyUserData(dataset, utils.SampleNet(utils.TwoFC()))
 
     def _get_client(
-        self, data=None, store_models_and_optimizers=False, timeout_simulator=None
+        self,
+        data=None,
+        store_models_and_optimizers: bool = False,
+        timeout_simulator=None,
     ):
         data = data or self._fake_data()
         config = ClientConfig(
@@ -87,9 +92,9 @@ class ClientTestBase:
     def _get_dp_client(
         self,
         data=None,
-        noise_multiplier=1,
-        clipping_value=1,
-        store_models_and_optimizers=False,
+        noise_multiplier: int = 1,
+        clipping_value: int = 1,
+        store_models_and_optimizers: bool = False,
     ):
         privacy_setting = PrivacySetting(
             noise_multiplier=noise_multiplier, clipping_value=clipping_value
@@ -102,7 +107,7 @@ class ClientTestBase:
             **OmegaConf.structured(config), dataset=(data or self._fake_data())
         )
 
-    def _train(self, data: IFLUserData, model, optim):
+    def _train(self, data: IFLUserData, model, optim) -> None:
         # basically re-write training logic
         model.fl_get_module().train()
         for batch in data.train_data():
@@ -112,7 +117,7 @@ class ClientTestBase:
             loss.backward()
             optim.step()
 
-    def _run_client_eval_test(self, client):
+    def _run_client_eval_test(self, client) -> None:
         """
         Test client eval will turn on eval mode and turn back into train mode
         after evaluation loop is finished
@@ -134,7 +139,7 @@ class ClientTestBase:
 
 
 class TestBaseClient(ClientTestBase):
-    def test_storage(self):
+    def test_storage(self) -> None:
         client = self._get_client(store_models_and_optimizers=True)
         model0 = utils.SampleNet(utils.TwoFC())
         model1 = utils.SampleNet(utils.TwoFC())
@@ -156,7 +161,7 @@ class TestBaseClient(ClientTestBase):
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_receive_through_channel(self):
+    def test_receive_through_channel(self) -> None:
         # expected channel effects,
         clnt = self._get_client()
         model = utils.SampleNet(utils.TwoFC())
@@ -165,7 +170,7 @@ class TestBaseClient(ClientTestBase):
         mismatched = utils.verify_models_equivalent_after_training(model2, model)
         assertEqual(mismatched, "", mismatched)
 
-    def test_prepare_for_training(self):
+    def test_prepare_for_training(self) -> None:
         clnt = self._get_client()
         model = utils.SampleNet(utils.TwoFC())
         try:
@@ -173,13 +178,16 @@ class TestBaseClient(ClientTestBase):
             model2, optim, optim_sch = clnt.prepare_for_training(model)
         except BaseException as e:
             assertTrue(False, e)
+        # pyre-fixme[61]: `model2` is undefined, or not always defined.
         mismatched = utils.verify_models_equivalent_after_training(model2, model)
         assertEqual(mismatched, "", mismatched)
         # expect correct type of optimizer
+        # pyre-fixme[61]: `optim` is undefined, or not always defined.
         assertIsInstance(optim, LocalOptimizerSGD)
+        # pyre-fixme[61]: `optim_sch` is undefined, or not always defined.
         assertIsInstance(optim_sch, ConstantLRScheduler)
 
-    def test_train(self):
+    def test_train(self) -> None:
         data = self._fake_data(num_batches=5, batch_size=10)
         clnt = self._get_client(data)
         model = utils.SampleNet(utils.TwoFC())
@@ -191,12 +199,13 @@ class TestBaseClient(ClientTestBase):
             model, weight = clnt.train(model, optim, optim_sch, None)
         except BaseException as e:
             assertTrue(False, e)
+        # pyre-fixme[61]: `weight` is undefined, or not always defined.
         assertAlmostEqual(weight, 5 * 10)
         self._train(data, model2, optim2)
         mismatched = utils.verify_models_equivalent_after_training(model2, model)
         assertEqual(mismatched, "", mismatched)
 
-    def test_generate_local_update(self):
+    def test_generate_local_update(self) -> None:
         clnt = self._get_client()
         model = utils.SampleNet(utils.TwoFC())
         model.fl_get_module().fill_all(0.1)
@@ -208,13 +217,15 @@ class TestBaseClient(ClientTestBase):
             delta, weight = clnt.generate_local_update(model)
         except BaseException as e:
             assertTrue(False, e)
+        # pyre-fixme[61]: `weight` is undefined, or not always defined.
         assertAlmostEqual(12.34, weight)
         mismatched = utils.verify_models_equivalent_after_training(model, model)
         assertEqual(mismatched, "", mismatched)
+        # pyre-fixme[61]: `delta` is undefined, or not always defined.
         mismatched = utils.verify_models_equivalent_after_training(delta, model)
         assertEqual(mismatched, "", mismatched)
 
-    def test_fed_prox_sgd_equivalent(self):
+    def test_fed_prox_sgd_equivalent(self) -> None:
         """
         Test FedProx under the following scenarios:
 
@@ -319,7 +330,7 @@ class TestBaseClient(ClientTestBase):
         )
         assertNotEqual(mismatched, "", mismatched)
 
-    def test_device_perf_generation(self):
+    def test_device_perf_generation(self) -> None:
         """
         test either client.device_perf is always generated,
         either using the TimeOutSimulator given in __init__
@@ -353,7 +364,7 @@ class TestBaseClient(ClientTestBase):
         clnt_default = self._get_client(data)
         assertEqual(clnt_default.per_example_training_time, 0.0)
 
-    def test_total_training_time(self):
+    def test_total_training_time(self) -> None:
         """
         total training time for Gaussian with mean 1.0 and std 0.0
         equals to min(number of client examples, timeout_wall_per_round)
@@ -400,7 +411,7 @@ class TestBaseClient(ClientTestBase):
         )
         assertEqual(clnt_never_timeout.get_total_training_time(), 0.0)
 
-    def test_partial_training(self):
+    def test_partial_training(self) -> None:
         """
         producing two training instance expected same training results:
         1. client with n (even number) batches and a time out wall just
@@ -454,16 +465,16 @@ class TestBaseClient(ClientTestBase):
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_logging_level(self):
+    def test_logging_level(self) -> None:
         clnt = self._get_client()
         assertTrue(utils.check_inherit_logging_level(clnt, 50))
         assertTrue(utils.check_inherit_logging_level(clnt, 10))
 
-    def test_base_client_eval(self):
+    def test_base_client_eval(self) -> None:
         client = self._get_client()
         self._run_client_eval_test(client)
 
-    def test_client_fine_tuning(self):
+    def test_client_fine_tuning(self) -> None:
         client = self._get_client()
         model = utils.SampleNet(utils.TwoFC())
         model.fl_get_module().fill_all(0.1)
@@ -476,8 +487,10 @@ class TestBaseClient(ClientTestBase):
 
 
 class TestDPClient(ClientTestBase):
-    def test_privacy_engine_properly_initialized(self):
+    def test_privacy_engine_properly_initialized(self) -> None:
         data = self._fake_data(num_batches=11, batch_size=3)
+        # pyre-fixme[6]: Expected `int` for 2nd param but got `float`.
+        # pyre-fixme[6]: Expected `int` for 3rd param but got `float`.
         clnt = self._get_dp_client(data, noise_multiplier=0.1, clipping_value=2.0)
         model = utils.SampleNet(utils.TwoFC())
         model, optim, optim_sch = clnt.prepare_for_training(model)
@@ -486,22 +499,32 @@ class TestDPClient(ClientTestBase):
         assertEqual(optim.max_grad_norm, 2.0)
         assertEqual(optim.expected_batch_size, 3)
 
-    def test_privacy_turned_off(self):
+    def test_privacy_turned_off(self) -> None:
         data = self._fake_data(num_batches=11, batch_size=3)
         # clipping value of inf means privacy is off no matter what the noise multiplier
         clnt = self._get_dp_client(
-            data, noise_multiplier=0.0, clipping_value=float("inf")
+            data,
+            # pyre-fixme[6]: Expected `int` for 2nd param but got `float`.
+            noise_multiplier=0.0,
+            # pyre-fixme[6]: Expected `int` for 3rd param but got `float`.
+            clipping_value=float("inf"),
         )
         assertFalse(clnt.privacy_on)
         clnt = self._get_dp_client(
-            data, noise_multiplier=1.0, clipping_value=float("inf")
+            data,
+            # pyre-fixme[6]: Expected `int` for 2nd param but got `float`.
+            noise_multiplier=1.0,
+            # pyre-fixme[6]: Expected `int` for 3rd param but got `float`.
+            clipping_value=float("inf"),
         )
         assertFalse(clnt.privacy_on)
         # negative noise multiplier should turn of privacy engine
+        # pyre-fixme[6]: Expected `int` for 2nd param but got `float`.
+        # pyre-fixme[6]: Expected `int` for 3rd param but got `float`.
         clnt = self._get_dp_client(data, noise_multiplier=-1.0, clipping_value=0.1)
         assertFalse(clnt.privacy_on)
 
-    def test_prepare_for_training(self):
+    def test_prepare_for_training(self) -> None:
         clnt = self._get_dp_client()
         model = utils.SampleNet(utils.TwoFC())
         model2, optim, optim_sch = clnt.prepare_for_training(model)
@@ -512,7 +535,7 @@ class TestDPClient(ClientTestBase):
         assertIsInstance(optim.original_optimizer, LocalOptimizerSGD)
         assertIsInstance(optim_sch, ConstantLRScheduler)
 
-    def test_storage(self):
+    def test_storage(self) -> None:
         client = self._get_dp_client(store_models_and_optimizers=True)
         model0 = utils.SampleNet(utils.TwoFC())
         delta, weight1 = client.generate_local_update(model0)
@@ -523,7 +546,7 @@ class TestDPClient(ClientTestBase):
         optim = client.optimizers[0]
         assertIsInstance(optim, DPOptimizer)
 
-    def test_no_noise_no_clip(self):
+    def test_no_noise_no_clip(self) -> None:
         data = self._fake_data(3, 4)
         model = utils.SampleNet(utils.TwoFC())
         private_model = FLModelParamUtils.clone(model)
@@ -546,7 +569,7 @@ class TestDPClient(ClientTestBase):
         assertEqual(mismatched, "", mismatched)
         assertEqual(mismatched_delta, "", mismatched_delta)
 
-    def test_only_clip(self):
+    def test_only_clip(self) -> None:
         data = self._fake_data(4, 4)
         model = utils.SampleNet(utils.TwoFC())
         private_model = FLModelParamUtils.clone(model)
@@ -554,7 +577,10 @@ class TestDPClient(ClientTestBase):
         clnt = self._get_client(data)
         delta, weight = clnt.generate_local_update(model)
         private_clnt = self._get_dp_client(
-            data, noise_multiplier=0, clipping_value=0.01
+            data,
+            noise_multiplier=0,
+            # pyre-fixme[6]: Expected `int` for 3rd param but got `float`.
+            clipping_value=0.01,
         )
 
         private_delta, private_weight = private_clnt.generate_local_update(
@@ -564,7 +590,7 @@ class TestDPClient(ClientTestBase):
         assertAlmostEqual(weight, private_weight)
         assertNotEqual(mismatched, "")
 
-    def test_noise_and_clip(self):
+    def test_noise_and_clip(self) -> None:
         data = self._fake_data(4, 4)
         model = utils.SampleNet(utils.TwoFC())
         private_model = FLModelParamUtils.clone(model)
@@ -572,7 +598,10 @@ class TestDPClient(ClientTestBase):
         clnt = self._get_client(data)
         delta, weight = clnt.generate_local_update(model)
         private_clnt = self._get_dp_client(
-            data, noise_multiplier=1, clipping_value=0.01
+            data,
+            noise_multiplier=1,
+            # pyre-fixme[6]: Expected `int` for 3rd param but got `float`.
+            clipping_value=0.01,
         )
         private_delta, private_weight = private_clnt.generate_local_update(
             private_model
@@ -583,13 +612,15 @@ class TestDPClient(ClientTestBase):
         assertAlmostEqual(weight, private_weight)
         assertNotEqual(mismatched_delta, "")
 
-    def test_epsilon(self):
+    def test_epsilon(self) -> None:
         noise_multiplier = 1.5
         clipping_value = 0.01
         num_batches = 5
         batch_size = 6
         data = self._fake_data(num_batches, batch_size)
         model = utils.SampleNet(utils.TwoFC())
+        # pyre-fixme[6]: Expected `int` for 2nd param but got `float`.
+        # pyre-fixme[6]: Expected `int` for 3rd param but got `float`.
         clnt = self._get_dp_client(data, noise_multiplier, clipping_value, True)
         model, weight = clnt.generate_local_update(model)
 
@@ -604,6 +635,6 @@ class TestDPClient(ClientTestBase):
         )
         assertAlmostEqual(eps_from_script, eps_from_client)
 
-    def test_dp_client_eval(self):
+    def test_dp_client_eval(self) -> None:
         dp_client = self._get_dp_client()
         self._run_client_eval_test(dp_client)

@@ -314,7 +314,7 @@ def verify_models_equivalent_after_training(
         return ""
 
 
-def model_parameters_equal_to_value(model, value):
+def model_parameters_equal_to_value(model, value) -> str:
     if isinstance(model, IFLModel):
         model = model.fl_get_module()
     for n, p in model.named_parameters():

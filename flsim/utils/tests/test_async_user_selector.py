@@ -16,17 +16,17 @@ from flsim.utils.sample_model import MockFLModel
 
 
 @pytest.fixture
-def num_users():
+def num_users() -> int:
     return 20
 
 
 @pytest.fixture
-def num_trials():
+def num_trials() -> int:
     return 100
 
 
 class TestAsyncUserSelectorUtils:
-    def test_random_user_selector(self, num_users, num_trials):
+    def test_random_user_selector(self, num_users, num_trials) -> None:
         # users are 0....n-1
         # number of examples per user: [1, 2, 3...., n-1, n]
         num_examples_per_user = list(range(1, num_users + 1))
@@ -50,11 +50,12 @@ class TestAsyncUserSelectorUtils:
             assertTrue(user_index >= 0 and user_index < num_users)
             assertEqual(random_user.num_train_examples(), user_index + 1)
 
-    def test_round_robin_user_selector(self, num_users, num_trials):
+    def test_round_robin_user_selector(self, num_users, num_trials) -> None:
         # users are 0....n-1
         # number of examples per user: [10, num_users, 30...., 10*n-1, 10*n]
         multiplier = 10
         num_examples_per_user = [multiplier * i for i in list(range(1, num_users + 1))]
+        # pyre-fixme[6]: Expected `IFLDataProvider` for 1st param but got `List[int]`.
         round_robin_user_selector = RoundRobinAsyncUserSelector(num_examples_per_user)
         data = [
             [1] * num_example

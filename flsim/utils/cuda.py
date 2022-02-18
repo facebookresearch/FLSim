@@ -22,7 +22,7 @@ def tensor(data, dtype, cuda_enabled: bool):
     return torch.tensor(data, dtype=dtype, device=device(cuda_enabled))
 
 
-def device(cuda_enabled: bool):
+def device(cuda_enabled: bool) -> str:
     return "cuda:{}".format(torch.cuda.current_device()) if cuda_enabled else "cpu"
 
 

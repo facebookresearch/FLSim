@@ -47,12 +47,12 @@ class TestSecureAggregationIntegration:
         sec_agg_enable: bool = False,
         fixedpoint=None,
         num_users: int = 26,
-        users_per_round=26,
-        epochs=1,
+        users_per_round: int = 26,
+        epochs: int = 1,
         metrics_reporter=None,
-        report_train_metrics=False,
-        report_train_metrics_after_aggregation=False,
-        train_metrics_reported_per_epoch=1,
+        report_train_metrics: bool = False,
+        report_train_metrics_after_aggregation: bool = False,
+        train_metrics_reported_per_epoch: int = 1,
     ):
         """
         Trains an FL model, with or without Secure Aggregation

@@ -37,7 +37,7 @@ from torchvision.datasets.cifar import CIFAR10
 IMAGE_SIZE = 32
 
 
-def build_data_provider(local_batch_size, examples_per_user, drop_last=False):
+def build_data_provider(local_batch_size, examples_per_user, drop_last: bool = False):
 
     transform = transforms.Compose(
         [
@@ -57,6 +57,7 @@ def build_data_provider(local_batch_size, examples_per_user, drop_last=False):
     fl_data_loader = DataLoader(
         train_dataset, test_dataset, test_dataset, sharder, local_batch_size, drop_last
     )
+    # pyre-fixme[45]: Cannot instantiate abstract class `DataProvider`.
     data_provider = DataProvider(fl_data_loader)
     print(f"Clients in total: {data_provider.num_train_users()}")
     return data_provider
@@ -65,11 +66,12 @@ def build_data_provider(local_batch_size, examples_per_user, drop_last=False):
 def main(
     trainer_config,
     data_config,
-    use_cuda_if_available=True,
-):
+    use_cuda_if_available: bool = True,
+) -> None:
     cuda_enabled = torch.cuda.is_available() and use_cuda_if_available
     device = torch.device(f"cuda:{0}" if cuda_enabled else "cpu")
     model = SimpleConvNet(in_channels=3, num_classes=10)
+    # pyre-fixme[6]: Expected `Optional[str]` for 2nd param but got `device`.
     global_model = FLModel(model, device)
     if cuda_enabled:
         global_model.fl_cuda()
@@ -97,7 +99,7 @@ def main(
 
 
 @hydra.main(config_path=None, config_name="cifar10_tutorial")
-def run(cfg: DictConfig):
+def run(cfg: DictConfig) -> None:
     print(OmegaConf.to_yaml(cfg))
 
     trainer_config = cfg.trainer

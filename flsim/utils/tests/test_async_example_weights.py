@@ -27,7 +27,7 @@ class TestAsyncExampleWeights:
         self,
         example_weight_config: AsyncExampleWeightConfig,
         example_weight_class: ExampleWeight,
-    ):
+    ) -> None:
         """Check that strings are correctly converted to ExampleWeight"""
         obj = instantiate(example_weight_config)
         assertEqual(obj.__class__, example_weight_class)
@@ -45,7 +45,7 @@ class TestAsyncExampleWeights:
         example_weight_config: AsyncExampleWeightConfig,
         example_weight_class: ExampleWeight,
         avg_num_examples: int,
-    ):
+    ) -> None:
         """Test that all weight computation works as expected"""
         # generate 10 random integers
         max_num_examples = 10000

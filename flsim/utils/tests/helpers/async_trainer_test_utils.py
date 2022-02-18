@@ -173,9 +173,9 @@ def assert_fl_nonfl_same(
     epochs: int,
     local_lr: float,
     aggregator_config: AsyncAggregatorConfig,
-    training_rate=1,
-    training_duration_mean=0,
-    training_duration_sd=0,
+    training_rate: int = 1,
+    training_duration_mean: int = 0,
+    training_duration_sd: int = 0,
 ) -> str:
     """
     Given:
@@ -225,9 +225,9 @@ def run_fl_nonfl_training(
     epochs: int,
     fl_local_lr: float,
     fl_aggregator_config: AsyncAggregatorConfig,
-    training_rate=1,
-    training_duration_mean=0,
-    training_duration_sd=0,
+    training_rate: int = 1,
+    training_duration_mean: int = 0,
+    training_duration_sd: int = 0,
     example_weight_config: AsyncExampleWeightConfig = EQUAL_EXAMPLE_WEIGHT_CONFIG,
     staleness_weight_config: AsyncStalenessWeightConfig = CONSTANT_STALENESS_WEIGHT_CONFIG,
 ) -> Tuple[IFLModel, IFLModel]:
@@ -263,9 +263,9 @@ def run_fl_training(
     epochs: int,
     local_lr: float,
     aggregator_config: AsyncAggregatorConfig,
-    training_rate=1,
-    training_duration_mean=0,
-    training_duration_sd=0,
+    training_rate: int = 1,
+    training_duration_mean: float = 0,
+    training_duration_sd: float = 0,
     example_weight_config: AsyncExampleWeightConfig = EQUAL_EXAMPLE_WEIGHT_CONFIG,
     staleness_weight_config: AsyncStalenessWeightConfig = CONSTANT_STALENESS_WEIGHT_CONFIG,
     metrics_reporter: Optional[IFLMetricsReporter] = None,
@@ -340,7 +340,7 @@ def get_fl_data_provider(
     assert data_loader.num_total_users == num_fl_users, "Error in data sharding"
 
 
-def get_nonfl_batch_size(fl_batch_size: int, min_examples_per_user: int):
+def get_nonfl_batch_size(fl_batch_size: int, min_examples_per_user: int) -> int:
     # how to chose batch_size for non-fl training?
     # if fl_batch_size is bigger than min_examples_per_user, use fl_batch_size
     # however, if fl_batch_size is *smaller* than min_examples_per_user, must
@@ -487,9 +487,9 @@ def assert_fl_nonfl_same_equal_data_split(
     epochs: int,
     local_lr: float,
     aggregator_config: AsyncAggregatorConfig,
-    training_rate=1,
-    training_duration_mean=0,
-    training_duration_sd=0,
+    training_rate: int = 1,
+    training_duration_mean: int = 0,
+    training_duration_sd: int = 0,
 ) -> str:
     # TODO: can this test share common code (eg, nonFL training) with
     # test_trainer._test_fl_nonfl_same_equal_data_split?
@@ -545,7 +545,7 @@ def simulate_async_global_model_update(
     global_model: IFLModel,
     local_model_before_training: IFLModel,
     local_model_after_training: IFLModel,
-):
+) -> None:
     # TODO: use AsyncAggregator._update_global_model, after John's refactoring
     reconstructed_grad = FLModelParamUtils.clone(global_model)
     FLModelParamUtils.reconstruct_gradient(

@@ -37,7 +37,7 @@ from omegaconf import OmegaConf
 
 
 @pytest.fixture(scope="class")
-def prepare_shared_client_config(request):
+def prepare_shared_client_config(request) -> None:
     request.cls.shared_client_config = OmegaConf.structured(
         ClientConfig(
             epochs=1,
@@ -56,7 +56,7 @@ class TestAsyncClientDeviceGeneration:
         client: AsyncClientDevice,
         expected_start_time: int,
         expected_end_time: int,
-    ):
+    ) -> None:
         assertEqual(client.training_schedule.start_time, expected_start_time)
         assertEqual(client.training_schedule.end_time, expected_end_time)
 
@@ -218,7 +218,7 @@ class TestAsyncClientDeviceGeneration:
             clients.append(client)
         return clients
 
-    def test_training_duration_per_example_gaussian(self):
+    def test_training_duration_per_example_gaussian(self) -> None:
         r"""
         Per-Example-Gaussian:
             The last user should finish first.
@@ -236,7 +236,7 @@ class TestAsyncClientDeviceGeneration:
                 > client_2.training_schedule.end_time
             )
 
-    def test_training_duration_per_user_gaussian(self):
+    def test_training_duration_per_user_gaussian(self) -> None:
         r"""
         Per-User-Gaussian:
             First user should finish first
@@ -256,7 +256,7 @@ class TestAsyncClientDeviceGeneration:
 
 
 @pytest.fixture(scope="class")
-def prepare_async_client_device(request):
+def prepare_async_client_device(request) -> None:
     request.cls.shared_client_config = OmegaConf.structured(
         ClientConfig(
             epochs=1,
@@ -284,7 +284,7 @@ def prepare_async_client_device(request):
 @pytest.mark.usefixtures("prepare_async_client_device")
 class TestAsyncClientDevice:
     def _build_data_provider(
-        self, num_examples, examples_per_user, user_batch_size, global_model
+        self, num_examples, examples_per_user: int, user_batch_size: int, global_model
     ) -> FLDataProviderFromList:
         dummy_dataset = DummyAlphabetDataset(num_examples)
         data_provider, _ = DummyAlphabetDataset.create_data_provider_and_loader(

@@ -20,7 +20,7 @@ from flsim.utils.tests.helpers.test_models import (
 
 
 @pytest.fixture(scope="class")
-def prepare_fl_model_with_private_modules(request):
+def prepare_fl_model_with_private_modules(request) -> None:
     request.cls.model_with_private_modules = PersonalizedFCModel()
 
 

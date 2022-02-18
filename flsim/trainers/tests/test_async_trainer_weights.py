@@ -86,7 +86,7 @@ class TestAsyncTrainerWeights:
         example_weight_config: AsyncExampleWeightConfig,
         rel_epsilon: float,
         normalize_wts: bool,
-    ):
+    ) -> None:
         """Run training for two tasks:
         data1: 2 training examples, same for data2 and data3
         example_weight_type: defines how number of examples affect weight
@@ -159,7 +159,7 @@ class TestAsyncTrainerWeights:
             "",
         )
 
-    def test_linear_example_wts_sgd(self):
+    def test_linear_example_wts_sgd(self) -> None:
         for example_weight_config in (
             EqualExampleWeightConfig(),
             LinearExampleWeightConfig(),
@@ -204,7 +204,7 @@ class TestAsyncTrainerWeights:
         assert fl_data_loader.num_total_users == num_fl_users, "Error in data sharding"
         return fl_data_provider
 
-    def test_default_example_weights(self):
+    def test_default_example_weights(self) -> None:
         """Create an FL Async task with default values for example weight (equal example weight)
         Note: In async, weight of a user update = example_weight * staleness_weight
         Equal example weight => example_weight = 1.0 irrespective of #examples
@@ -255,7 +255,7 @@ class TestAsyncTrainerWeights:
             "",
         )
 
-    def test_default_staleness_weights(self):
+    def test_default_staleness_weights(self) -> None:
         r"""Create an FL Async task with default values for staleness weight (no staleness weight)
         Verify that weight doesn't depend on staleness. Train on two users, where training events
         are as follows. Assume initial model=M
@@ -324,7 +324,7 @@ class TestAsyncTrainerWeights:
         )
         assertEqual(error_msg, "")
 
-    def test_threshold_staleness_weights(self):
+    def test_threshold_staleness_weights(self) -> None:
         r"""
         Run training for two tasks:
         Task1: FL async task, training_duration = 100, training_rate=1
@@ -414,7 +414,7 @@ class TestAsyncTrainerWeights:
             "",
         )
 
-    def test_polynomial_staleness_weights(self):
+    def test_polynomial_staleness_weights(self) -> None:
         r"""
         Integration test for polynomial staleness weight
         Train task where polynomial staleness weight cancels out example_weight,
@@ -532,7 +532,7 @@ class TestAsyncTrainerWeights:
             "",
         )
 
-    def test_example_wts_and_staleness_wts_lr_scale(self):
+    def test_example_wts_and_staleness_wts_lr_scale(self) -> None:
         """
         Test for same number of examples and a fixed global learning rate.
         Async with no example weight should be the same as linear example weight where
