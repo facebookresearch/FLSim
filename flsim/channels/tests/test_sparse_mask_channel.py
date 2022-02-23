@@ -296,3 +296,29 @@ class TestSparseMaskChannel:
         true_size_bytes = true_size_bytes_weights + true_size_bytes_biases
 
         assertEqual(client_to_server_bytes, true_size_bytes)
+
+    @pytest.mark.parametrize("sparsity_method", ["topk", "random"])
+    def test_sparsity_after_reception(self, sparsity_method: str):
+        """
+        Tests if the message received at the server after transmission has
+        the expected sparsity
+        """
+        # instantiation
+        config = SparseMaskChannelConfig(
+            proportion_of_zero_weights=0.6,
+            report_communication_metrics=True,
+            sparsity_method=sparsity_method,
+        )
+        channel = instantiate(config)
+
+        # create dummy model
+        two_fc = utils.TwoFC()
+        upload_model = utils.SampleNet(FLModelParamUtils.clone(two_fc))
+
+        # client -> server
+        message = Message(upload_model)
+        message = channel.client_to_server(message)
+
+        # Test that message model has sparsity approximately 0.6
+        state_dict = message.model.fl_get_module().state_dict()
+        assertAlmostEqual(self.calc_model_sparsity(state_dict), 0.6, delta=0.05)
