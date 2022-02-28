@@ -5,6 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 import math
 from unittest.mock import MagicMock
 
@@ -29,7 +30,6 @@ from flsim.privacy.privacy_engine import (
 )
 from flsim.privacy.privacy_engine_factory import PrivacyEngineFactory, NoiseType
 from flsim.tests import utils
-from flsim.utils.fl.common import FLModelParamUtils
 from opacus.accountants.analysis import rdp as privacy_analysis
 
 
@@ -131,7 +131,7 @@ class TestGaussianPrivacyEngine:
         model_diff = utils.TwoFC()  # model update
         model_diff.fill_all(1.0)
 
-        model_diff_before_noise = FLModelParamUtils.clone(model_diff)
+        model_diff_before_noise = copy.deepcopy(model_diff)
 
         privacy_engine = self._init_privacy_engine()
         privacy_engine.add_noise(model_diff, sensitivity=0.5)
@@ -151,8 +151,8 @@ class TestGaussianPrivacyEngine:
         model_diff = utils.TwoFC()  # model update
         model_diff.fill_all(1.0)
 
-        model_diff_another_seed = FLModelParamUtils.clone(model_diff)
-        model_diff_same_seed = FLModelParamUtils.clone(model_diff)
+        model_diff_another_seed = copy.deepcopy(model_diff)
+        model_diff_same_seed = copy.deepcopy(model_diff)
 
         privacy_engine = self._init_privacy_engine(noise_seed=1003)
         privacy_engine.add_noise(model_diff, sensitivity=0.5)
@@ -209,7 +209,7 @@ class TestTreePrivacyEngine:
         delta = nn.Linear(dim, 1)
         delta.bias.data.fill_(value)
         delta.weight.data.fill_(value)
-        return delta, FLModelParamUtils.clone(delta)
+        return delta, copy.deepcopy(delta)
 
     def _count_bits(self, n: int):
         """

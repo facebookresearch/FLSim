@@ -58,8 +58,8 @@ class ActiveUserSelectorUtils:
     @staticmethod
     def samples_per_user(data_provider: IFLDataProvider) -> torch.Tensor:
         samples_per_user = [
-            data_provider.get_train_user(u).num_train_examples()
-            for u in data_provider.train_user_ids()
+            data_provider.get_user_data(u).num_examples()
+            for u in data_provider.user_ids()
         ]
         samples_per_user = torch.tensor(samples_per_user, dtype=torch.float)
         return samples_per_user
@@ -375,7 +375,7 @@ class HighLossActiveUserSelector(ActiveUserSelector):
                 user_losses[i],
                 user_sample_counts[i],
             ) = self._get_user_loss_and_sample_count(
-                data_provider.get_train_user(i), global_model
+                data_provider.get_user_data(i), global_model
             )
         return user_losses, user_sample_counts
 
@@ -396,7 +396,7 @@ class HighLossActiveUserSelector(ActiveUserSelector):
     ) -> Tuple[float, int]:
         loss = 0
         num_samples = 0
-        for batch in user_data.train_data():
+        for batch in user_data:
             metrics = model.get_eval_metrics(batch)
             loss += metrics.loss.item() * metrics.num_examples
             num_samples += metrics.num_examples
@@ -455,7 +455,7 @@ class HighLossActiveUserSelector(ActiveUserSelector):
                 self.user_losses[i],
                 self.user_sample_counts[i],
             ) = self._get_user_loss_and_sample_count(
-                data_provider.get_train_user(i), global_model
+                data_provider.get_user_data(i), global_model
             )
 
         return selected_indices

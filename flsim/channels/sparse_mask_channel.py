@@ -85,10 +85,6 @@ class SparseMaskChannel(IdentityChannel):
         message.populate_state_dict()
         return message
 
-    def _on_server_after_reception(self, message: Message) -> Message:
-        message.update_model_()
-        return message
-
     def _on_client_before_transmission(self, message: Message) -> Message:
         """
         Here we apply a sparse mask to the parameter updates before sending the message.

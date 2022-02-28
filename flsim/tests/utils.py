@@ -5,6 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 from typing import Any, Dict, List, NamedTuple, Optional, Union, Tuple
 from unittest.mock import MagicMock
 
@@ -59,25 +60,19 @@ class DummyUserData(IFLUserData):
             )
             self._num_batches += 1
 
-    def num_train_batches(self):
-        return self._num_batches
-
-    def num_train_examples(self):
-        return self._num_examples
-
-    def train_data(self):
+    def __iter__(self):
         for batch in self.data:
             yield self.model.fl_create_training_batch(batch=batch)
+
+    def num_batches(self):
+        return self._num_batches
+
+    def num_examples(self):
+        return self._num_examples
 
     def eval_data(self):
         for batch in self.data:
             yield self.model.fl_create_training_batch(batch=batch)
-
-    def num_eval_batches(self):
-        return 0
-
-    def num_eval_examples(self):
-        return 0
 
 
 class Quadratic1D(nn.Module):
@@ -136,6 +131,23 @@ class TwoFC(nn.Module):
     def forward(self, x):
         x = self.fc1(x)
         x = self.fc2(x)
+        return x
+
+    def fill_all(self, value):
+        def fill(layer):
+            if type(layer) == nn.Linear:
+                layer.bias.data.fill_(value)
+                layer.weight.data.fill_(value)
+
+        self.apply(fill)
+
+class Linear(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(2, 1)
+
+    def forward(self, x):
+        x = self.fc1(x)
         return x
 
     def fill_all(self, value):
@@ -314,7 +326,7 @@ def verify_models_equivalent_after_training(
         return ""
 
 
-def model_parameters_equal_to_value(model, value) -> str:
+def model_parameters_equal_to_value(model, value):
     if isinstance(model, IFLModel):
         model = model.fl_get_module()
     for n, p in model.named_parameters():
@@ -426,7 +438,7 @@ class RandomEvalMetricsReporter(IFLMetricsReporter):
             print(
                 f"MetricReporter current_eval:{eval_result}, best_eval: {self._best_eval_result}"
             )
-            self._best_eval_model = FLModelParamUtils.clone(model)
+            self._best_eval_model = copy.deepcopy(model)
             self._best_eval_result = eval_result
             return (eval_result, True)
         else:
@@ -445,6 +457,6 @@ class RandomEvalMetricsReporter(IFLMetricsReporter):
 
 
 def create_model_with_value(value) -> nn.Module:
-    model = TwoFC()
+    model = Linear()
     model.fill_all(value)
     return model

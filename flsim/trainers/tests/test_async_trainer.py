@@ -5,6 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 from typing import Any, List, Dict
 
 import numpy as np
@@ -44,7 +45,6 @@ from flsim.utils.async_trainer.training_event_generator import (
     AsyncTrainingEventGeneratorFromListConfig,
     EventTimingInfo,
 )
-from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.sample_model import DummyAlphabetFLModel, ConstantGradientFLModel
 from flsim.utils.tests.helpers.async_trainer_test_utils import (
     async_train_one_user,
@@ -73,14 +73,14 @@ class TestMetricsReporter(MetricsReporterWithMockedChannels):
     training, metrics have zeroes
     """
 
-    def reset(self) -> None:
+    def reset(self):
         pass
 
 
 class ConcurrencyMetricsReporter(FLMetricsReporter):
     ACCURACY = "Accuracy"
 
-    def __init__(self, channels: List[Channel]) -> None:
+    def __init__(self, channels: List[Channel]):
         self.concurrency_metrics = []
         self.eval_rounds = []
         super().__init__(channels)
@@ -119,7 +119,13 @@ class ConcurrencyMetricsReporter(FLMetricsReporter):
     ) -> Any:
         return scores[self.ACCURACY]
 
-    def report_metrics(self, reset: bool, stage, extra_metrics=None, **kwargs):
+    def report_metrics(
+        self,
+        reset,
+        stage,
+        extra_metrics=None,
+        **kwargs,
+    ):
 
         if stage != TrainingStage.EVAL:
             assert (
@@ -151,10 +157,10 @@ class TestAsyncTrainer:
         epochs: int,
         local_lr: float,
         aggregator_config: AsyncAggregatorConfig,
-        training_rate: int = 1,
-        training_duration_mean: int = 0,
-        training_duration_sd: int = 0,
-    ) -> None:
+        training_rate=1,
+        training_duration_mean=0,
+        training_duration_sd=0,
+    ):
         torch.manual_seed(1)
         # create dummy FL model on alphabet
         global_model = DummyAlphabetFLModel()
@@ -184,7 +190,7 @@ class TestAsyncTrainer:
             "",
         )
 
-    def assert_fl_nonfl_same_one_user_sgd(self) -> None:
+    def assert_fl_nonfl_same_one_user_sgd(self):
         """
         Given:
             data_for_fl={user1:batchA, batchB, batchC, ...}
@@ -220,7 +226,7 @@ class TestAsyncTrainer:
                 "",
             )
 
-    def assert_fl_nonfl_same_multiple_users_sgd(self) -> None:
+    def assert_fl_nonfl_same_multiple_users_sgd(self):
         """
         Given:
             data_for_fl={user1:batch1A, batch1B..., user2: batch2A, batch2B,...}
@@ -243,7 +249,6 @@ class TestAsyncTrainer:
             local_lr = np.random.random_sample() * 10
             global_lr = get_safe_global_lr(
                 fl_batch_size=fl_batch_size,
-                # pyre-fixme[6]: Expected `int` for 2nd param but got `float`.
                 max_examples_per_user=equal_split_examples_per_user,
             )
             assertEqual(
@@ -287,7 +292,7 @@ class TestAsyncTrainer:
                 aggregator_config=FedAvgWithLRAsyncAggregatorConfig(lr=global_lr),
             )
 
-    def assert_fl_nonfl_same_one_user_adam(self) -> None:
+    def assert_fl_nonfl_same_one_user_adam(self):
         """
         Given:
             data_for_fl={user1:batchA, batchB, batchC, ...}
@@ -322,7 +327,7 @@ class TestAsyncTrainer:
                 "",
             )
 
-    def assert_fl_nonfl_same_multiple_users_adam(self) -> None:
+    def assert_fl_nonfl_same_multiple_users_adam(self):
         """
         Given:
             data_for_fl={user1:batch1A, batch1B..., user2: batch2A, batch2B,...}
@@ -357,7 +362,7 @@ class TestAsyncTrainer:
                 "",
             )
 
-    def _test_local_lr_normalization(self, num_users: int) -> None:
+    def _test_local_lr_normalization(self, num_users: int):
         """Run training for two tasks:
             Assumption: batch_size > data on any user (so all users have incomplete batches)
             AsyncFLTask1: data = {user1:data1, user2:data2},
@@ -398,7 +403,7 @@ class TestAsyncTrainer:
         )
 
         def get_base_optimizer_and_trained_model():
-            init_model_local = FLModelParamUtils.clone(init_model)
+            init_model_local = copy.deepcopy(init_model)
             async_trainer = create_async_trainer(
                 model=init_model_local,
                 local_lr=base_lr,
@@ -418,7 +423,7 @@ class TestAsyncTrainer:
             return trained_fl_model
 
         def get_lrnorm_optimizer_and_trained_model():
-            init_model_local = FLModelParamUtils.clone(init_model)
+            init_model_local = copy.deepcopy(init_model)
             async_trainer = create_async_trainer(
                 model=init_model_local,
                 local_lr=upweighted_lr,
@@ -453,13 +458,13 @@ class TestAsyncTrainer:
             "",
         )
 
-    def test_local_lr_normalization_single_user(self) -> None:
+    def test_local_lr_normalization_single_user(self):
         self._test_local_lr_normalization(num_users=1)
 
-    def test_local_lr_normalization_multiple_users(self) -> None:
+    def test_local_lr_normalization_multiple_users(self):
         self._test_local_lr_normalization(num_users=4)
 
-    def test_async_training_metrics_reporting(self) -> None:
+    def test_async_training_metrics_reporting(self):
         """Verify that in async training, metrics are only reported
         training_end event fires, not when training_start event fires.
         We do this by:
@@ -528,7 +533,7 @@ class TestAsyncTrainer:
             fl_model, _ = async_trainer.train(
                 data_provider=fl_data_provider,
                 metric_reporter=metric_reporter,
-                num_total_users=fl_data_provider.num_train_users(),
+                num_total_users=fl_data_provider.num_users(),
                 distributed_world_size=1,
             )
             assertEqual(
@@ -570,7 +575,7 @@ class TestAsyncTrainer:
         user2 starts training
         user2 finishes training. Global model update
         """
-        global_model = FLModelParamUtils.clone(initial_model)
+        global_model = copy.deepcopy(initial_model)
         # sequential training. user1 finishes first. user2 takes user1 trained model, and trains
         for batches in [first_user_batches, second_user_batches]:
             updated_global_model = async_train_one_user(
@@ -579,7 +584,7 @@ class TestAsyncTrainer:
                 batches=batches,
                 local_lr=local_lr,
             )
-            global_model = FLModelParamUtils.clone(updated_global_model)
+            global_model = copy.deepcopy(updated_global_model)
         return global_model
 
     def _run_parallel_training_two_users(
@@ -602,7 +607,7 @@ class TestAsyncTrainer:
             they are much easier to read as separate functions. Trading off code duplication
             for readability.
         """
-        global_model = FLModelParamUtils.clone(initial_model)
+        global_model = copy.deepcopy(initial_model)
         for batches in [first_user_batches, second_user_batches]:
             # both users start training with the same initial model
             # loop iteration 1 will handle first_user_batches, which will change
@@ -614,10 +619,10 @@ class TestAsyncTrainer:
                 batches=batches,
                 local_lr=local_lr,
             )
-            global_model = FLModelParamUtils.clone(updated_global_model)
+            global_model = copy.deepcopy(updated_global_model)
         return global_model
 
-    def test_num_examples_computation(self) -> None:
+    def test_num_examples_computation(self):
         r"""
         Test that num_examples for each user affects training duration. Test this for different batch sizes
         Two users: U1 and U2. U2 always has 2 examples. U1 may have 2, 4, or 6 examples
@@ -649,7 +654,7 @@ class TestAsyncTrainer:
         num_examples_user2 = 2
         batch_size = 2
         for num_examples_user1 in [2, 4, 6]:
-            fl_model = FLModelParamUtils.clone(initial_model)
+            fl_model = copy.deepcopy(initial_model)
             fl_data_provider, nonfl_data_loader = get_data(
                 num_examples=num_examples_user1 + num_examples_user2,
                 num_fl_users=2,
@@ -665,10 +670,7 @@ class TestAsyncTrainer:
                 local_lr=local_lr,
                 aggregator_config=FedAvgWithLRAsyncAggregatorConfig(lr=global_lr),
                 training_event_generator_config=create_event_generator_config(
-                    # pyre-fixme[6]: Expected `int` for 1st param but got `float`.
-                    training_rate=0.33,
-                    training_duration_mean=1,
-                    training_duration_sd=0,
+                    training_rate=0.33, training_duration_mean=1, training_duration_sd=0
                 ),
             )
             # first num_examples_user1/batch_size batches are for user1. Rest for user2
@@ -687,7 +689,6 @@ class TestAsyncTrainer:
                     first_user_batches=user1_batches,
                     second_user_batches=user2_batches,
                     initial_model=initial_model,
-                    # pyre-fixme[6]: Expected `int` for 4th param but got `float`.
                     local_lr=local_lr,
                 )
             elif num_examples_user1 == 4:
@@ -701,7 +702,6 @@ class TestAsyncTrainer:
                     first_user_batches=user1_batches,
                     second_user_batches=user2_batches,
                     initial_model=initial_model,
-                    # pyre-fixme[6]: Expected `int` for 4th param but got `float`.
                     local_lr=local_lr,
                 )
             elif num_examples_user1 == 6:
@@ -715,13 +715,10 @@ class TestAsyncTrainer:
                     first_user_batches=user2_batches,
                     second_user_batches=user1_batches,
                     initial_model=initial_model,
-                    # pyre-fixme[6]: Expected `int` for 4th param but got `float`.
                     local_lr=local_lr,
                 )
             error_msg = verify_models_equivalent_after_training(
                 fl_trained_model,
-                # pyre-fixme[61]: `simulated_global_model` is undefined, or not
-                #  always defined.
                 simulated_global_model,
                 initial_model,
                 rel_epsilon=1e-4,
@@ -729,7 +726,7 @@ class TestAsyncTrainer:
             )
             assertEqual(error_msg, "")
 
-    def test_async_training_with_timeout(self) -> None:
+    def test_async_training_with_timeout(self):
         """
         Test async training with timeout on.
 
@@ -757,10 +754,7 @@ class TestAsyncTrainer:
             epochs=epochs,
             aggregator_config=FedAvgWithLRAsyncAggregatorConfig(lr=global_lr),
             event_generator_config=create_event_generator_config(
-                # pyre-fixme[6]: Expected `int` for 1st param but got `float`.
-                training_rate=1.0,
-                training_duration_mean=0.0,
-                training_duration_sd=0.0,
+                training_rate=1.0, training_duration_mean=0.0, training_duration_sd=0.0
             ),
             timeout_simulator_config=GaussianTimeOutSimulatorConfig(
                 timeout_wall_per_round=timeout_limit,
@@ -789,7 +783,7 @@ class TestAsyncTrainer:
         total_time = timeout_limit * num_users
         assertTrue(total_examples_trained <= total_time)
 
-    def test_max_staleness_cutoff(self) -> None:
+    def test_max_staleness_cutoff(self):
         """
         Test for max staleness cut off
 
@@ -865,7 +859,7 @@ class TestAsyncTrainer:
         )
         assertTrue(async_trainer.global_round - 1 == num_users)
 
-    def test_number_of_steps(self) -> None:
+    def test_number_of_steps(self):
         """This test checks that async training takes the same number of optimizer.step()
         as #epochs * #users * #batches_per_user
         """
@@ -899,15 +893,13 @@ class TestAsyncTrainer:
                 # ConstantGradientFLModel has a property that its bias term = #of times optimizer.step() is called
                 assertTrue(
                     np.isclose(
-                        # pyre-fixme[29]: `Union[BoundMethod[typing.Callable(torch.Te...
                         fl_model.fl_get_module().bias.detach().item(),
                         num_optimizer_steps,
                     ),
-                    # pyre-fixme[29]: `Union[BoundMethod[typing.Callable(torch.Tensor...
                     f"Expected: {num_optimizer_steps}, Found: {fl_model.fl_get_module().bias.detach().item()}",
                 )
 
-    def test_best_eval_model_is_kept(self) -> None:
+    def test_best_eval_model_is_kept(self):
         """This test checks that AsyncTrainer retains the model with the best eval performance
         To check for this, we use a special MetricsReporter that tracks which model produced
         the best eval results
@@ -954,9 +946,7 @@ class TestAsyncTrainer:
     @pytest.mark.parametrize(
         "num_users,training_rate,num_epochs", [(100, 10, 2), (50, 10, 2)]
     )
-    def test_constant_concurrency(
-        self, num_users: int, training_rate, num_epochs: int
-    ) -> None:
+    def test_constant_concurrency(self, num_users, training_rate, num_epochs):
         """
         Test for constant concurrency from one epoch to another
         We expect training_rate #users to be training simultaneously

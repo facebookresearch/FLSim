@@ -5,6 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 from enum import Enum
 from typing import Union
 
@@ -36,7 +37,6 @@ from flsim.tests.utils import (
 from flsim.trainers.async_trainer import AsyncTrainerConfig
 from flsim.trainers.sync_trainer import SyncTrainerConfig
 from flsim.utils.config_utils import is_target
-from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.sample_model import DummyAlphabetFLModel
 from flsim.utils.tests.helpers.async_trainer_test_utils import (
     create_async_trainer,
@@ -80,11 +80,11 @@ class HybridFLTestUtils:
         data_provider,
         global_model,
         server_config,
-        local_lr: float,
-        epochs: int,
-        training_rate: int,
-        training_duration_mean: float,
-        training_duration_sd: float,
+        local_lr,
+        epochs,
+        training_rate,
+        training_duration_mean,
+        training_duration_sd,
     ) -> IFLModel:
         metric_reporter = MetricsReporterWithMockedChannels()
         if trainer_to_compare_hybrid_fl_with == TrainerType.SYNC:
@@ -98,7 +98,7 @@ class HybridFLTestUtils:
             model_to_compare, _ = trainer.train(
                 data_provider=data_provider,
                 metric_reporter=metric_reporter,
-                num_total_users=data_provider.num_train_users(),
+                num_total_users=data_provider.num_users(),
                 distributed_world_size=1,
             )
         elif trainer_to_compare_hybrid_fl_with == TrainerType.ASYNC:
@@ -116,7 +116,7 @@ class HybridFLTestUtils:
             model_to_compare, _ = trainer.train(
                 data_provider=data_provider,
                 metric_reporter=metric_reporter,
-                num_total_users=data_provider.num_train_users(),
+                num_total_users=data_provider.num_users(),
                 distributed_world_size=1,
             )
         elif trainer_to_compare_hybrid_fl_with == TrainerType.NONFL:
@@ -194,24 +194,24 @@ class HybridFLTestUtils:
         trainer_to_compare_aggregator_config,
         hybrid_aggregator_config,
         base_local_lr,
-        hybrid_local_lr: float,
-        epochs: int,
-        num_examples: int,
-        num_fl_users: int,
-        batch_size: int,
-        examples_per_user: int,
+        hybrid_local_lr,
+        epochs,
+        num_examples,
+        num_fl_users,
+        batch_size,
+        examples_per_user,
         buffer_size,
-        training_rate: int,
-        training_duration_mean: float,
-        training_duration_sd: float,
+        training_rate,
+        training_duration_mean,
+        training_duration_sd,
     ) -> str:
         # we need to make three copies:
         # to train the model we want to compare with
         global_model = DummyAlphabetFLModel()
         # to train hybrid model
-        global_model_hybrid_copy = FLModelParamUtils.clone(global_model)
+        global_model_hybrid_copy = copy.deepcopy(global_model)
         # to verify training indeed took place
-        global_model_init_copy = FLModelParamUtils.clone(global_model)
+        global_model_init_copy = copy.deepcopy(global_model)
 
         data_provider = HybridFLTestUtils.get_data_provider(
             num_examples=num_examples,
@@ -251,7 +251,7 @@ class HybridFLTestUtils:
             hybrid_model, _ = hybrid_fl_trainer.train(
                 data_provider=data_provider,
                 metric_reporter=MetricsReporterWithMockedChannels(),
-                num_total_users=data_provider.num_train_users(),
+                num_total_users=data_provider.num_users(),
                 distributed_world_size=1,
             )
             return hybrid_model
@@ -287,24 +287,24 @@ class HybridFLTestUtils:
 
     @staticmethod
     def compare_nonfl_hybrid_uneven_data_split(
-        total_examples: int,
-        num_fl_users: int,
+        total_examples,
+        num_fl_users,
         buffer_size,
         non_fl_lr,
         hybrid_global_lr,
-        examples_per_user_hybrid: int,
-        examples_per_user_nonfl: int,
-        batch_size_hybrid: int,
-        batch_size_nonfl: int,
-        epochs: int,
-        local_lr: float = 1.0,
-    ) -> str:
+        examples_per_user_hybrid,
+        examples_per_user_nonfl,
+        batch_size_hybrid,
+        batch_size_nonfl,
+        epochs,
+        local_lr=1.0,
+    ):
         # to verify training indeed took place
         reference_untrained_model = DummyAlphabetFLModel()
         # to train hybrid model
-        hybrid_model = FLModelParamUtils.clone(reference_untrained_model)
+        hybrid_model = copy.deepcopy(reference_untrained_model)
         # to train nonfl
-        nonfl_model = FLModelParamUtils.clone(reference_untrained_model)
+        nonfl_model = copy.deepcopy(reference_untrained_model)
 
         nonfl_data_provider = HybridFLTestUtils.get_data_provider(
             num_examples=total_examples,
@@ -355,24 +355,24 @@ class HybridFLTestUtils:
 
     @staticmethod
     def compare_async_hybrid_uneven_data_split(
-        total_examples: int,
-        num_fl_users: int,
+        total_examples,
+        num_fl_users,
         hybrid_num_fl_users,
         async_global_lr,
         hybrid_global_lr,
-        batch_size_hybrid: int,
-        batch_size_async: int,
-        epochs: int,
+        batch_size_hybrid,
+        batch_size_async,
+        epochs,
         training_rate,
         training_duration_mean,
-        local_lr: float = 1.0,
-    ) -> str:
+        local_lr=1.0,
+    ):
         # to verify training indeed took place
         reference_untrained_model = DummyAlphabetFLModel()
         # to train hybrid model
-        hybrid_model = FLModelParamUtils.clone(reference_untrained_model)
+        hybrid_model = copy.deepcopy(reference_untrained_model)
         # to train async
-        async_model = FLModelParamUtils.clone(reference_untrained_model)
+        async_model = copy.deepcopy(reference_untrained_model)
 
         async_data_provider = HybridFLTestUtils.get_data_provider(
             num_examples=total_examples,
@@ -423,10 +423,10 @@ class HybridFLTestUtils:
 
 class TestFedBuff:
     @classmethod
-    def setup_class(cls) -> None:
+    def setup_class(cls):
         np.random.seed(0)
 
-    def test_async_hybrid_same_multiple_clients_to_sync(self) -> None:
+    def test_async_hybrid_same_multiple_clients_to_sync(self):
         r"""
         Test when hybrid has multiple clients to sync
         1. Training in parallel. Meaning, both mechanisms start from the same global model (training_time >> training rate)
@@ -461,7 +461,7 @@ class TestFedBuff:
         )
         assertEmpty(error_msg, msg=error_msg)
 
-    def test_non_fl_hybrid_same_multiple_clients_to_sync(self) -> None:
+    def test_non_fl_hybrid_same_multiple_clients_to_sync(self):
         """
         Test nonFL and hybrid same with multiple clients to sync
 
@@ -497,7 +497,7 @@ class TestFedBuff:
         )
         assertEmpty(error_msg, msg=error_msg)
 
-    def test_async_hybrid_same_sync_every_client(self) -> None:
+    def test_async_hybrid_same_sync_every_client(self):
         r"""
         Hybrid and Async should yield the same model:
         1. Async and Hybrid training duration distribution are the same
@@ -546,7 +546,7 @@ class TestFedBuff:
                 )
                 assertEqual(error_msg, "")
 
-    def test_nonfl_hybrid_same_sgd(self) -> None:
+    def test_nonfl_hybrid_same_sgd(self):
         r"""
         Hybrid and NonFL should yield the same model:
         1. Hybrid's training rate = 1, training duration ~ N(0, 0)
@@ -593,7 +593,7 @@ class TestFedBuff:
             )
             assertEqual(error, "")
 
-    def test_nonfl_hybrid_same_adam(self) -> None:
+    def test_nonfl_hybrid_same_adam(self):
         r"""
         Hybrid and NonFL should yield the same model:
         1. Hybrid's training rate = 1, training duration ~ N(0, 0)
@@ -639,7 +639,7 @@ class TestFedBuff:
         )
         assertEqual(error, "")
 
-    def test_sync_hybrid_same_sgd(self) -> None:
+    def test_sync_hybrid_same_sgd(self):
         r"""
         Hybrid and Sync should yield the same model:
         1. For simplification, assume training_rate = total_users.
@@ -692,7 +692,7 @@ class TestFedBuff:
             )
             assertEqual(error, "")
 
-    def test_sync_hybrid_same_adam(self) -> None:
+    def test_sync_hybrid_same_adam(self):
         r"""
         For sync == hybrid adam,
         `hybrid_local_lr = sync_local_lr / buffer_size`
@@ -749,7 +749,7 @@ class TestFedBuff:
         print(f"{num_fl_users} {examples_per_user} {local_lr} {global_lr}")
         assertEqual(error, "")
 
-    def test_partial_model_update(self) -> None:
+    def test_partial_model_update(self):
         r"""
         Test for partial update
 
@@ -793,7 +793,7 @@ class TestFedBuff:
         )
         assertEmpty(error_msg, msg=error_msg)
 
-    def test_remaining_clients_to_sync(self) -> None:
+    def test_remaining_clients_to_sync(self):
         """
         An aggregator can have unaggregated clients before
         an end of the epoch

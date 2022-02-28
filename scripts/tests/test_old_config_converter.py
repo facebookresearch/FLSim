@@ -9,7 +9,7 @@ import json
 
 import pkg_resources
 from flsim.common.pytest_helper import assertTrue
-from scripts.old_config_converter import get_new_fl_config
+from flsim.scripts.old_config_converter import get_new_fl_config
 
 OLD_CONFIGS = [
     "configs/hybrid_fedadam_old.json",

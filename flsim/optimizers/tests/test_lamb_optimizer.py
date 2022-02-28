@@ -19,12 +19,12 @@ from flsim.tests.utils import MockQuadratic1DFL, Quadratic1D
 from omegaconf import OmegaConf
 
 
-def adjust_learning_rate(optimizer, new_lr) -> None:
+def adjust_learning_rate(optimizer, new_lr):
     for param_group in optimizer.param_groups:
         param_group["lr"] = new_lr
 
 
-def _test_lamb_multiple_steps(test_case, weight_decay: int = 0) -> None:
+def _test_lamb_multiple_steps(test_case, weight_decay=0):
     """
         a toy optimization example:
             min f(x) = 100 x^2 - 1
@@ -44,20 +44,12 @@ def _test_lamb_multiple_steps(test_case, weight_decay: int = 0) -> None:
         "weight_decay": weight_decay,
     }
     lamb_aggregator = FedLAMBSyncAggregator(
-        # pyre-fixme[6]: Expected `bool` for 1st param but got `float`.
-        # pyre-fixme[6]: Expected `IFLRoundReducerConfig` for 1st param but got `float`.
-        # pyre-fixme[6]: Expected `int` for 1st param but got `float`.
-        # pyre-fixme[6]: Expected `str` for 1st param but got `float`.
         **OmegaConf.structured(FedLAMBSyncAggregatorConfig(**dict_config_lamb)),
         global_model=test_case.quadratic1D_lamb,
     )
 
     dict_config_adam = {"lr": 0.01, "weight_decay": weight_decay, "eps": eps}
     adam_aggregator = FedAdamSyncAggregator(
-        # pyre-fixme[6]: Expected `bool` for 1st param but got `float`.
-        # pyre-fixme[6]: Expected `IFLRoundReducerConfig` for 1st param but got `float`.
-        # pyre-fixme[6]: Expected `int` for 1st param but got `float`.
-        # pyre-fixme[6]: Expected `str` for 1st param but got `float`.
         **OmegaConf.structured(FedAdamSyncAggregatorConfig(**dict_config_adam)),
         global_model=test_case.quadratic1D_adam,
     )
@@ -116,17 +108,15 @@ def _test_lamb_multiple_steps(test_case, weight_decay: int = 0) -> None:
 
 
 @pytest.fixture(scope="class")
-def prepare_lamb_optimizer_test(request) -> None:
+def prepare_lamb_optimizer_test(request):
     request.cls.quadratic1D_lamb = MockQuadratic1DFL(Quadratic1D())
     request.cls.quadratic1D_adam = MockQuadratic1DFL(Quadratic1D())
 
 
 @pytest.mark.usefixtures("prepare_lamb_optimizer_test")
 class TestLambOptimizer:
-    def test_lamb_no_weight_decay(self) -> None:
-        # pyre-fixme[6]: Expected `int` for 2nd param but got `float`.
+    def test_lamb_no_weight_decay(self):
         _test_lamb_multiple_steps(self, weight_decay=0.0)
 
-    def test_lamb_weight_decay(self) -> None:
-        # pyre-fixme[6]: Expected `int` for 2nd param but got `float`.
+    def test_lamb_weight_decay(self):
         _test_lamb_multiple_steps(self, weight_decay=0.1)

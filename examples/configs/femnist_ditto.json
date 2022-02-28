@@ -1,0 +1,50 @@
+{
+  "config": {
+    "trainer": {
+      "_base_": "base_sync_trainer",
+      "num_rounds": 500,
+      "server": {
+        "_base_": "base_sync_server",
+        "server_optimizer": {
+          "_base_": "base_fed_avg_with_lr",
+          "lr": 2.13,
+          "momentum": 0.9
+        },
+        "active_user_selector": {
+          "_base_": "base_uniformly_random_active_user_selector",
+          "random_with_replacement": true
+        }
+      },
+      "client": {
+        "_base_": "base_ditto_client",
+        "epochs": 1,
+        "random_seed": 0,
+        "optimizer": {
+          "_base_": "base_optimizer_prox",
+          "lr": 0.0138,
+          "momentum": 0,
+          "lambda_": 10
+        }
+      },
+      "users_per_round": 10,
+      "train_metrics_reported_per_epoch": 1,
+      "always_keep_trained_model": false,
+      "report_train_metrics": true,
+      "eval_epoch_frequency": 1.0,
+      "do_eval": true,
+      "personalized": true,
+      "report_train_metrics_after_aggregation": false
+    },
+    "data": {
+        "local_batch_size": 32,
+        "eval_split": 0.2,
+        "train_file": "/private/home/koloskova/federated-asynchronous/FLSim/examples/leaf/data/femnist/data/train/femnist_348_train.json",
+        "test_file": "/private/home/koloskova/federated-asynchronous/FLSim/examples/leaf/data/femnist/data/test/femnist_test.json"
+    },
+    "model": {
+      "use_resnet": true
+    },
+    "distributed_world_size": 1,
+    "use_cuda_if_available": true
+  }
+}

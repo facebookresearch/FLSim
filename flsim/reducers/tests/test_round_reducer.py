@@ -5,6 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 import math
 from dataclasses import dataclass
 from tempfile import mkstemp
@@ -31,11 +32,16 @@ from flsim.reducers.base_round_reducer import (
     RoundReducerConfig,
 )
 from flsim.reducers.dp_round_reducer import DPRoundReducer, DPRoundReducerConfig
+from flsim.reducers.secure_round_reducer import (
+    SecureRoundReducer,
+    SecureRoundReducerConfig,
+)
 from flsim.reducers.weighted_dp_round_reducer import (
     EstimatorType,
     WeightedDPRoundReducer,
     WeightedDPRoundReducerConfig,
 )
+from flsim.secure_aggregation.secure_aggregator import FixedPointConfig
 from flsim.tests import utils
 from flsim.utils.async_trainer.async_example_weights import EqualExampleWeightConfig
 from flsim.utils.async_trainer.async_staleness_weights import (
@@ -43,7 +49,6 @@ from flsim.utils.async_trainer.async_staleness_weights import (
 )
 from flsim.utils.async_trainer.async_weights import AsyncWeight, AsyncWeightConfig
 from flsim.utils.distributed.fl_distributed import FLDistributedUtils
-from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
@@ -56,12 +61,12 @@ def create_ref_model(ref_model_param_value):
 
 def get_dp_round_reducer(
     ref_model=None,
-    clipping_value: float = 99999.99,
+    clipping_value=99999.99,
     reduction_type=ReductionType.AVERAGE,
-    noise_multiplier: int = 0,
+    noise_multiplier=0,
     num_users_per_round: int = 1,
     total_number_of_users: int = 1,
-    reset: bool = True,
+    reset=True,
 ):
     ref_model = ref_model or utils.SampleNet(utils.TwoFC())
     privacy_setting = PrivacySetting(
@@ -82,9 +87,7 @@ def get_dp_round_reducer(
     return dp_rr
 
 
-def init_process(
-    rank, world_size, reducer, models, file_loc, pipe, backend: str = "gloo"
-) -> None:
+def init_process(rank, world_size, reducer, models, file_loc, pipe, backend="gloo"):
     """
     Initialize the distributed environment for multi-process testing, and
     runs a simple reduction task and returns the mean of all the parameters
@@ -107,7 +110,7 @@ def init_process(
     dist.destroy_process_group()
 
 
-def run_reduction_test(reducer, num_processes: int = 1, num_models: int = 4):
+def run_reduction_test(reducer, num_processes=1, num_models=4):
     """
     Used in multiprocess test only.
     Runs a simple scenario in multiple processes.
@@ -167,7 +170,7 @@ class TestRoundReducer(TestRoundReducerBase):
         self,
         model=None,
         reduction_type=ReductionType.WEIGHTED_AVERAGE,
-        reset: bool = True,
+        reset=True,
     ):
         model = model or utils.SampleNet(utils.TwoFC())
         round_reducer = RoundReducer(
@@ -176,7 +179,7 @@ class TestRoundReducer(TestRoundReducerBase):
         )
         return round_reducer
 
-    def test_reset(self) -> None:
+    def test_reset(self):
         rr = self.get_round_reducer()
         mismatched = utils.model_parameters_equal_to_value(rr.reduced_module, 0.0)
         assertEqual(mismatched, "", mismatched)
@@ -186,7 +189,7 @@ class TestRoundReducer(TestRoundReducerBase):
         mismatched = utils.model_parameters_equal_to_value(rr.reduced_module, 0.0)
         assertEqual(mismatched, "", mismatched)
 
-    def test_receive_through_channel(self) -> None:
+    def test_receive_through_channel(self):
         # expected channel effects,
         rr = self.get_round_reducer()
         model = utils.SampleNet(utils.TwoFC())
@@ -196,7 +199,7 @@ class TestRoundReducer(TestRoundReducerBase):
         mismatched = utils.verify_models_equivalent_after_training(model2, model)
         assertEqual(mismatched, "", mismatched)
 
-    def test_update_reduced_module(self) -> None:
+    def test_update_reduced_module(self):
         model = utils.SampleNet(utils.TwoFC())
         rr = self.get_round_reducer(model)
         model.fl_get_module().fill_all(0.2)
@@ -208,7 +211,7 @@ class TestRoundReducer(TestRoundReducerBase):
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_collect_update(self) -> None:
+    def test_collect_update(self):
         param_values = [0.1 * i for i in range(100)]
         weights = [i % 10 for i in range(100)]
         global_param = 1.0
@@ -232,7 +235,7 @@ class TestRoundReducer(TestRoundReducerBase):
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_reduction_types_sum(self) -> None:
+    def test_reduction_types_sum(self):
         model = utils.SampleNet(utils.TwoFC())
         rr = self.get_round_reducer(model, reduction_type=ReductionType.SUM)
         results = run_reduction_test(rr, num_processes=1, num_models=2)
@@ -240,7 +243,7 @@ class TestRoundReducer(TestRoundReducerBase):
         for r in results:
             assertAlmostEqual(r, value_expected, 5)
 
-    def test_reduction_types_avg(self) -> None:
+    def test_reduction_types_avg(self):
         model = utils.SampleNet(utils.TwoFC())
         rr = self.get_round_reducer(model, reduction_type=ReductionType.AVERAGE)
         results = run_reduction_test(rr, num_processes=2, num_models=4)
@@ -248,7 +251,7 @@ class TestRoundReducer(TestRoundReducerBase):
         for r in results:
             assertAlmostEqual(r, value_expected, 5)
 
-    def test_reduction_types_weighted_sum(self) -> None:
+    def test_reduction_types_weighted_sum(self):
         model = utils.SampleNet(utils.TwoFC())
         rr = self.get_round_reducer(model, reduction_type=ReductionType.WEIGHTED_SUM)
         results = run_reduction_test(rr, num_processes=3, num_models=6)
@@ -256,7 +259,7 @@ class TestRoundReducer(TestRoundReducerBase):
         for r in results:
             assertAlmostEqual(r, value_expected, 5)
 
-    def test_reduction_types_weighted_avg(self) -> None:
+    def test_reduction_types_weighted_avg(self):
         model = utils.SampleNet(utils.TwoFC())
         rr = self.get_round_reducer(
             model, reduction_type=ReductionType.WEIGHTED_AVERAGE
@@ -268,7 +271,7 @@ class TestRoundReducer(TestRoundReducerBase):
         for r in results:
             assertAlmostEqual(r, value_expected, 5)
 
-    def test_multiprocess_reduce(self) -> None:
+    def test_multiprocess_reduce(self):
         # test multi processing.
         model = utils.SampleNet(utils.TwoFC())
         num_models = 4
@@ -286,14 +289,143 @@ class TestRoundReducer(TestRoundReducerBase):
         for r in results:
             assertAlmostEqual(r, value_expected, 5)
 
-    def test_logging_level(self) -> None:
+    def test_logging_level(self):
         rr = self.get_round_reducer()
         assertTrue(utils.check_inherit_logging_level(rr, 50))
         assertTrue(utils.check_inherit_logging_level(rr, 10))
 
 
+class TestSecureRoundReducer(TestRoundReducerBase):
+    def get_round_reducer(
+        self,
+        model,
+        fixedpoint,
+    ):
+        model = model or utils.SampleNet(utils.TwoFC())
+        round_reducer = SecureRoundReducer(
+            **OmegaConf.structured(
+                SecureRoundReducerConfig(
+                    reduction_type=ReductionType.WEIGHTED_AVERAGE,
+                    fixedpoint=fixedpoint,
+                )
+            ),
+            global_model=model,
+        )
+        return round_reducer
+
+    def test_secure_aggregator_reducer_init(self):
+        """
+        Tests whether secure aggeragtion object is initiated
+        correctly in round reducer
+        """
+        model = utils.SampleNet(utils.TwoFC())
+        # test secure aggregation with flat FP config
+        fixedpoint = FixedPointConfig(num_bytes=2, scaling_factor=100)
+        r1 = self.get_round_reducer(model, fixedpoint=fixedpoint)
+        assertEqual(len(r1.secure_aggregator.converters), 4)
+        assertEqual(  # verify an arbitrary layer of the model
+            r1.secure_aggregator.converters["fc2.bias"].scaling_factor, 100
+        )
+
+    def test_secure_aggregator_reducer_update_reduced_module(self):
+        """
+        Tests whether secure aggeragtion operations work correctly
+        when a model update is received and reduced module is updated
+        """
+        model = utils.SampleNet(utils.TwoFC())
+
+        fixedpoint = FixedPointConfig(num_bytes=2, scaling_factor=100)
+        # hence minValue = -32768, maxValue = 32767
+        rr = self.get_round_reducer(model, fixedpoint=fixedpoint)
+
+        model.fl_get_module().fill_all(7.2345)
+        rr.update_reduced_module(model.fl_get_module(), 3.0)
+        model.fl_get_module().fill_all(-3.45612)
+        rr.update_reduced_module(model.fl_get_module(), 7.0)
+        mismatched = utils.model_parameters_equal_to_value(
+            rr.reduced_module, -249.0
+        )  # round(7.2345*100*3 - 3.45612*100*7) = round(-248.934)
+        assertEqual(mismatched, "", mismatched)
+
+        rr.reduce()
+        mismatched = utils.model_parameters_equal_to_value(
+            rr.reduced_module, -0.2490  # -249.0 / 100 / (3.0 + 0.7)
+        )
+        assertEqual(mismatched, "", mismatched)
+
+    def test_secure_aggregator_reducer_reduce_large_range(self):
+        """
+        Tests whether secure aggeragtion operations work correctly
+        when the reduce() method is called, and when the num_bytes is
+        big, so we do not have a possible fixedpoint overflow
+        """
+        ref_model = utils.SampleNet(utils.TwoFC())
+        fixedpoint = FixedPointConfig(num_bytes=4, scaling_factor=10)
+        rr = self.get_round_reducer(ref_model, fixedpoint=fixedpoint)
+
+        global_param = 8.0
+        client_param = 2.123
+        num_clients = 50
+
+        clients = self._create_fake_clients(
+            global_param_value=global_param,
+            num_clients=num_clients,
+            client_param_value=client_param,
+            client_weight=1.0,
+        )
+        for client in clients:
+            delta, weight = client.generate_local_update(utils.SampleNet(utils.TwoFC()))
+            rr.collect_update(delta, weight)
+        rr.reduce()
+        # update is 5.877. In current fixedpoint setup, it is 59.
+        # when we reduce, we convert from fixedpoint to floating point, so 59 -> 5.9
+        expected_param_values = (5.9 * num_clients) / num_clients
+
+        model_after_noise, sum_weights = rr.current_results
+        mismatched = utils.model_parameters_equal_to_value(
+            model_after_noise, expected_param_values
+        )
+        assertEqual(mismatched, "", mismatched)
+
+    def test_secure_aggregator_reducer_reduce_small_range(self):
+        """
+        Tests whether secure aggeragtion operations work correctly
+        when the reduce() method is called, and when the num_bytes is
+        small so we have possible fixedpoint overflows
+        """
+        ref_model = utils.SampleNet(utils.TwoFC())
+        fixedpoint = FixedPointConfig(num_bytes=1, scaling_factor=100)
+        # the range of numbers would be (-128,127)
+        rr = self.get_round_reducer(ref_model, fixedpoint=fixedpoint)
+
+        global_param = 8.0
+        client_param = 2.123
+        num_clients = 50
+
+        clients = self._create_fake_clients(
+            global_param_value=global_param,
+            num_clients=num_clients,
+            client_param_value=client_param,
+            client_weight=1.0,
+        )
+        for client in clients:
+            delta, weight = client.generate_local_update(utils.SampleNet(utils.TwoFC()))
+            rr.collect_update(delta, weight)
+        rr.reduce()
+        # update is 5.877. In current fixedpoint setup, it is 127, as 587.7 > 127
+        # when we reduce, we convert from fixedpoint to floating point, so 127 -> 1.27
+        expected_param_values = (1.27 * num_clients) / num_clients
+
+        model_after_noise, sum_weights = rr.current_results
+
+        mismatched = utils.model_parameters_equal_to_value(
+            model_after_noise, expected_param_values
+        )
+        assertEqual(mismatched, "", mismatched)
+
+
 class TestDPRoundReducer(TestRoundReducerBase):
-    def test_dp_off(self) -> None:
+    def test_dp_off(self):
         ref_model = create_ref_model(ref_model_param_value=3.0)
         # when clipping_value is inf, sensetivity is inf -> dp not supported
         dp_rr = get_dp_round_reducer(
@@ -306,7 +438,7 @@ class TestDPRoundReducer(TestRoundReducerBase):
         )
         assertFalse(dp_rr.privacy_on)
 
-    def test_collect_update_with_clipping(self) -> None:
+    def test_collect_update_with_clipping(self):
         """
         Tests whether the model updates associated with the new models sent
         from clients are clipped correctly.
@@ -345,7 +477,7 @@ class TestDPRoundReducer(TestRoundReducerBase):
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_clipping_when_noise_zero(self) -> None:
+    def test_clipping_when_noise_zero(self):
         """
         Tests when noise multiplier is zero, calling add_noise() in reduce()
         does not change the model after clipping.
@@ -389,7 +521,7 @@ class TestDPRoundReducer(TestRoundReducerBase):
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_noise_when_clipping_large_value(self) -> None:
+    def test_noise_when_clipping_large_value(self):
         """
         Tests 2 things: 1) whether clipping does not happen when
         clipping threshold is set to a large value, 2) whether we get
@@ -406,7 +538,7 @@ class TestDPRoundReducer(TestRoundReducerBase):
         )
         ref_model = create_ref_model(ref_model_param_value=global_value)
 
-        ref_model_before = FLModelParamUtils.clone(ref_model)
+        ref_model_before = copy.deepcopy(ref_model)
         dp_rr = get_dp_round_reducer(
             ref_model,
             clipping_value=10.0,
@@ -440,7 +572,7 @@ class TestDPRoundReducer(TestRoundReducerBase):
         )
         assertNotEqual(mismatched, "")
 
-    def test_noise_added_correctly(self) -> None:
+    def test_noise_added_correctly(self):
         """
         Tests that the noise is added correctly to model.
         """
@@ -481,7 +613,7 @@ class TestDPRoundReducer(TestRoundReducerBase):
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_multiprocess_dp_all_processes_the_same(self) -> None:
+    def test_multiprocess_dp_all_processes_the_same(self):
         # test multi processing.
         model = utils.SampleNet(utils.TwoFC())
         num_models = 4
@@ -517,10 +649,10 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
     def _get_reducer(
         self,
         ref_model=None,
-        clipping_value: float = 1e10,
+        clipping_value=1e10,
         reduction_type=ReductionType.WEIGHTED_SUM,
         estimator_type=EstimatorType.UNBIASED,
-        noise_multiplier: int = 0,
+        noise_multiplier=0,
         num_users_per_round: int = 1,
         total_number_of_users: int = 1,
         max_weight: float = 10,
@@ -548,7 +680,7 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
         )
         return reducer
 
-    def _get_async_weight(self, exponent, avg_staleness: int = 0):
+    def _get_async_weight(self, exponent, avg_staleness=0):
         return AsyncWeight(
             **OmegaConf.structured(
                 AsyncWeightConfig(
@@ -610,7 +742,7 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
         return reducer, weights
 
     def _test_weighted_avg_reduction(
-        self, estimator_type, global_param: float, client_param: float, max_clip_norm
+        self, estimator_type, global_param, client_param, max_clip_norm
     ):
         delta = global_param - client_param
         global_model = create_ref_model(ref_model_param_value=global_param)
@@ -645,7 +777,7 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
             ref_module_after_noise, expected_param_values
         )
 
-    def test_clipped_models_weighted_sum(self) -> None:
+    def test_clipped_models_weighted_sum(self):
         """
         Test when models get clipped with weighted sum
 
@@ -688,7 +820,7 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_clipped_models_weighted_avg_with_biased_estimator(self) -> None:
+    def test_clipped_models_weighted_avg_with_biased_estimator(self):
         """
         Test when models get clipped with weighted avg with biased estimator
         where the sensitivity = (clipping_value * max_weight) / (mean_weight * num_clients_per_round)
@@ -707,7 +839,7 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_clipped_models_weighted_avg_with_unbiased_estimator(self) -> None:
+    def test_clipped_models_weighted_avg_with_unbiased_estimator(self):
         """
         Test when models get clipped with weighted avg with unbiased estimator
         where the sensitivity = (clipping_value * max_weight) / (min_weight * users_per_round)
@@ -727,7 +859,7 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_unclipped_models_weighted_avg_with_biased_estimator(self) -> None:
+    def test_unclipped_models_weighted_avg_with_biased_estimator(self):
         """
         Test when max_clip_norm is greater than user norm with weighted avg
 
@@ -743,7 +875,7 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_unclipped_models_weighted_avg_with_unbiased_estimator(self) -> None:
+    def test_unclipped_models_weighted_avg_with_unbiased_estimator(self):
         """
         Test when max_clip_norm is greater than user norm with weighted avg
 
@@ -759,7 +891,7 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_unclipped_models_weighted_sum(self) -> None:
+    def test_unclipped_models_weighted_sum(self):
         """
         Test when max_clip_norm is greater than user norm with weighted sum
 
@@ -797,7 +929,7 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
         )
         assertEqual(mismatched, "", mismatched)
 
-    def test_weighted_dp_multiprocess_same(self) -> None:
+    def test_weighted_dp_multiprocess_same(self):
         """
         Multiprocess test for weighted DP reducer
         """
@@ -826,9 +958,7 @@ class FLRoundReducerTest:
             (RoundReducerConfig(), RoundReducer),
         ],
     )
-    def test_reducer_creation_from_config(
-        self, config: Type, expected_type: Type
-    ) -> None:
+    def test_reducer_creation_from_config(self, config: Type, expected_type: Type):
         ref_model = utils.SampleNet(utils.TwoFC())
         reducer = instantiate(config, global_model=ref_model)
         assertIsInstance(reducer, expected_type)

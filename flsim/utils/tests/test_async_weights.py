@@ -65,7 +65,7 @@ class TestAsyncExampleWeights:
         example_weight_class: ExampleWeight,
         avg_num_examples: int = 1,
         avg_staleness: int = 1,
-    ) -> None:
+    ):
         """Test that all weight computation works as expected"""
         max_num_examples = 10000
         max_staleness = 10000

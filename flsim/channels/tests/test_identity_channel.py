@@ -5,6 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from copy import deepcopy
 from typing import Type
 
 import pytest
@@ -57,7 +58,7 @@ class TestIdentityChannel:
         # create dummy model
         two_fc = utils.TwoFC()
         base_model = utils.SampleNet(two_fc)
-        download_model = FLModelParamUtils.clone(base_model)
+        download_model = deepcopy(base_model)
 
         # test server -> client, models should be strictly identical
         message = Message(download_model)
@@ -88,7 +89,7 @@ class TestIdentityChannel:
         # create dummy model
         two_fc = utils.TwoFC()
         base_model = utils.SampleNet(two_fc)
-        upload_model = FLModelParamUtils.clone(base_model)
+        upload_model = deepcopy(base_model)
 
         # test client -> server, models should be strictly identical
         message = Message(upload_model)
@@ -117,8 +118,9 @@ class TestIdentityChannel:
 
         # create dummy model
         two_fc = utils.TwoFC()
-        download_model = utils.SampleNet(FLModelParamUtils.clone(two_fc))
-        upload_model = utils.SampleNet(FLModelParamUtils.clone(two_fc))
+        base_model = utils.SampleNet(two_fc)
+        download_model = deepcopy(base_model)
+        upload_model = deepcopy(base_model)
 
         # server -> client
         message = Message(download_model)

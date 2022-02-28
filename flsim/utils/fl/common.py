@@ -7,10 +7,9 @@
 
 import copy
 import math
-from typing import Union, List, Optional
+from typing import List, Optional
 
 import torch
-from flsim.interfaces.model import IFLModel
 from flsim.utils.fl.personalized_model import FLModelWithPrivateModules
 from torch import nn
 from torch.optim.optimizer import Optimizer
@@ -52,7 +51,7 @@ class FLModelParamUtils:
         abs_epsilon: Optional[float] = None,
     ) -> str:
         """Compare all the models in the given list of models.
-        It returns an empty string if all the models have the same parameters.
+        It returns an empty string if all the models have same parameters.
         It returns the name of the first parameter that is different if any.
         """
         if rel_epsilon is None and abs_epsilon is not None:
@@ -122,7 +121,7 @@ class FLModelParamUtils:
             none
         """
         assert weights is None or len(weights) == len(models), (
-            "Weights should have the same length as models. len(wts):"
+            "Weights should have same length as models. len(wts):"
             + str(len(weights))
             + ", len(models):"
             + str(len(models))
@@ -162,26 +161,17 @@ class FLModelParamUtils:
             cls.load_state_dict(m, from_state_dict, only_federated_params)
 
     @classmethod
-    def clone(
-        cls, model: Union[nn.Module, IFLModel], dtype: Optional[torch.dtype] = None
-    ):
+    def clone(cls, model: nn.Module, dtype: Optional[torch.dtype] = None):
         """
         Clones a pytorch module, and allows for a change of precision.
         TODO If needed we can also add device here.
         """
         new_model = copy.deepcopy(model)
-        if isinstance(new_model, IFLModel):
-            if dtype == torch.float32:
-                new_model.fl_get_module().float()
-            elif dtype == torch.float64:
-                new_model.fl_get_module().double()
-            return new_model
-        else:
-            return (
-                new_model.float()
-                if dtype == torch.float32
-                else (new_model.double() if dtype == torch.float64 else new_model)
-            )
+        return (
+            new_model.float()
+            if dtype == torch.float32
+            else (new_model.double() if dtype == torch.float64 else new_model)
+        )
 
     @classmethod
     def set_gradient(cls, model: nn.Module, reference_gradient: nn.Module) -> None:
@@ -190,7 +180,7 @@ class FLModelParamUtils:
             model: nn.Module
             reference_gradient: nn.Module - gradient is the parameters of this model
         """
-        # Use parameters() since state_dict() may include non-learnable params.
+        # Use parameters() since state_dict() may inlude non-learnable params.
         for m, ref in zip(model.parameters(), reference_gradient.parameters()):
             m.grad = ref.detach().clone().type(m.type())
 

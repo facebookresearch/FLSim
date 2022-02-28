@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import abc
+import copy
 import logging
 from dataclasses import dataclass
 from typing import Optional
@@ -175,7 +176,7 @@ class SyncAggregatorWithOptimizer(SyncAggregator):
         )
         # creating two temporary models so we don't have to initialize them
         # every time step() is called
-        self._reconstructed_grad = FLModelParamUtils.clone(self._global_model)
+        self._reconstructed_grad = copy.deepcopy(self._global_model)
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):

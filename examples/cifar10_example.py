@@ -6,12 +6,10 @@
 # LICENSE file in the root directory of this source tree.
 
 """In this tutorial, we will train an image classifier with FLSim to simulate federated learning training environment.
-
 With this tutorial, you will learn the following key components of FLSim:
 1. Data loading
 2. Model construction
 3. Trainer construction
-
   Typical usage example:
     python3 cifar10_example.py --config-file configs/cifar10_config.json
 """
@@ -33,11 +31,10 @@ from omegaconf import DictConfig, OmegaConf
 from torchvision import transforms
 from torchvision.datasets.cifar import CIFAR10
 
-
 IMAGE_SIZE = 32
 
 
-def build_data_provider(local_batch_size, examples_per_user, drop_last: bool = False):
+def build_data_provider(local_batch_size, examples_per_user, drop_last=False):
 
     transform = transforms.Compose(
         [
@@ -57,21 +54,19 @@ def build_data_provider(local_batch_size, examples_per_user, drop_last: bool = F
     fl_data_loader = DataLoader(
         train_dataset, test_dataset, test_dataset, sharder, local_batch_size, drop_last
     )
-    # pyre-fixme[45]: Cannot instantiate abstract class `DataProvider`.
     data_provider = DataProvider(fl_data_loader)
-    print(f"Clients in total: {data_provider.num_train_users()}")
+    print(f"Clients in total: {data_provider.num_users()}")
     return data_provider
 
 
 def main(
     trainer_config,
     data_config,
-    use_cuda_if_available: bool = True,
-) -> None:
+    use_cuda_if_available=True,
+):
     cuda_enabled = torch.cuda.is_available() and use_cuda_if_available
     device = torch.device(f"cuda:{0}" if cuda_enabled else "cpu")
     model = SimpleConvNet(in_channels=3, num_classes=10)
-    # pyre-fixme[6]: Expected `Optional[str]` for 2nd param but got `device`.
     global_model = FLModel(model, device)
     if cuda_enabled:
         global_model.fl_cuda()
@@ -88,7 +83,7 @@ def main(
     final_model, eval_score = trainer.train(
         data_provider=data_provider,
         metric_reporter=metrics_reporter,
-        num_total_users=data_provider.num_train_users(),
+        num_total_users=data_provider.num_users(),
         distributed_world_size=1,
     )
 
@@ -96,10 +91,11 @@ def main(
         data_iter=data_provider.test_data(),
         metric_reporter=MetricsReporter([Channel.STDOUT]),
     )
+    return final_model, eval_score
 
 
 @hydra.main(config_path=None, config_name="cifar10_tutorial")
-def run(cfg: DictConfig) -> None:
+def run(cfg: DictConfig):
     print(OmegaConf.to_yaml(cfg))
 
     trainer_config = cfg.trainer

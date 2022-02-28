@@ -25,7 +25,7 @@ def fullclassname(cls: Type[Any]) -> str:
     return name
 
 
-def _validate_cfg(component_class: Type[Any], cfg: Any) -> None:
+def _validate_cfg(component_class: Type[Any], cfg: Any):
     """
     Validate that cfg doesn't have MISSING fields. This needs to be done only after
     all defaults are set, typically in the base class.
@@ -40,8 +40,12 @@ def _validate_cfg(component_class: Type[Any], cfg: Any) -> None:
 
 
 def init_self_cfg(
-    component_obj: Any, *, component_class: Type, config_class: Type, **kwargs
-) -> None:
+    component_obj: Any,
+    *,
+    component_class: Type,
+    config_class: Type,
+    **kwargs,
+):
     """
     Initialize FL component config by constructing OmegaConf object,
     setting defaults, and validating config.
@@ -61,7 +65,7 @@ def init_self_cfg(
 
 # trainer config utils for consuming hydra configs
 def _flatten_dict(
-    d: collections.MutableMapping, parent_key: str = "", sep: str = "."
+    d: collections.MutableMapping, parent_key="", sep="."
 ) -> Dict[str, str]:
     """
     Changes json of style

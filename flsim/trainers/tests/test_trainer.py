@@ -28,6 +28,9 @@ from flsim.common.timeout_simulator import GaussianTimeOutSimulatorConfig
 from flsim.data.data_provider import FLDataProviderFromList
 from flsim.data.data_sharder import SequentialSharder
 from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
+from flsim.fb.data.hive_data_utils import create_dataloader
+from flsim.fb.data.hive_dataset import InlineDatasetConfig
+from flsim.fb.data.paged_dataloader import PagedDataProvider
 from flsim.interfaces.metrics_reporter import TrainingStage
 from flsim.optimizers.async_aggregators import FedAdamAsyncAggregatorConfig
 from flsim.optimizers.local_optimizers import (
@@ -92,7 +95,7 @@ class TestTrainer:
     )
     def test_trainer_creation_from_json_config(
         self, json_file_name: str, trainer_class: type
-    ) -> None:
+    ):
         trainer = None
         file_path = pkg_resources.resource_filename(__name__, json_file_name)
         with open(file_path, "r") as parameters_file:
@@ -105,7 +108,7 @@ class TestTrainer:
         )
         assertIsInstance(trainer, trainer_class)
 
-    def test_trainer_sync_server_creation_from_json_config(self) -> None:
+    def test_trainer_sync_server_creation_from_json_config(self):
         file_path = pkg_resources.resource_filename(__name__, SYNC_TRAINER_JSON)
         with open(file_path, "r") as parameters_file:
             json_cfg = json.load(parameters_file)
@@ -128,7 +131,7 @@ class TestTrainer:
     )
     def test_trainer_creation_from_yaml_config(
         self, yaml_file_name: str, trainer_class: type
-    ) -> None:
+    ):
         trainer = None
         with initialize(config_path=CONFIG_PATH):
             cfg = compose(config_name=yaml_file_name)
@@ -139,7 +142,7 @@ class TestTrainer:
             )
         assertIsInstance(trainer, trainer_class)
 
-    def test_async_trainer_with_dp_creation_from_json_config(self) -> None:
+    def test_async_trainer_with_dp_creation_from_json_config(self):
         trainer = None
         file_path = pkg_resources.resource_filename(__name__, ASYNC_TRAINER_JSON)
         with open(file_path, "r") as parameters_file:
@@ -153,7 +156,7 @@ class TestTrainer:
         assertIsInstance(trainer, AsyncTrainer)
         assertTrue(trainer.aggregator.is_private)
 
-    def test_async_trainer_with_dp_creation_from_yaml_config(self) -> None:
+    def test_async_trainer_with_dp_creation_from_yaml_config(self):
         trainer = None
         with initialize(config_path=CONFIG_PATH):
             cfg = compose(config_name=ASYNC_TRAINER_YAML)
@@ -165,7 +168,7 @@ class TestTrainer:
         assertIsInstance(trainer, AsyncTrainer)
         assertTrue(trainer.aggregator.is_private)
 
-    def test_global_model_unchanged_after_metrics_reporting(self) -> None:
+    def test_global_model_unchanged_after_metrics_reporting(self):
         """
         reporting metrics after aggregation should NOT update the global model
         """
@@ -199,7 +202,7 @@ class TestTrainer:
         )
 
         sync_trainer_report = create_sync_trainer(
-            model=FLModelParamUtils.clone(global_model),
+            model=copy.deepcopy(global_model),
             local_lr=local_optimizer_lr,
             users_per_round=users_per_round,
             epochs=3,
@@ -221,7 +224,7 @@ class TestTrainer:
             model, _ = trainer.train(
                 data_provider,
                 metrics_reporter,
-                num_total_users=data_provider.num_train_users(),
+                num_total_users=data_provider.num_users(),
                 distributed_world_size=world_size,
             )
             modules.append(model.fl_get_module())
@@ -229,7 +232,7 @@ class TestTrainer:
         # make sure metrics reporting after aggregation does not change global model
         assertEqual(FLModelParamUtils.get_mismatched_param(modules), "")
 
-    def test_client_optimizer_creation_from_config(self) -> None:
+    def test_client_optimizer_creation_from_config(self):
         """
         Test if trainer can instantiate the correct client optimizer from config
         """
@@ -259,7 +262,7 @@ class TestTrainer:
             (FedAdamAsyncAggregatorConfig(beta1=0.1), AsyncTrainer),
         ],
     )
-    def test_server_optimizer_creation_from_config(self, config, trainer_type) -> None:
+    def test_server_optimizer_creation_from_config(self, config, trainer_type):
         """
         Test if trainer can instantiate correct aggregator config
         """
@@ -271,7 +274,7 @@ class TestTrainer:
         trainer = instantiate(config, model=DummyAlphabetFLModel(), cuda_enabled=False)
         assertTrue(isinstance(trainer, trainer_type))
 
-    def test_same_training_results_with_post_aggregation_reporting(self) -> None:
+    def test_same_training_results_with_post_aggregation_reporting(self):
         """
         create two training instances,
         one with report_train_metrics_after_aggregation=True, another with False,
@@ -313,14 +316,14 @@ class TestTrainer:
             data_loader.fl_test_set(),
             global_model_1,
         )
-        assertEqual(data_provider.num_train_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_users(), data_loader.num_total_users)
         # training with reporting the train metrics after aggregation
         sync_trainer_1.cfg.report_train_metrics = True
         sync_trainer_1.cfg.report_train_metrics_after_aggregation = True
         global_model_1, best_metric_1 = sync_trainer_1.train(
             data_provider,
             metrics_reporter_1,
-            num_total_users=data_provider.num_train_users(),
+            num_total_users=data_provider.num_users(),
             distributed_world_size=world_size,
         )
 
@@ -341,7 +344,7 @@ class TestTrainer:
         global_model_2, best_metric_2 = sync_trainer_2.train(
             data_provider,
             metrics_reporter_2,
-            num_total_users=data_provider.num_train_users(),
+            num_total_users=data_provider.num_users(),
             distributed_world_size=world_size,
         )
 
@@ -353,7 +356,7 @@ class TestTrainer:
             "",
         )
 
-    def test_different_metrics_with_aggregation_client_reporting(self) -> None:
+    def test_different_metrics_with_aggregation_client_reporting(self):
         """
         create two training instances,
         one with use_train_clients_for_aggregation_metrics=True, another with False,
@@ -395,7 +398,7 @@ class TestTrainer:
             data_loader.fl_test_set(),
             global_model_1,
         )
-        assertEqual(data_provider.num_train_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_users(), data_loader.num_total_users)
         # training with using training clients for aggregation training metrics
         sync_trainer_1.cfg.report_train_metrics_after_aggregation = True
         sync_trainer_1.cfg.use_train_clients_for_aggregation_metrics = True
@@ -403,7 +406,7 @@ class TestTrainer:
         global_model_1, best_metric_1 = sync_trainer_1.train(
             data_provider,
             metrics_reporter_1,
-            num_total_users=data_provider.num_train_users(),
+            num_total_users=data_provider.num_users(),
             distributed_world_size=world_size,
         )
 
@@ -425,7 +428,7 @@ class TestTrainer:
         global_model_2, best_metric_2 = sync_trainer_2.train(
             data_provider,
             metrics_reporter_2,
-            num_total_users=data_provider.num_train_users(),
+            num_total_users=data_provider.num_users(),
             distributed_world_size=world_size,
         )
 
@@ -440,7 +443,7 @@ class TestTrainer:
                 return
         assert True, "Batch metrics same whether using training or random clients"
 
-    def test_one_user_sequential_user_equivalent(self) -> None:
+    def test_one_user_sequential_user_equivalent(self):
         """
         test equivalence of the following scenario,
 
@@ -453,9 +456,9 @@ class TestTrainer:
         torch.manual_seed(1)
         # create dummy FL model on alphabet
         global_model = DummyAlphabetFLModel()
-        global_model_init = FLModelParamUtils.clone(global_model)
+        global_model_init = copy.deepcopy(global_model)
         # will be used later to verify training indeed took place
-        global_model_init_copy = FLModelParamUtils.clone(global_model)
+        global_model_init_copy = copy.deepcopy(global_model)
         metrics_reporter = FakeMetricReporter()
 
         num_training_examples = 32
@@ -487,7 +490,7 @@ class TestTrainer:
         one_user_global_model, _eval_metric_one_user = sync_trainer.train(
             data_provider,
             metrics_reporter,
-            num_total_users=data_provider.num_train_users(),
+            num_total_users=data_provider.num_users(),
             distributed_world_size=world_size,
         )
         metrics_reporter.reset()
@@ -506,9 +509,9 @@ class TestTrainer:
         assertEqual(
             data_loader.num_total_users, math.ceil(num_training_examples / shard_size)
         )
-        assertEqual(data_provider.num_train_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_users(), data_loader.num_total_users)
         # select all users to train in each round
-        users_per_round = data_provider.num_train_users()
+        users_per_round = data_provider.num_users()
         torch.manual_seed(1)
         sync_trainer = create_sync_trainer(
             model=global_model_init,
@@ -519,7 +522,7 @@ class TestTrainer:
         all_users_global_model, _eval_metric_all_user = sync_trainer.train(
             data_provider,
             metrics_reporter,
-            num_total_users=data_provider.num_train_users(),
+            num_total_users=data_provider.num_users(),
             distributed_world_size=world_size,
         )
         assertEqual(
@@ -533,7 +536,7 @@ class TestTrainer:
             "",
         )
 
-    def test_training_with_armijo_line_search(self) -> None:
+    def test_training_with_armijo_line_search(self):
         """
         test Armijo line-search for local LR scheduling
 
@@ -543,9 +546,9 @@ class TestTrainer:
         torch.manual_seed(1)
         # create dummy FL model on alphabet
         global_model = DummyAlphabetFLModel()
-        global_model_init = FLModelParamUtils.clone(global_model)
+        global_model_init = copy.deepcopy(global_model)
         # will be used later to verify training indeed took place
-        global_model_init_copy = FLModelParamUtils.clone(global_model)
+        global_model_init_copy = copy.deepcopy(global_model)
         metrics_reporter = FakeMetricReporter()
 
         # one user, who got 26 examples
@@ -560,7 +563,7 @@ class TestTrainer:
             dummy_dataset, shard_size, local_batch_size, global_model
         )
         assertEqual(data_loader.num_total_users, math.ceil(26 / shard_size))
-        assertEqual(data_provider.num_train_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_users(), data_loader.num_total_users)
         users_per_round = 1
         local_optimizer_lr = 1.0
         epochs = 5
@@ -575,7 +578,7 @@ class TestTrainer:
         constant_lr_model, _ = sync_trainer.train(
             data_provider,
             metrics_reporter,
-            num_total_users=data_provider.num_train_users(),
+            num_total_users=data_provider.num_users(),
             distributed_world_size=world_size,
         )
         metrics_reporter.reset()
@@ -597,7 +600,7 @@ class TestTrainer:
         armijo_ls_model, _ = sync_trainer_with_scheduler.train(
             data_provider,
             metrics_reporter,
-            num_total_users=data_provider.num_train_users(),
+            num_total_users=data_provider.num_users(),
             distributed_world_size=world_size,
         )
         metrics_reporter.reset()
@@ -619,7 +622,7 @@ class TestTrainer:
         epochs: int,
         local_lr: float,
         server_config: SyncServerConfig,
-    ) -> None:
+    ):
         """
         Given:
             data_for_fl={user1:batch1, user2:batch2}
@@ -633,7 +636,7 @@ class TestTrainer:
         # create dummy FL model on alphabet
         global_model = DummyAlphabetFLModel()
         # will be used later to verify training indeed took place
-        global_model_init_copy = FLModelParamUtils.clone(global_model)
+        global_model_init_copy = copy.deepcopy(global_model)
         # num_fl_users users, each with num_examples/num_fl_users training examples
         assertTrue(
             num_examples % num_fl_users == 0,
@@ -650,7 +653,7 @@ class TestTrainer:
             dummy_dataset, shard_size, batch_size, global_model
         )
         assertEqual(data_loader.num_total_users, math.ceil(num_examples / shard_size))
-        assertEqual(data_provider.num_train_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_users(), data_loader.num_total_users)
 
         torch.manual_seed(1)
 
@@ -665,7 +668,7 @@ class TestTrainer:
         fl_model, _ = sync_trainer.train(
             data_provider,
             metric_reporter=FakeMetricReporter(),
-            num_total_users=data_provider.num_train_users(),
+            num_total_users=data_provider.num_users(),
             distributed_world_size=world_size,
         )
 
@@ -674,7 +677,7 @@ class TestTrainer:
         data_loader = torch.utils.data.DataLoader(
             dummy_dataset, batch_size=batch_size, shuffle=False
         )
-        nonfl_model = FLModelParamUtils.clone(global_model_init_copy)
+        nonfl_model = copy.deepcopy(global_model_init_copy)
 
         optimizer = instantiate(
             config=server_config.server_optimizer,
@@ -697,7 +700,7 @@ class TestTrainer:
         )
         assertEmpty(error_msg, msg=error_msg)
 
-    def test_fl_nonfl_equivalent_global_optimizer_sgd(self) -> None:
+    def test_fl_nonfl_equivalent_global_optimizer_sgd(self):
         """
         Given:
             batch_size=13
@@ -719,7 +722,7 @@ class TestTrainer:
             ),
         )
 
-    def test_fl_nonfl_equivalent_global_optimizer_adam(self) -> None:
+    def test_fl_nonfl_equivalent_global_optimizer_adam(self):
         """
         Given:
             batch_size=16 (bs=num_examples/num_fl_users)
@@ -741,7 +744,7 @@ class TestTrainer:
             ),
         )
 
-    def test_client_overselection(self) -> None:
+    def test_client_overselection(self):
         """
         test client overselection by equivalence of the two setups:
 
@@ -758,7 +761,7 @@ class TestTrainer:
         # create dummy FL model on alphabet
         global_model = DummyAlphabetFLModel()
         # keep a copy of initial model to trigger another training instance
-        global_model_init = FLModelParamUtils.clone(global_model)
+        global_model_init = copy.deepcopy(global_model)
         # dummy alphabet dataset
         dummy_dataset = DummyAlphabetDataset()
         # two users, one gets 1 more example than the other
@@ -770,17 +773,11 @@ class TestTrainer:
         ) = DummyAlphabetDataset.create_data_provider_and_loader(
             dummy_dataset, shard_size, local_batch_size, global_model
         )
-        assertEqual(data_provider.num_train_users(), data_loader.num_total_users)
+        assertEqual(data_provider.num_users(), data_loader.num_total_users)
         # assert first user gets (dummy_dataset.num_rows / 2) + 1 data point,
         # the second user gets (dummy_dataset.num_rows / 2) - 1 data point
-        assertEqual(
-            data_provider.get_train_user(0).num_train_examples(),
-            dummy_dataset.num_rows / 2 + 1,
-        )
-        assertEqual(
-            data_provider.get_train_user(1).num_train_examples(),
-            dummy_dataset.num_rows / 2 - 1,
-        )
+        assertEqual(data_provider[0].num_examples(), dummy_dataset.num_rows / 2 + 1)
+        assertEqual(data_provider[1].num_examples(), dummy_dataset.num_rows / 2 - 1)
         # shared trainer config between two training instance
         users_per_round = 1
         local_optimizer_lr = 1.0
@@ -805,16 +802,16 @@ class TestTrainer:
         model_with_overselection, _ = sync_trainer_overselection.train(
             data_provider,
             metric_reporter=FakeMetricReporter(),
-            num_total_users=data_provider.num_train_users(),
+            num_total_users=data_provider.num_users(),
             distributed_world_size=1,
         )
         # another training instance: only user[1] in the user population
         # removing user 0 from dataset, assign user 1 to be user 0
-        data_provider._train_users[0] = copy.deepcopy(data_provider._train_users[1])
-        data_provider._train_users.pop(1)
+        data_provider._users[0] = copy.deepcopy(data_provider._users[1])
+        data_provider._users.pop(1)
         # only a single user after remove user 0
-        assertEqual(data_provider.num_train_users(), 1)
-        global_model = FLModelParamUtils.clone(global_model_init)
+        assertEqual(data_provider.num_users(), 1)
+        global_model = copy.deepcopy(global_model_init)
         torch.manual_seed(1)
         dropout_rate = 1.0
         epochs = 2
@@ -828,7 +825,7 @@ class TestTrainer:
         model_single_user, _ = sync_trainer_single_user.train(
             data_provider,
             metric_reporter=FakeMetricReporter(),
-            num_total_users=data_provider.num_train_users(),
+            num_total_users=data_provider.num_users(),
             distributed_world_size=1,
         )
         assertEqual(
@@ -842,7 +839,7 @@ class TestTrainer:
             "",
         )
 
-    def test_partial_update_from_clients(self) -> None:
+    def test_partial_update_from_clients(self):
         """
         test the equivalence of these two training instance
         1. UPR=1. User dataset has 52 characters [a,b,c,d .... x, y ,z, a, b, c... x,y,z],
@@ -855,7 +852,7 @@ class TestTrainer:
         # create dummy FL model on alphabet
         global_model = DummyAlphabetFLModel()
         # keep a copy of initial model to trigger another training instance
-        global_model_init = FLModelParamUtils.clone(global_model)
+        global_model_init = copy.deepcopy(global_model)
         # dummy alphabet dataset, getting each character twice
         num_rows = 52
         dummy_dataset = DummyAlphabetDataset(num_rows)
@@ -876,7 +873,7 @@ class TestTrainer:
         # training time just enough for 26 examples, although user has
         # 52 examples
         sync_trainer_timeout = create_sync_trainer(
-            model=FLModelParamUtils.clone(global_model),
+            model=copy.deepcopy(global_model),
             local_lr=local_optimizer_lr,
             users_per_round=users_per_round,
             epochs=epochs,
@@ -891,7 +888,7 @@ class TestTrainer:
         model_with_timeout, _ = sync_trainer_timeout.train(
             data_provider,
             metric_reporter=FakeMetricReporter(),
-            num_total_users=data_provider.num_train_users(),
+            num_total_users=data_provider.num_users(),
             distributed_world_size=1,
         )
         # dummy alphabet dataset, getting each character once
@@ -910,7 +907,7 @@ class TestTrainer:
         torch.manual_seed(1)
         # training time just enough for 26 examples
         sync_trainer_timeout = create_sync_trainer(
-            model=FLModelParamUtils.clone(global_model),
+            model=copy.deepcopy(global_model),
             local_lr=local_optimizer_lr,
             users_per_round=users_per_round,
             epochs=epochs,
@@ -918,7 +915,7 @@ class TestTrainer:
         model_no_timeout, _ = sync_trainer_timeout.train(
             data_provider,
             metric_reporter=FakeMetricReporter(),
-            num_total_users=data_provider.num_train_users(),
+            num_total_users=data_provider.num_users(),
             distributed_world_size=1,
         )
         assertEqual(
@@ -932,7 +929,7 @@ class TestTrainer:
             "",
         )
 
-    def test_client_metric_reporting(self) -> None:
+    def test_client_metric_reporting(self):
         """
         Test that per-client reporting reports exactly every
         ``client_metrics_reported_per_epoch`` as defined in the config.
@@ -995,7 +992,7 @@ class TestTrainer:
         model, _ = sync_trainer_with_client_reports.train(
             data_provider,
             metric_reporter=metrics_reporter,
-            num_total_users=data_provider.num_train_users(),
+            num_total_users=data_provider.num_users(),
             distributed_world_size=1,
         )
 
@@ -1011,7 +1008,7 @@ class TestTrainer:
         )
 
     def _get_tensorboard_results_from_training(
-        self, num_total_users: int, num_epochs: int, users_per_round: int
+        self, num_total_users, num_epochs, users_per_round
     ) -> List[MockRecord]:
         # dataset has 26 rows
         assertTrue(num_total_users <= 26, "Can't have more than 26 users")
@@ -1020,20 +1017,20 @@ class TestTrainer:
         shard_size = int(math.ceil(26 / num_total_users))
         local_batch_size = 4
         dummy_dataset = DummyAlphabetDataset()
-        global_model = DummyAlphabetFLModel()
-
-        (
-            data_provider,
-            data_loader,
-        ) = DummyAlphabetDataset.create_data_provider_and_loader(
+        fl_data_sharder = SequentialSharder(examples_per_shard=shard_size)
+        data_loader = FLDatasetDataLoaderWithBatch(
             dummy_dataset,
-            examples_per_user=shard_size,
-            batch_size=local_batch_size,
-            model=global_model,
+            dummy_dataset,
+            dummy_dataset,
+            fl_data_sharder,
+            local_batch_size,
+            local_batch_size,
+            local_batch_size,
         )
 
-        assertEqual(data_provider.num_train_users(), data_loader.num_total_users)
         torch.manual_seed(1)
+        # first training instance
+        global_model = DummyAlphabetFLModel()
         metrics_reporter = MetricsReporterWithMockedChannels()
         sync_trainer = create_sync_trainer(
             model=global_model,
@@ -1041,10 +1038,16 @@ class TestTrainer:
             users_per_round=users_per_round,
             epochs=num_epochs,
             user_epochs_per_round=1,
-            report_train_metrics=True,
-            report_train_metrics_after_aggregation=True,
         )
-
+        data_provider = FLDataProviderFromList(
+            data_loader.fl_train_set(),
+            data_loader.fl_eval_set(),
+            data_loader.fl_test_set(),
+            global_model,
+        )
+        assertEqual(data_provider.num_users(), data_loader.num_total_users)
+        sync_trainer.cfg.report_train_metrics = True
+        sync_trainer.cfg.report_train_metrics_after_aggregation = True
         global_model, best_metric = sync_trainer.train(
             data_provider,
             metrics_reporter,
@@ -1053,7 +1056,7 @@ class TestTrainer:
         )
         return metrics_reporter.tensorboard_results
 
-    def test_tensorboard_metrics_reporting_simple(self) -> None:
+    def test_tensorboard_metrics_reporting_simple(self):
         """Train with tensorboard metrics reporter for one epoch, 5 rounds per epoch.
         Test for 2 things:
         a) Train, Aggregation and Eval metrics are reported once
@@ -1093,7 +1096,7 @@ class TestTrainer:
             f"Actual global steps: {global_steps_reported_actual}, Expected global steps:{global_steps_reported_expected}",
         )
 
-    def test_tensorboard_metrics_reporting_complex(self) -> None:
+    def test_tensorboard_metrics_reporting_complex(self):
         """Train with tensorboard metrics reporter. Ensure eval and train metrics are
         correctly reported to tensorboard
         """
@@ -1146,7 +1149,6 @@ class TestTrainer:
             f"Actual global steps: {global_steps_reported_actual}, Expected global steps:{global_steps_reported_expected}",
         )
 
-    @pytest.mark.xfail
     @pytest.mark.parametrize(
         "page_turn_freq,users_per_round, pages_used",
         [
@@ -1157,8 +1159,8 @@ class TestTrainer:
         ],
     )
     def test_sync_trainer_with_page_data_provider(
-        self, page_turn_freq, users_per_round: int, pages_used
-    ) -> None:
+        self, page_turn_freq, users_per_round, pages_used
+    ):
         """
         Test if sync trainer works properly with paged data loader
         Assumptions:
@@ -1201,7 +1203,7 @@ class TestTrainer:
             data_provider,
             metric_reporter=FakeMetricReporter(),
             # Note: We're using num_total_users and
-            # not data_provider.num_train_users()
+            # not data_provider.num_users()
             num_total_users=num_total_users,
             distributed_world_size=1,
         )

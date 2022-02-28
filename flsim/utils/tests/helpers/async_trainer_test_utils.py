@@ -5,6 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 from typing import Any, Optional, Tuple
 
 import numpy as np
@@ -173,9 +174,9 @@ def assert_fl_nonfl_same(
     epochs: int,
     local_lr: float,
     aggregator_config: AsyncAggregatorConfig,
-    training_rate: int = 1,
-    training_duration_mean: int = 0,
-    training_duration_sd: int = 0,
+    training_rate=1,
+    training_duration_mean=0,
+    training_duration_sd=0,
 ) -> str:
     """
     Given:
@@ -187,8 +188,8 @@ def assert_fl_nonfl_same(
     Return value: model parameters that don't match between fl and non-fl training
     """
     # will be used later to verify training indeed took place
-    reference_untrained_model = FLModelParamUtils.clone(global_model)
-    nonfl_model = FLModelParamUtils.clone(reference_untrained_model)
+    reference_untrained_model = copy.deepcopy(global_model)
+    nonfl_model = copy.deepcopy(reference_untrained_model)
     nonfl_optimizer = get_nonfl_optimizer(
         nonfl_model=nonfl_model,
         fl_local_lr=local_lr,
@@ -225,9 +226,9 @@ def run_fl_nonfl_training(
     epochs: int,
     fl_local_lr: float,
     fl_aggregator_config: AsyncAggregatorConfig,
-    training_rate: int = 1,
-    training_duration_mean: int = 0,
-    training_duration_sd: int = 0,
+    training_rate=1,
+    training_duration_mean=0,
+    training_duration_sd=0,
     example_weight_config: AsyncExampleWeightConfig = EQUAL_EXAMPLE_WEIGHT_CONFIG,
     staleness_weight_config: AsyncStalenessWeightConfig = CONSTANT_STALENESS_WEIGHT_CONFIG,
 ) -> Tuple[IFLModel, IFLModel]:
@@ -263,9 +264,9 @@ def run_fl_training(
     epochs: int,
     local_lr: float,
     aggregator_config: AsyncAggregatorConfig,
-    training_rate: int = 1,
-    training_duration_mean: float = 0,
-    training_duration_sd: float = 0,
+    training_rate=1,
+    training_duration_mean=0,
+    training_duration_sd=0,
     example_weight_config: AsyncExampleWeightConfig = EQUAL_EXAMPLE_WEIGHT_CONFIG,
     staleness_weight_config: AsyncStalenessWeightConfig = CONSTANT_STALENESS_WEIGHT_CONFIG,
     metrics_reporter: Optional[IFLMetricsReporter] = None,
@@ -296,7 +297,7 @@ def run_fl_training(
     fl_trained_model, test_metrics = async_trainer.train(
         data_provider=fl_data_provider,
         metric_reporter=metrics_reporter,
-        num_total_users=fl_data_provider.num_train_users(),
+        num_total_users=fl_data_provider.num_users(),
         distributed_world_size=1,
     )
     return fl_trained_model, test_metrics
@@ -340,7 +341,7 @@ def get_fl_data_provider(
     assert data_loader.num_total_users == num_fl_users, "Error in data sharding"
 
 
-def get_nonfl_batch_size(fl_batch_size: int, min_examples_per_user: int) -> int:
+def get_nonfl_batch_size(fl_batch_size: int, min_examples_per_user: int):
     # how to chose batch_size for non-fl training?
     # if fl_batch_size is bigger than min_examples_per_user, use fl_batch_size
     # however, if fl_batch_size is *smaller* than min_examples_per_user, must
@@ -487,9 +488,9 @@ def assert_fl_nonfl_same_equal_data_split(
     epochs: int,
     local_lr: float,
     aggregator_config: AsyncAggregatorConfig,
-    training_rate: int = 1,
-    training_duration_mean: int = 0,
-    training_duration_sd: int = 0,
+    training_rate=1,
+    training_duration_mean=0,
+    training_duration_sd=0,
 ) -> str:
     # TODO: can this test share common code (eg, nonFL training) with
     # test_trainer._test_fl_nonfl_same_equal_data_split?
@@ -525,7 +526,7 @@ def async_train_one_user(
     batches,
     local_lr: float,
 ) -> IFLModel:
-    local_model = FLModelParamUtils.clone(global_model_at_training_start)
+    local_model = copy.deepcopy(global_model_at_training_start)
     local_optimizer = torch.optim.SGD(
         local_model.fl_get_module().parameters(), lr=local_lr
     )
@@ -545,9 +546,9 @@ def simulate_async_global_model_update(
     global_model: IFLModel,
     local_model_before_training: IFLModel,
     local_model_after_training: IFLModel,
-) -> None:
+):
     # TODO: use AsyncAggregator._update_global_model, after John's refactoring
-    reconstructed_grad = FLModelParamUtils.clone(global_model)
+    reconstructed_grad = copy.deepcopy(global_model)
     FLModelParamUtils.reconstruct_gradient(
         old_model=local_model_before_training.fl_get_module(),
         new_model=local_model_after_training.fl_get_module(),
@@ -584,7 +585,7 @@ def run_fl_training_with_event_generator(
     fl_trained_model, _ = async_trainer.train(
         data_provider=fl_data_provider,
         metric_reporter=FakeMetricReporter(),
-        num_total_users=fl_data_provider.num_train_users(),
+        num_total_users=fl_data_provider.num_users(),
         distributed_world_size=1,
     )
     return fl_trained_model

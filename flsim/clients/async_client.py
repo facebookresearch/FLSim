@@ -5,6 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from copy import deepcopy
 from typing import Any, Optional, Tuple
 
 from flsim.channels.base_channel import IdentityChannel
@@ -28,7 +29,6 @@ from flsim.utils.cuda import (
     ICudaStateManager,
     DEFAULT_CUDA_MANAGER,
 )
-from flsim.utils.fl.common import FLModelParamUtils
 from omegaconf import OmegaConf
 
 
@@ -46,7 +46,7 @@ class AsyncClientFactory:
     ):
         user_info = user_selector.get_random_user()
         training_schedule = TrainingScheduleFactory.create(
-            current_time, event_generator, user_info.user_data.num_train_examples()
+            current_time, event_generator, user_info.user_data.num_examples()
         )
         client = Client(
             **OmegaConf.structured(client_config),
@@ -100,7 +100,7 @@ class AsyncClientDevice(DeviceState):
             self.local_model is not None
         ), "Client has not started training, local_model is None"
         # 1. Save the init model to compute delta
-        before_train_local = FLModelParamUtils.clone(self.local_model)
+        before_train_local = deepcopy(self.local_model)
         # 2. Get ready for training
         self.local_model, optim, optim_scheduler = self.client.prepare_for_training(
             self.local_model

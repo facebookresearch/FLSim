@@ -91,7 +91,7 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
         )
         # for pyre; declare instance variables (https://fburl.com/88n6i71r)
         # pyre-fixme[8]: Attribute has type `IFLMetricsReporter`; used as `None`.
-        self.metric_reporter: "IFLMetricsReporter" = None
+        self.metric_reporter = None  # type: IFLMetricsReporter
         self.best_metric = None
         self.best_model_state = self.global_model().fl_get_module().state_dict()
 
@@ -182,12 +182,12 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
         )
         (self.best_metric, self.best_model_state,) = FLTrainer._maybe_run_evaluation(
             self,
-            model=self.global_model(),
-            timeline=timeline,
-            data_provider=self.data_provider,
-            metric_reporter=self.metric_reporter,
-            best_metric=self.best_metric,
-            best_model_state=self.best_model_state,
+            self.global_model(),
+            timeline,
+            self.data_provider.eval_data(),
+            self.metric_reporter,
+            self.best_metric,
+            self.best_model_state,
         )
 
     def _get_training_metrics(self) -> List[Metric]:
@@ -247,7 +247,7 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
         self.best_model_state = self.global_model().fl_get_module().state_dict()
         self.data_provider = data_provider
         self.metric_reporter = metric_reporter
-        self.num_total_users = data_provider.num_train_users()
+        self.num_total_users = data_provider.num_users()
         self.aggregator.set_num_total_users(self.num_total_users)
         user_selector = AsyncUserSelectorFactory.create_users_selector(
             # pyre-fixme[16]: `AsyncTrainer` has no attribute `cfg`.

@@ -98,7 +98,7 @@ class TestStatsTracker:
         assertEqual(stats_tracker.mean(), expected_mean)
         assertEqual(stats_tracker.standard_deviation(), expected_std)
 
-    def test_quantiles_tracker(self) -> None:
+    def test_quantiles_tracker(self):
         stats_tracker = RandomVariableStatsTracker(tracks_quantiles=True)
         values = []
         for i in range(100):

@@ -38,7 +38,7 @@ class ISyncServer(abc.ABC):
     """
     Interface for Sync servers, all sync server should
     implement this interface.
-    Responsibilities:
+    Responsiblities:
         Wrapper for aggregator and optimizer.
         Collects client updates and sends to aggregator.
         Changes the global model using aggregator and optimizer.
@@ -88,7 +88,7 @@ class ISyncServer(abc.ABC):
             is high loss. Defaults to None.
 
         Returns:
-            List[int]: A list of client indices
+            List[int]: A list of client indicies
         """
         pass
 
@@ -170,11 +170,18 @@ class SyncServer(ISyncServer):
 
     def step(self):
         aggregated_model = self._aggregator.aggregate()
+        # print(f"BiLevel Aggregated {[p for p in aggregated_model.parameters()]}")
+        # for param in aggregated_model.parameters():
+        #     print("aggregated params:", param[0][0][0])
+        #     break
+        # breakpoint()
+
         FLModelParamUtils.set_gradient(
             model=self._global_model.fl_get_module(),
             reference_gradient=aggregated_model,
         )
         self._optimizer.step()
+        # print(f"Global Bilevel {[p for p in self._global_model.fl_get_module().parameters()]}")
 
 
 @dataclass

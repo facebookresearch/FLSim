@@ -5,6 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 import itertools
 import math
 from tempfile import mkstemp
@@ -31,7 +32,6 @@ from flsim.tests.utils import (
     SampleNet,
 )
 from flsim.utils.distributed.fl_distributed import FLDistributedUtils
-from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 
 
@@ -43,15 +43,15 @@ class TestSyncDPSGDServer:
     @classmethod
     def init_process(
         cls,
-        rank: int,
-        world_size: int,
+        rank,
+        world_size,
         clip,
         noise,
         models,
         file_loc,
         pipe,
-        use_cuda: bool,
-    ) -> None:
+        use_cuda,
+    ):
         use_cuda = use_cuda and torch.cuda.is_available()
         FLDistributedUtils.dist_init(
             rank=rank,
@@ -91,12 +91,7 @@ class TestSyncDPSGDServer:
 
     @classmethod
     def run_multiprocess_server_test(
-        cls,
-        clip,
-        noise,
-        num_processes: int = 1,
-        num_models: int = 4,
-        use_cuda: bool = False,
+        cls, clip, noise, num_processes=1, num_models=4, use_cuda=False
     ):
         _, tmpfile = mkstemp(dir="/tmp")
         pipe_out, pipe_in = mp.Pipe(False)
@@ -131,10 +126,10 @@ class TestSyncDPSGDServer:
     def _create_server(
         cls,
         server_model,
-        num_rounds: int = 1,
-        num_clients: int = 1,
-        clipping_value: float = 1.0,
-        noise_multiplier: float = 1.0,
+        num_rounds=1,
+        num_clients=1,
+        clipping_value=1.0,
+        noise_multiplier=1.0,
         channel=None,
     ):
         server = instantiate(
@@ -232,7 +227,7 @@ class TestSyncDPSGDServer:
             )
             assertEmpty(error_msg, msg=error_msg)
 
-    def test_no_noise_no_clip(self) -> None:
+    def test_no_noise_no_clip(self):
         """
         Test that DP-SGD server with no clipping and no noise is the same as vanilla SyncServer
         """
@@ -284,7 +279,7 @@ class TestSyncDPSGDServer:
             error_msg = verify_models_equivalent_after_training(dp_model, no_dp_model)
             assertEmpty(error_msg, msg=error_msg)
 
-    def test_noise_added_correctly(self) -> None:
+    def test_noise_added_correctly(self):
         """
         Test where noise is a fixed value, 0.8
         update = global (all 0) - local (all 2.0) = all 2.0
@@ -328,7 +323,7 @@ class TestSyncDPSGDServer:
         "channel",
         [HalfPrecisionChannel(), IdentityChannel()],
     )
-    def test_dp_server_channel_integration(self, channel) -> None:
+    def test_dp_server_channel_integration(self, channel):
         """From Client to Server, the channel should quantize and then dequantize the message
         therefore there should be no change in the model
         """
@@ -341,7 +336,7 @@ class TestSyncDPSGDServer:
             channel=channel,
         )
         delta = create_model_with_value(1)
-        init = FLModelParamUtils.clone(delta)
+        init = copy.deepcopy(delta)
         server.receive_update_from_client(Message(model=SampleNet(delta), weight=1.0))
         error_msg = verify_models_equivalent_after_training(delta, init)
         assertEmpty(error_msg, msg=error_msg)
@@ -364,7 +359,7 @@ class TestSyncDPSGDServer:
     )
     def test_sync_dp_server_with_multiple_processes(
         self, noise, clip, use_cuda, num_processes
-    ) -> None:
+    ):
         if use_cuda and not torch.cuda.is_available():
             return
 

@@ -14,7 +14,11 @@ from .async_aggregators import (
     FedAdamHybridAggregatorConfig,
     FedAvgWithLRHybridAggregatorConfig,
 )
-from .local_optimizers import LocalOptimizerSGDConfig, LocalOptimizerFedProxConfig
+from .local_optimizers import (
+    LocalOptimizerSGDConfig,
+    LocalOptimizerFedProxConfig,
+    LocalOptimizerProximalConfig,
+)
 from .optimizer_scheduler import (
     ConstantLRSchedulerConfig,
     LRBatchSizeNormalizerSchedulerConfig,
@@ -33,6 +37,12 @@ from .sync_aggregators import (
     FedAvgWithLRSyncAggregatorConfig,
     FedLARSSyncAggregatorConfig,
     FedLAMBSyncAggregatorConfig,
+)
+
+ConfigStore.instance().store(
+    name="base_optimizer_prox",
+    node=LocalOptimizerProximalConfig,
+    group="optimizer",
 )
 
 ConfigStore.instance().store(

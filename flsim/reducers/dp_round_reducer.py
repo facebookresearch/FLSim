@@ -17,9 +17,9 @@ from flsim.privacy.common import PrivacyBudget, PrivacySetting
 from flsim.privacy.privacy_engine import IPrivacyEngine
 from flsim.privacy.privacy_engine_factory import PrivacyEngineFactory, NoiseType
 from flsim.privacy.user_update_clip import UserUpdateClipper
-from flsim.reducers.base_round_reducer import (
-    RoundReducer,
-    RoundReducerConfig,
+from flsim.reducers.secure_round_reducer import (
+    SecureRoundReducer,
+    SecureRoundReducerConfig,
 )
 from flsim.utils.config_utils import fullclassname
 from flsim.utils.config_utils import init_self_cfg
@@ -28,7 +28,7 @@ from flsim.utils.fl.common import FLModelParamUtils
 from torch import nn
 
 
-class DPRoundReducer(RoundReducer):
+class DPRoundReducer(SecureRoundReducer):
     def __init__(
         self,
         *,
@@ -142,7 +142,7 @@ class DPRoundReducer(RoundReducer):
 
 
 @dataclass
-class DPRoundReducerConfig(RoundReducerConfig):
+class DPRoundReducerConfig(SecureRoundReducerConfig):
     """
     Contains configurations for a round reducer based on DP (user-level dp)
     """

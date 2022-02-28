@@ -40,6 +40,10 @@ class FLMetricsReporter(IFLMetricsReporter, abc.ABC):
         self.latest_scores: Dict[str, Any] = {}
         self.best_eval_metrics = None
 
+        self.best_eval_train_metrics = None
+        self.best_pers_eval_train_metrics = None
+        self.best_pers_eval_eval_metrics = None
+
     def set_summary_writer(self, log_dir: Optional[str]):
         self.writer = SummaryWriter(log_dir=log_dir)
 
@@ -66,13 +70,29 @@ class FLMetricsReporter(IFLMetricsReporter, abc.ABC):
         if stage != TrainingStage.EVAL:
             return (metrics, False)
 
-        if self.best_eval_metrics is None or self.compare_metrics(
-            metrics, self.best_eval_metrics
+        best_eval_metrics = self.get_best_metrics_type(stage)
+
+        if best_eval_metrics is None or self.compare_metrics(
+            metrics, best_eval_metrics
         ):
-            self.best_eval_metrics = copy.deepcopy(metrics)
+            best_eval_metrics = copy.deepcopy(metrics)
             return (metrics, True)
         else:
             return (metrics, False)
+
+    def get_best_metrics_type(self, stage):
+        # eval on eval users
+        if stage == TrainingStage.EVAL:
+            return self.best_eval_metrics
+        # eval on eval data of train clients
+        elif stage == TrainingStage.EVAL_TRAIN:
+            return self.best_eval_train_metrics
+        # personalized eval on eval users
+        elif stage == TrainingStage.PERSONALIZED_EVAL_EVAL:
+            return self.best_pers_eval_eval_metrics
+        # personalized eval on train users
+        elif stage == TrainingStage.PERSONALIZED_EVAL_TRAIN:
+            return self.best_pers_eval_train_metrics
 
     def _report_metrics(
         self,

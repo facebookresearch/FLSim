@@ -26,8 +26,7 @@ class FixedPointConverter:
     fixed point and floating point.
     """
 
-    MAX_WIDTH_BYTES = 8  # code handles up to 7 bytes, due to division in overflow calc
-
+    MAX_WIDTH = 8
     logger: logging.Logger = Logger.get_logger(__name__)
 
     def __init__(self, **kwargs):
@@ -46,10 +45,10 @@ class FixedPointConverter:
             **kwargs,
         )
 
-        if self.cfg.num_bytes < 1 or self.cfg.num_bytes > self.MAX_WIDTH_BYTES:
+        if self.cfg.num_bytes < 1 or self.cfg.num_bytes > self.MAX_WIDTH:
             error_msg = (
                 f"Width {self.cfg.num_bytes} is not supported. "
-                f"Please enter a width between 1 and {self.MAX_WIDTH_BYTES}."
+                f"Please enter a width between 1 and {self.MAX_WIDTH}."
             )
             raise ValueError(error_msg)
         if self.cfg.scaling_factor <= 0:
@@ -58,7 +57,7 @@ class FixedPointConverter:
         self.max_value = 2 ** (num_bits - 1) - 1
         self.min_value = -(2 ** (num_bits - 1))
         self.scaling_factor = self.cfg.scaling_factor
-        self._convert_overflows = 0  # during fixedpoint conversion
+        self._overflows = 0
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
@@ -77,15 +76,11 @@ class FixedPointConverter:
 
         Returns:
             A tensor containing the converted numbers to fixed point.
-
-        Notes:
-            It also updates the number of convert overflows (the number of underflows
-            are not yet considered)
         """
 
         numbers = numbers.mul(self.scaling_factor)
-        overflow_matrix = torch.gt(numbers, self.max_value)
-        self._convert_overflows += int(torch.sum(overflow_matrix).item())
+        overflow_matrix = torch.gt(torch.abs(numbers), self.max_value)
+        self._overflows += int(torch.sum(overflow_matrix).item())
         numbers = numbers.clamp(self.min_value, self.max_value)
         return torch.round(numbers)
 
@@ -103,20 +98,7 @@ class FixedPointConverter:
         Returns:
             A tensor containing the converted number to floating point.
         """
-        return torch.true_divide(numbers, self.scaling_factor)
-
-    def get_convert_overflow(self, reset: bool = False):
-        """
-        Reports the conversion overflow and if reset is set, it resets the
-        conversion overflow for the next call (i.e., the next round)
-
-        Args:
-            reset: whether to reset the conversion overflow
-        """
-        overflow = self._convert_overflows
-        if reset:
-            self._convert_overflows = 0
-        return overflow
+        return numbers.div(self.scaling_factor)
 
 
 def utility_config_flatter(
@@ -165,7 +147,6 @@ class SecureAggregator:
         self.converters = {}
         for key in config.keys():
             self.converters[key] = instantiate(config[key])
-        self._aggregate_overflows = 0  # overflow during aggregation of model parameters
 
     def _check_converter_dict_items(self, model: nn.Module) -> None:
         """
@@ -205,9 +186,9 @@ class SecureAggregator:
             state_dict[name] = converter.to_fixedpoint(state_dict[name])
             converter.logger.debug(
                 f"{name} has "
-                f"{converter.get_convert_overflow(reset=False)} overflow(s)"
-                f"during fixed point conversion"
+                f"{converter._overflows} overflow(s) during fixed point conversion"
             )
+
         model.load_state_dict(state_dict)
 
     def params_to_float(self, model: nn.Module) -> None:
@@ -226,19 +207,6 @@ class SecureAggregator:
         for name in state_dict.keys():
             state_dict[name] = self.converters[name].to_float(state_dict[name])
         model.load_state_dict(state_dict)
-
-    def get_aggregate_overflow(self, reset: bool = False):
-        """
-        Reports the aggregatation overflow and if reset is set, it resets the
-        aggregatation overflow for the next call (i.e., the next round)
-
-        Args:
-            reset: whether to reset the aggregatation overflow
-        """
-        overflow = self._aggregate_overflows
-        if reset:
-            self._aggregate_overflows = 0
-        return overflow
 
     def _generate_noise_mask(
         self, update_params: Iterator[Tuple[str, nn.Parameter]]
@@ -301,85 +269,6 @@ class SecureAggregator:
             new ``model_aggregate_params``.
         """
         pass
-
-    def update_aggr_overflow_and_model(
-        self,
-        model: nn.Module,
-    ):
-        """
-        This method is called every time after a delta (in fixedpoint format)
-        is received from a client. This method updates the overflow counter
-        due to overflows during aggregation. It also adjusts the values of the
-        ``model`` based on max value related to the fixedpoint (see notes).
-
-        Args:
-            model: the buffered model that holds the current sum, in
-                fixedpoint format.
-
-        Notes:
-            This is an example to show how this method adjusts the input model
-            based on min and max values of fixedpoint. If we have one parameter,
-            and if num_bytes=1 (allowed range is -128 to +127), when in aggregation
-            we add delta=40 to model=90, the input model would be 130. This
-            method adjusts 130 to 2 (i.e. 130%128) since 130 is outside the range.
-            Currently we only keep track of overflows, hence underflows are not
-            monitored.
-        """
-        state_dict = model.state_dict()
-        for name in state_dict.keys():
-            numbers = state_dict[name]
-            converter = self.converters[name]
-            overflow_matrix = torch.div(  # FIXME: div blows up when MAX_WIDTH_BYTES >7
-                numbers, converter.max_value + 1, rounding_mode="floor"
-            )
-            overflow_matrix = torch.where(
-                overflow_matrix < 0,
-                torch.zeros(overflow_matrix.size()),
-                overflow_matrix,
-            )  # zero out negative entries since we are only interested in overflows
-            self._aggregate_overflows += int(torch.sum(overflow_matrix).item())
-            converter.logger.debug(
-                f"{name} has "
-                f"{self._aggregate_overflows} overflow(s) during aggregation"
-            )
-            numbers = torch.where(
-                numbers >= 0, torch.remainder(numbers, converter.max_value + 1), numbers
-            )
-            numbers = torch.where(
-                numbers < 0, torch.remainder(numbers, converter.min_value), numbers
-            )
-            state_dict[name] = numbers
-        model.load_state_dict(state_dict)
-
-    def calc_avg_overflow_percentage(
-        self,
-        num_users: int,
-        model: nn.Module,
-    ) -> Tuple[float, float]:
-        """
-        Calcualtes the percentage of average overflow over all model layers,
-        with regards to the number of model parameters. Also resets the
-        overflow counters to make them ready for the next round.
-
-        Args:
-            num_users: the total number of users in the system
-            model: the global model
-
-        Notes:
-            The assumption here is that the model is always the same acorss
-            clients and server, since we have one object of secure aggregator,
-            and this object assumes the model is same for all clients and server.
-        """
-        num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-        convert_overflow_perc = sum(
-            converter.get_convert_overflow(reset=True) * 100
-            for converter in self.converters.values()
-        ) / (num_params * num_users)
-        aggregate_overflow_perc = (
-            self.get_aggregate_overflow(reset=True) * 100 / (num_params * num_users)
-        )
-        return convert_overflow_perc, aggregate_overflow_perc
 
 
 @dataclass

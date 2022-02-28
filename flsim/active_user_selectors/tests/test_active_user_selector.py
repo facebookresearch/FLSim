@@ -34,7 +34,7 @@ from hydra.utils import instantiate
 
 
 class TestActiveUserSelector:
-    def test_uniformly_random_user_selection(self) -> None:
+    def test_uniformly_random_user_selection(self):
         # Test the uniformly random user selection in the ActiveUserSelector base class
         null_selector = instantiate(SequentialActiveUserSelectorConfig())
         assertIsInstance(null_selector, SequentialActiveUserSelector)
@@ -67,7 +67,7 @@ class TestActiveUserSelector:
         )
         assertEqual(selection_1, selection_2)
 
-    def test_uniformly_random_user_selector(self) -> None:
+    def test_uniformly_random_user_selector(self):
         null_selector = instantiate(UniformlyRandomActiveUserSelectorConfig())
         assertIsInstance(null_selector, UniformlyRandomActiveUserSelector)
         users = tuple(range(5))
@@ -97,7 +97,7 @@ class TestActiveUserSelector:
         )
         assertEqual(selection_1, selection_2)
 
-    def test_sequential_user_selector(self) -> None:
+    def test_sequential_user_selector(self):
         # 1) test if num_users is not divisible by users_per_round
         num_total_users, users_per_round, round_num = 10, 3, 8
         selector = instantiate(SequentialActiveUserSelectorConfig())
@@ -129,7 +129,7 @@ class TestActiveUserSelector:
             if round_index % 3 == 2:
                 assertEqual(user_indices, [6, 7, 8])
 
-    def test_random_round_robin_user_selector(self) -> None:
+    def test_random_round_robin_user_selector(self):
         # 1) test if num_users is not divisible by users_per_round
         num_total_users, users_per_round = 87, 15
         available_users = range(num_total_users)
@@ -182,7 +182,7 @@ class TestActiveUserSelector:
         assertEqual(len(user_indices_set), users_per_round)
         assertTrue(user_indices_set.issubset(available_user_set))
 
-    def test_number_of_samples_user_selector(self) -> None:
+    def test_number_of_samples_user_selector(self):
         selector = instantiate(NumberOfSamplesActiveUserSelectorConfig())
         assertIsInstance(selector, NumberOfSamplesActiveUserSelector)
 
@@ -201,7 +201,7 @@ class TestActiveUserSelector:
         counts = Counter(selections)
         assertTrue(counts[0] > counts[1])
 
-    def test_high_loss_user_selector(self) -> None:
+    def test_high_loss_user_selector(self):
         selector = instantiate(HighLossActiveUserSelectorConfig())
         assertIsInstance(selector, HighLossActiveUserSelector)
 
@@ -256,7 +256,7 @@ class TestActiveUserSelectorUtils:
 
     tolerence = 1e-5
 
-    def test_convert_to_probability(self) -> None:
+    def test_convert_to_probability(self):
         valuations = torch.tensor([1, 1, 1, 2, 2], dtype=torch.float)
         weights = torch.tensor([1, 1, 1, 1, 1], dtype=torch.float)
 
@@ -301,7 +301,7 @@ class TestActiveUserSelectorUtils:
         with assertRaises(AssertionError):
             ActiveUserSelectorUtils.convert_to_probability(valuations, 1, 1)
 
-    def test_normalize_by_sample_count(self) -> None:
+    def test_normalize_by_sample_count(self):
         user_utility = torch.tensor([0, 1, 2, 3], dtype=torch.float)
         counts = torch.tensor([1, 10, 100, 1], dtype=torch.float)
 
@@ -316,7 +316,7 @@ class TestActiveUserSelectorUtils:
         )
         assertTrue(torch.allclose(avg_normalization, avged, rtol=self.tolerence))
 
-    def test_samples_per_user(self) -> None:
+    def test_samples_per_user(self):
         shard_size = 4
         local_batch_size = 4
         dummy_dataset = DummyAlphabetDataset()
@@ -332,7 +332,7 @@ class TestActiveUserSelectorUtils:
             )
         )
 
-    def test_select_users(self) -> None:
+    def test_select_users(self):
         """select_users has two mechanisms for selecting users: p proportion are
         selected according to the probabilties in probs, and (1-p) proportion are
         selected uniformly at random, where p = fraction_uniformly_random. This test
@@ -362,7 +362,7 @@ class TestActiveUserSelectorUtils:
             [0, 1],
         )
 
-    def test_sample_available_users(self) -> None:
+    def test_sample_available_users(self):
         num_total_users, users_per_round = 95, 10
         available_users = range(num_total_users)
         rng = torch.Generator()
@@ -370,11 +370,7 @@ class TestActiveUserSelectorUtils:
         while len(available_users) > 0:
             prev_available_users = available_users
             user_indices = ActiveUserSelectorUtils.sample_available_users(
-                users_per_round,
-                # pyre-fixme[6]: Expected `List[int]` for 2nd param but got
-                #  `Union[typing.List[int], range]`.
-                available_users,
-                rng,
+                users_per_round, available_users, rng
             )
             user_indices_set = set(user_indices)
             available_user_set = set(available_users)

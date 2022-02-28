@@ -77,11 +77,12 @@ class Client:
         self.timeout_simulator = timeout_simulator or NeverTimeOutSimulator(
             **OmegaConf.structured(NeverTimeOutSimulatorConfig())
         )
-        self.store_last_updated_model = store_last_updated_model
+        self.store_last_updated_model = (
+            store_last_updated_model or self.cfg.store_last_updated_model
+        )
         self.name = name or "unnamed_client"
 
         # base lr needs to match LR in optimizer config, overwrite it
-        # pyre-ignore [16]
         self.cfg.lr_scheduler.base_lr = self.cfg.optimizer.lr
         self.per_example_training_time = (
             self.timeout_simulator.simulate_per_example_training_time()
@@ -137,28 +138,6 @@ class Client:
         report_metrics will be called ont the reporter, o.w. reports will be
         accumulated in memory.
         """
-        updated_model, weight, optimizer = self.copy_and_train_model(
-            model, metric_reporter
-        )
-        # 4. Store updated model if being tracked
-        if self.store_last_updated_model:
-            self.last_updated_model = FLModelParamUtils.clone(updated_model)
-        # 5. compute delta
-        delta = self.compute_delta(
-            before=model, after=updated_model, model_to_save=updated_model
-        )
-        # 6. track state of the client
-        self.track(delta=delta, weight=weight, optimizer=optimizer)
-        return delta, weight
-
-    def copy_and_train_model(
-        self, model: IFLModel, metric_reporter: Optional[IFLMetricsReporter] = None
-    ) -> Tuple[IFLModel, float, torch.optim.Optimizer]:
-        """Copy the model then use that model to train on the client's train split
-
-        Returns:
-            Tuple[IFLModel, float, torch.optim.Optimizer]: The trained model, the client's weight, the optimizer used
-        """
         # 1. pass through channel, set initial state
         updated_model = self.receive_through_channel(model)
         # 2. set up model and optimizer in the client
@@ -167,7 +146,16 @@ class Client:
         updated_model, weight = self.train(
             updated_model, optim, optim_scheduler, metric_reporter
         )
-        return updated_model, weight, optim
+        # 4. Store updated model if being tracked
+        if self.store_last_updated_model:
+            self.last_updated_model = deepcopy(updated_model)
+        # 5. compute delta
+        delta = self.compute_delta(
+            before=model, after=updated_model, model_to_save=updated_model
+        )
+        # 6. track state of the client
+        self.track(delta=delta, weight=weight, optimizer=optim)
+        return delta, weight
 
     def compute_delta(
         self, before: IFLModel, after: IFLModel, model_to_save: IFLModel
@@ -219,7 +207,7 @@ class Client:
 
     def get_total_training_time(self) -> float:
         return self.timeout_simulator.simulate_training_time(
-            self.per_example_training_time, self.dataset.num_train_examples()
+            self.per_example_training_time, self.dataset.num_examples()
         )
 
     def stop_training(self, num_examples_processed) -> bool:
@@ -234,22 +222,23 @@ class Client:
         optimizer: Any,
         optimizer_scheduler: OptimizerScheduler,
         metric_reporter: Optional[IFLMetricsReporter] = None,
+        epoch: Optional[int] = None,
     ) -> Tuple[IFLModel, float]:
         total_samples = 0
         # NOTE currently weight = total_sampls, this might be a bad strategy
         # plus there are privcay implications that must be taken into account.
         num_examples_processed = 0  # number of examples processed during training
-
+        epoch = epoch if epoch is not None else self.cfg.epochs
         if self.seed is not None:
             torch.manual_seed(self.seed)
-        # pyre-fixme[16]: `Client` has no attribute `cfg`.
-        for epoch in range(self.cfg.epochs):
+
+        for epoch in range(epoch):
             if self.stop_training(num_examples_processed):
                 break
 
             # if user has too many examples and times-out, we want to process
             # different portion of the dataset each time
-            dataset = list(self.dataset.train_data())
+            dataset = list(iter(self.dataset))
             if self.cfg.shuffle_batch_order:
                 random.shuffle(dataset)
             for batch in dataset:
@@ -271,7 +260,7 @@ class Client:
         # cuda manager may move model out of GPU memory if needed
         self.cuda_state_manager.after_train_or_eval(model)
         self.logger.debug(
-            f"Processed {num_examples_processed} of {self.dataset.num_train_examples()}"
+            f"Processed {num_examples_processed} of {self.dataset.num_examples()}"
         )
         self.post_train(model, total_samples, optimizer)
         # if training stops early, used partial training weight
@@ -302,11 +291,28 @@ class Client:
         model: IFLModel,
         dataset: Optional[IFLUserData] = None,
         metric_reporter: Optional[IFLMetricsReporter] = None,
+        fine_tune: bool = False,
+        personalized_epoch: int = 1,
     ):
         """
-        Client evaluates the model based on its evaluation data split
+        Evaluate the given `model` with the given `dataset`. `model` defaults
+        to the current global_model if nothing is provided, and `dataset`
+        defaults to client's dataset.
         """
-        data = dataset or self.dataset
+        if fine_tune:
+            model = self.receive_through_channel(model)
+            model, optim, optim_scheduler = self.prepare_for_training(model)
+            model, _ = self.train(
+                model=model,
+                optimizer=optim,
+                optimizer_scheduler=optim_scheduler,
+                metric_reporter=metric_reporter,
+                epoch=personalized_epoch,
+            )
+        else:
+            model = model or self.ref_model
+
+        data = self.dataset
         self.cuda_state_manager.before_train_or_eval(model)
         with torch.no_grad():
             if self.seed is not None:
@@ -371,3 +377,4 @@ class ClientConfig:
     shuffle_batch_order: bool = False  # shuffle the ordering of batches
     store_models_and_optimizers: bool = False  # name clear
     track_multiple_selection: bool = False  # track if client appears in 2+ rounds.
+    store_last_updated_model: bool = False

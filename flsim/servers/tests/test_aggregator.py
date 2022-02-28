@@ -193,7 +193,7 @@ class TestAggregator:
     )
     def test_distributed_op_aggregation(self, agg_type, dist_op):
         """
-        Test aggregation with only SUM and no BROADCAST then each worker should have
+        Test aggregation with only SUM and no BROADTCAST then each worker should have
         different parameters.
         """
         model = create_model_with_value(0)

@@ -5,6 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 from dataclasses import dataclass
 from typing import List
 
@@ -45,7 +46,7 @@ class MockClientUpdate:
 
 
 class TestSyncServer:
-    def _create_client_updates(self, num_clients, aggregation_type) -> MockClientUpdate:
+    def _create_client_updates(self, num_clients, aggregation_type):
         deltas = [i + 1 for i in range(num_clients)]
         weights = [i + 1 for i in range(num_clients)]
 
@@ -57,9 +58,6 @@ class TestSyncServer:
             expected_value = float(sum(d * w for d, w in zip(deltas, weights)))
         elif aggregation_type == AggregationType.SUM:
             expected_value = float(sum(deltas))
-        # pyre-fixme[6]: Expected `List[float]` for 1st param but got `List[int]`.
-        # pyre-fixme[6]: Expected `List[float]` for 2nd param but got `List[int]`.
-        # pyre-fixme[61]: `expected_value` is undefined, or not always defined.
         return MockClientUpdate(deltas, weights, expected_value)
 
     def _run_one_round_comparison(
@@ -85,9 +83,7 @@ class TestSyncServer:
         server.step()
         return server_model, optim_model
 
-    def _compare_optim_and_server(
-        self, opt_config, num_rounds, num_clients, agg_type
-    ) -> None:
+    def _compare_optim_and_server(self, opt_config, num_rounds, num_clients, agg_type):
         server_model = SampleNet(create_model_with_value(0))
         optim_model = create_model_with_value(0)
         server = instantiate(
@@ -266,10 +262,10 @@ class TestSyncServer:
             num_clients=num_clients,
         )
 
-    def test_select_clients_for_training(self) -> None:
+    def test_select_clients_for_training(self):
         """
         Selects 10 clients out of 100. SyncServer with seed = 0 should
-        return the same indices as those of uniform random selector.
+        return the same indicies as those of uniform random selector.
         """
         selector_config = UniformlyRandomActiveUserSelectorConfig(user_selector_seed=0)
         uniform_selector = instantiate(selector_config)
@@ -291,7 +287,7 @@ class TestSyncServer:
         "channel",
         [HalfPrecisionChannel(), IdentityChannel()],
     )
-    def test_server_channel_integration(self, channel) -> None:
+    def test_server_channel_integration(self, channel):
         """From Client to Server, the channel should quantize and then dequantize the message
         therefore there should be no change in the model
         """
@@ -302,7 +298,7 @@ class TestSyncServer:
         )
 
         delta = create_model_with_value(1)
-        init = FLModelParamUtils.clone(delta)
+        init = copy.deepcopy(delta)
         server.receive_update_from_client(Message(model=SampleNet(delta), weight=1.0))
         error_msg = verify_models_equivalent_after_training(delta, init)
         assertEmpty(error_msg, msg=error_msg)

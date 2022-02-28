@@ -11,7 +11,7 @@ import abc
 import logging
 import sys
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple
+from typing import Any, Iterable, List, Optional, Tuple
 
 import torch
 from flsim.channels.base_channel import FLChannelConfig
@@ -19,6 +19,7 @@ from flsim.channels.communication_stats import (
     ChannelDirection,
 )
 from flsim.clients.base_client import ClientConfig
+from flsim.clients.sarah_client import SarahClientConfig
 from flsim.common.logger import Logger
 from flsim.common.timeline import Timeline
 from flsim.common.timeout_simulator import (
@@ -29,10 +30,12 @@ from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.metrics_reporter import IFLMetricsReporter, Metric, TrainingStage
 from flsim.interfaces.model import IFLModel
 from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import is_target
 from flsim.utils.cuda import CudaTransferMinimizer
 from hydra.utils import instantiate
 from omegaconf import MISSING
 from omegaconf import OmegaConf
+from tqdm import tqdm
 
 
 class FLTrainer(abc.ABC):
@@ -72,6 +75,8 @@ class FLTrainer(abc.ABC):
         self.num_total_users: int = -1
         # Initialize tracker for measuring communication between the clients and
         # the server if communication metrics are enabled
+        self.clients = {}
+        self.eval_clients = {}
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
@@ -94,11 +99,11 @@ class FLTrainer(abc.ABC):
         pass
 
     def test(
-        self, data_provider: IFLDataProvider, metric_reporter: IFLMetricsReporter
+        self, data_iter: Iterable[Any], metric_reporter: IFLMetricsReporter
     ) -> Any:
         return self._test(
             timeline=Timeline(global_round=1),
-            data_provider=data_provider,
+            data_iter=data_iter,
             model=self.global_model(),
             metric_reporter=metric_reporter,
         )
@@ -118,12 +123,39 @@ class FLTrainer(abc.ABC):
         # pyre-fixme[16]: `FLTrainer` has no attribute `cfg`.
         if not self.cfg.do_eval:
             return best_metric, best_model_state
-        if not timeline.tick(self.cfg.eval_epoch_frequency):
+        if not timeline.global_round_num() % self.cfg.round_eval_frequency == 0:
             return best_metric, best_model_state
+
+        if self.cfg.personalized:
+            # personalized eval on train users
+            self._evaluate_personalized_train_users(
+                timeline=timeline,
+                data_provider=data_provider,
+                global_model=model,
+                metric_reporter=metric_reporter,
+            )
+
+            # personalized eval on eval users
+            self._evaluate_personalized_eval_users(
+                timeline=timeline,
+                data_provider=data_provider,
+                global_model=model,
+                metric_reporter=metric_reporter,
+            )
+
+        # evaluate global model on train users
+        eval_metric_train, eval_metric_better_than_prev = self._evaluate_train(
+            timeline=timeline,
+            data_provider=data_provider,
+            global_model=model,
+            metric_reporter=metric_reporter,
+        )
+
+        # evaluate global model on eval users
         eval_metric, eval_metric_better_than_prev = self._evaluate(
             timeline=timeline,
-            global_model=model,
             data_provider=data_provider,
+            global_model=model,
             metric_reporter=metric_reporter,
         )
 
@@ -131,10 +163,6 @@ class FLTrainer(abc.ABC):
         # 2) if self.always_keep_trained_model is set as true, ignore the metrics and
         #    keep the trained model for each epoch
         if self.cfg.always_keep_trained_model or eval_metric_better_than_prev:
-            # last_best_epoch = epoch
-            self.logger.info(
-                f"Found a better model!, current_eval_metric:{eval_metric}"
-            )
             best_metric = eval_metric
             model_state = model.fl_get_module().state_dict()
             best_model_state = model_state
@@ -198,6 +226,98 @@ class FLTrainer(abc.ABC):
             )
             self.channel.stats_collector.reset_channel_stats()
 
+    def _evaluate_train(
+        self,
+        timeline: Timeline,
+        data_provider,
+        global_model: IFLModel,  # a global model
+        metric_reporter: IFLMetricsReporter,
+    ) -> Tuple[Any, bool]:
+        """
+        Eval of global model on already seen users (trained) users
+        """
+        print(f"{timeline}: \t Evaluate global model on validation data of train users")
+
+        for client in self.clients.values():
+            client.eval(
+                model=global_model, metric_reporter=metric_reporter, fine_tune=False
+            )
+
+        metrics, found_best_model = metric_reporter.report_metrics(
+            model=global_model,
+            reset=True,
+            stage=TrainingStage.EVAL_TRAIN,
+            timeline=timeline,
+            print_to_channels=True,
+        )
+        return metrics, found_best_model
+
+    def _evaluate_personalized_eval_users(
+        self,
+        timeline: Timeline,
+        data_provider,
+        global_model: IFLModel,  # a global model
+        metric_reporter: IFLMetricsReporter,
+    ) -> Tuple[Any, bool]:
+        # Finetunes global model for each eval user on their train data
+        # and then evaluates performance on local eval data
+        print(
+            f"{timeline}: \t Evaluate global model w/ finetune on validation data of eval users"
+        )
+
+        for idx, eval_user in data_provider.eval_users.items():
+            eval_client = instantiate(
+                self.cfg.client,
+                dataset=eval_user,
+                name=f"client_{idx}",
+                timeout_simulator=self._timeout_simulator,
+                channel=self.channel,
+                cuda_manager=self._cuda_state_manager,
+            )
+            eval_client.eval(
+                model=global_model,
+                metric_reporter=metric_reporter,
+                fine_tune=True,
+                personalized_epoch=self.cfg.personalized_epoch,
+            )
+
+        metrics, found_best_model = metric_reporter.report_metrics(
+            model=global_model,
+            reset=True,
+            stage=TrainingStage.PERSONALIZED_EVAL_EVAL,
+            timeline=timeline,
+            print_to_channels=True,
+        )
+        return metrics, found_best_model
+
+    def _evaluate_personalized_train_users(
+        self,
+        timeline: Timeline,
+        data_provider,
+        global_model: IFLModel,
+        metric_reporter: IFLMetricsReporter,
+    ) -> Tuple[Any, bool]:
+        print(
+            f"{timeline}: \t Evaluates global model on validation data of train users"
+        )
+        for train_client in self.clients.values():
+            train_client.eval(
+                model=global_model,
+                metric_reporter=metric_reporter,
+                fine_tune=True,
+                personalized_epoch=self.cfg.personalized_epoch,
+            )
+
+        metrics, found_best_model = metric_reporter.report_metrics(
+            model=global_model,
+            reset=True,
+            stage=TrainingStage.PERSONALIZED_EVAL_TRAIN,
+            timeline=timeline,
+            print_to_channels=True,
+        )
+
+        return metrics, found_best_model
+
     def _evaluate(
         self,
         timeline: Timeline,
@@ -209,13 +329,12 @@ class FLTrainer(abc.ABC):
         Evaluate global model on eval users
         """
         with torch.no_grad():
-            self._cuda_state_manager.before_train_or_eval(global_model)
             global_model.fl_get_module().eval()
             print(f"{timeline}: \t Evaluates global model on all data of eval users")
-            for user in data_provider.eval_users():
-                for batch in user.eval_data():
-                    batch_metrics = global_model.get_eval_metrics(batch)
-                    metric_reporter.add_batch_metrics(batch_metrics)
+
+            for _, batch in enumerate(data_provider.eval_data()):
+                batch_metrics = global_model.get_eval_metrics(batch)
+                metric_reporter.add_batch_metrics(batch_metrics)
 
             metrics, found_best_model = metric_reporter.report_metrics(
                 model=global_model,
@@ -225,25 +344,50 @@ class FLTrainer(abc.ABC):
                 epoch=timeline.global_round_num(),  # for legacy
                 print_to_channels=True,
             )
-            self._cuda_state_manager.after_train_or_eval(global_model)
             return metrics, found_best_model
 
     def _test(
         self,
         timeline: Timeline,
-        data_provider: IFLDataProvider,
+        data_iter: Iterable[Any],
         model: IFLModel,
         metric_reporter: IFLMetricsReporter,
     ) -> Any:
+        for idx, test_user in tqdm(
+            self.data_provider.test_users.items(), desc="Personalization Test"
+        ):
+            test_client = instantiate(
+                self.cfg.client,
+                dataset=test_user,
+                name=f"client_{idx}",
+                timeout_simulator=self._timeout_simulator,
+                channel=self.channel,
+                cuda_manager=self._cuda_state_manager,
+            )
+            test_client.eval(
+                model=model,
+                metric_reporter=metric_reporter,
+                fine_tune=True,
+                personalized_epoch=self.cfg.personalized_epoch,
+            )
+
+        p_metrics, _ = metric_reporter.report_metrics(
+            model=model,
+            reset=True,
+            stage=TrainingStage.PERSONALIZED_EVAL_TEST,
+            timeline=timeline,
+            epoch=timeline.global_round_num(),  # for legacy
+            print_to_channels=True,
+        )
+
         with torch.no_grad():
             self._cuda_state_manager.before_train_or_eval(model)
             model.fl_get_module().eval()
             print(f"Running {timeline} for {TrainingStage.TEST.name.title()}")
 
-            for test_user in data_provider.test_users():
-                for batch in test_user.eval_data():
-                    batch_metrics = model.get_eval_metrics(batch)
-                    metric_reporter.add_batch_metrics(batch_metrics)
+            for _, batch in enumerate(data_iter):
+                batch_metrics = model.get_eval_metrics(batch)
+                metric_reporter.add_batch_metrics(batch_metrics)
 
             metrics, _ = metric_reporter.report_metrics(
                 model=model,
@@ -254,7 +398,7 @@ class FLTrainer(abc.ABC):
                 print_to_channels=True,
             )
             self._cuda_state_manager.after_train_or_eval(model)
-            return metrics
+            return {**metrics, **p_metrics}
 
 
 @dataclass
@@ -262,7 +406,7 @@ class FLTrainerConfig:
     _target_: str = MISSING
     _recursive_: bool = False
     # Training epochs
-    epochs: float = 10.0
+    epochs: float = 1000.0
     # Whether to do evaluation and model selection based on it.
     do_eval: bool = True
     # don't use metric reporter to choose: always keep trained model
@@ -274,6 +418,8 @@ class FLTrainerConfig:
     train_metrics_reported_per_epoch: int = 1
     # perform eval to do model selection in every eval_epoch_frequency epochs
     eval_epoch_frequency: float = 1.0
+    # frequency of eval based on number of rounds
+    round_eval_frequency: int = 10
     # Whether metrics on training data should be computed and reported.
     report_train_metrics: bool = True
     report_train_metrics_after_aggregation: bool = False
@@ -282,3 +428,5 @@ class FLTrainerConfig:
     client: ClientConfig = ClientConfig()
     # config for the channels
     channel: FLChannelConfig = FLChannelConfig()
+    personalized: bool = False
+    personalized_epoch: int = 1

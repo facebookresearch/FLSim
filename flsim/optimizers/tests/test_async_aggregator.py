@@ -5,6 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 import random
 from dataclasses import dataclass
 from typing import List
@@ -43,7 +44,7 @@ class TestAsyncAggregator:
         param_after_global_training: float,
         weight: float,
         config: AsyncAggregatorConfig,
-    ) -> None:
+    ):
         """
         Test async aggregator by:
         1. Create AsyncAggregator of given type (fed_buff_aggregation or fed_async_aggregation)
@@ -56,8 +57,8 @@ class TestAsyncAggregator:
         init_val = 1
         global_model = MockQuadratic1DFL(Quadratic1D())
         async_aggregator = instantiate(config, global_model=global_model)
-        local_model = FLModelParamUtils.clone(global_model)
-        delta = FLModelParamUtils.clone(global_model)
+        local_model = copy.deepcopy(global_model)
+        delta = copy.deepcopy(global_model)
         # local training, x becomes param_after_local_training
         local_model.fl_get_module().x.data = torch.Tensor([param_after_local_training])
         # global update from another user, x becomes param_after_global_training
@@ -94,7 +95,7 @@ class TestAsyncAggregator:
             )
         )
 
-    def test_fed_buff_aggregation(self) -> None:
+    def test_fed_buff_aggregation(self):
         """
         Test that AsyncAggregator with 'fed_buff_aggregation' works as expected
         1. Create global_model, some_param=1
@@ -125,7 +126,7 @@ class TestAsyncAggregator:
                         config=config,
                     )
 
-    def test_fed_async_aggregation(self) -> None:
+    def test_fed_async_aggregation(self):
         """
         Test that AsyncAggregator with 'fed_async_aggregation' works as expected
         1. Create global_model, some_param=1
@@ -159,10 +160,10 @@ class TestAsyncAggregator:
             for _ in range(num_clients)
         ]
 
-    def _symmetry_test(self, num_users, hybrid_config) -> str:
+    def _symmetry_test(self, num_users, hybrid_config):
 
         hybrid_global_model_1 = SampleNet(TwoFC())
-        hybrid_global_model_2 = FLModelParamUtils.clone(hybrid_global_model_1)
+        hybrid_global_model_2 = copy.deepcopy(hybrid_global_model_1)
 
         hybrid_aggregator_1 = instantiate(
             hybrid_config, global_model=hybrid_global_model_1
@@ -200,9 +201,9 @@ class TestAsyncAggregator:
             abs_epsilon=1e-6,
         )
 
-    def _equivalence_test(self, num_users, hybrid_config, async_config) -> str:
+    def _equivalence_test(self, num_users, hybrid_config, async_config):
         async_global_model = SampleNet(TwoFC())
-        hybrid_global_model = FLModelParamUtils.clone(async_global_model)
+        hybrid_global_model = copy.deepcopy(async_global_model)
 
         async_aggregator = instantiate(async_config, global_model=async_global_model)
 
@@ -235,7 +236,7 @@ class TestAsyncAggregator:
             abs_epsilon=1e-6,
         )
 
-    def test_hybrid_async_symmetry(self) -> None:
+    def test_hybrid_async_symmetry(self):
         """
         Test for symmetry:
         To satisfy symmetry, a hybrid async aggregation algorithm should be invariant to the order of user updates
@@ -257,7 +258,7 @@ class TestAsyncAggregator:
         )
         assertEmpty(error_msg, msg=error_msg)
 
-    def test_hybrid_async_equivalence(self) -> None:
+    def test_hybrid_async_equivalence(self):
         """
         To satisfy equivalence,
         1. Assume both mechanisms have the same starting point
@@ -278,7 +279,7 @@ class TestAsyncAggregator:
         )
         assertEmpty(error_msg, msg=error_msg)
 
-    def test_global_update(self) -> None:
+    def test_global_update(self):
         """
         Test the aggregator only updates global model if
         threshold is reached
@@ -360,8 +361,8 @@ class TestAsyncAggregator:
         [(1, 2, 0.5), (10, 10, 0.5), (10, 10, 0)],
     )
     def test_momentum_implementation_zero_weight(
-        self, num_total_users: int, num_epochs: int, momentum: float
-    ) -> None:
+        self, num_total_users, num_epochs, momentum
+    ):
         """In FedAsyncAggregatorWithMomentum.on_client_training_end, when weight=0,
         neither velocity nor model should be updated
         We test this by comparing two training runs:
@@ -380,7 +381,7 @@ class TestAsyncAggregator:
         torch.manual_seed(1)
         np.random.seed(1)
         global_model_trained1 = self.train_async_with_zero_weight(
-            initial_model=FLModelParamUtils.clone(initial_model),
+            initial_model=copy.deepcopy(initial_model),
             client_models=client_models,
             num_epochs=num_epochs,
             num_total_users=num_total_users,
@@ -390,7 +391,7 @@ class TestAsyncAggregator:
         torch.manual_seed(1)
         np.random.seed(1)
         global_model_trained2 = self.train_async_with_zero_weight(
-            initial_model=FLModelParamUtils.clone(initial_model),
+            initial_model=copy.deepcopy(initial_model),
             client_models=client_models,
             num_epochs=num_epochs,
             num_total_users=num_total_users,
@@ -412,8 +413,8 @@ class TestAsyncAggregator:
         [(1, 2, 0.5, 10), (10, 10, 0.5, 10), (10, 10, 0, 10)],
     )
     def test_momentum_implementation_one_weight(
-        self, num_total_users: int, num_epochs: int, momentum: float, lr: float
-    ) -> None:
+        self, num_total_users, num_epochs, momentum, lr
+    ):
         """FedAsyncAggregatorWithMomentum.on_client_training_end should behave
         exactly like SGD with momentum when weight = 1
         We test this by
@@ -433,9 +434,7 @@ class TestAsyncAggregator:
         torch.manual_seed(1)
         np.random.seed(1)
         config = FedAvgWithLRWithMomentumAsyncAggregatorConfig(lr=lr, momentum=momentum)
-        aggregator = instantiate(
-            config, global_model=FLModelParamUtils.clone(initial_model)
-        )
+        aggregator = instantiate(config, global_model=copy.deepcopy(initial_model))
         for _ in range(num_epochs):
             for client in client_models:
                 aggregator.on_client_training_end(
@@ -445,7 +444,7 @@ class TestAsyncAggregator:
         # run SGD training
         torch.manual_seed(1)
         np.random.seed(1)
-        sgd_model = FLModelParamUtils.clone(initial_model)
+        sgd_model = copy.deepcopy(initial_model)
         sgd_optimizer = torch.optim.SGD(
             sgd_model.fl_get_module().parameters(), lr=lr, momentum=momentum
         )

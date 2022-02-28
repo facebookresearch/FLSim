@@ -8,8 +8,10 @@
 from hydra.core.config_store import ConfigStore
 
 from .base_client import ClientConfig
+from .bilevel_client import BiLevelClientConfig
+from .cd_client import CDClientConfig
 from .dp_client import DPClientConfig
-
+from .sarah_client import SarahClientConfig
 
 ConfigStore.instance().store(
     name="base_client",
@@ -20,5 +22,29 @@ ConfigStore.instance().store(
 ConfigStore.instance().store(
     name="base_dp_client",
     node=DPClientConfig,
+    group="client",
+)
+
+ConfigStore.instance().store(
+    name="base_sarah_client",
+    node=SarahClientConfig,
+    group="client",
+)
+
+ConfigStore.instance().store(
+    name="base_bilevel_client",
+    node=BiLevelClientConfig,
+    group="client",
+)
+
+ConfigStore.instance().store(
+    name="base_cd_client",
+    node=CDClientConfig,
+    group="client",
+)
+
+ConfigStore.instance().store(
+    name="base_ditto_client",
+    node=ClientConfig,
     group="client",
 )

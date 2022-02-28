@@ -5,6 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 from typing import Any, Dict, Optional
 
 import numpy as np
@@ -51,8 +52,8 @@ class TestDifferentialPrivacyIntegration:
         noise,
         clipping,
         reduction_type=ReductionType.WEIGHTED_SUM,
-        min_weight: float = 1e-6,
-        max_weight: float = 1.0,
+        min_weight=1e-6,
+        max_weight=1.0,
     ):
         return WeightedDPRoundReducerConfig(
             reduction_type=reduction_type,
@@ -106,7 +107,7 @@ class TestDifferentialPrivacyIntegration:
             dummy_dataset, shard_size, local_batch_size, DummyAlphabetFLModel()
         )
         assertEqual(data_loader.num_total_users, data_size / shard_size)
-        assertEqual(data_loader.num_total_users, data_provider.num_train_users())
+        assertEqual(data_loader.num_total_users, data_provider.num_users())
         self.data_size = data_size  # pyre-ignore
         return data_provider, data_loader.train_batch_size
 
@@ -133,8 +134,8 @@ class TestDifferentialPrivacyIntegration:
             train_batch_size,
         )
         model_wrapper.model.train()
-        for one_user_data in data_provider.train_users():
-            for batch in one_user_data.train_data():
+        for one_user_data in data_provider.train_data():
+            for batch in one_user_data:
                 batch_metrics = model_wrapper.fl_forward(batch)
                 loss = batch_metrics.loss
                 loss.backward()
@@ -150,7 +151,7 @@ class TestDifferentialPrivacyIntegration:
         dp_config: Optional[Dict[str, Any]] = None,
         noise_func_seed: Optional[int] = None,
         data_size: int = 26,
-        **kwargs
+        **kwargs,
     ):
         """
         Trains an FL model, with or without DP
@@ -225,7 +226,7 @@ class TestDifferentialPrivacyIntegration:
         global_fl_model, _eval_metric = sync_trainer.train(
             data_provider,
             metrics_reporter,
-            num_total_users=data_provider.num_train_users(),
+            num_total_users=data_provider.num_users(),
             distributed_world_size=world_size,
         )
 
@@ -638,13 +639,13 @@ class TestDifferentialPrivacyIntegration:
         clip_norm,
         data_provider,
         buffer_size,
-        epochs: int = 1,
+        epochs=1,
     ):
         local_lr = np.random.sample()
         global_lr = np.random.sample()
 
         dp_model = DummyAlphabetFLModel()
-        nondp_model = FLModelParamUtils.clone(dp_model)
+        nondp_model = copy.deepcopy(dp_model)
         staleness_config = PolynomialStalenessWeightConfig(
             exponent=0.5, avg_staleness=0
         )
