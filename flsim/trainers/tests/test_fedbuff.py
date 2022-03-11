@@ -193,7 +193,7 @@ class HybridFLTestUtils:
         trainer_to_compare_hybrid_fl_with,
         trainer_to_compare_aggregator_config,
         hybrid_aggregator_config,
-        base_local_lr,
+        base_local_lr: float,
         hybrid_local_lr: float,
         epochs: int,
         num_examples: int,
@@ -363,8 +363,8 @@ class HybridFLTestUtils:
         batch_size_hybrid: int,
         batch_size_async: int,
         epochs: int,
-        training_rate,
-        training_duration_mean,
+        training_rate: int,
+        training_duration_mean: float,
         local_lr: float = 1.0,
     ) -> str:
         # to verify training indeed took place

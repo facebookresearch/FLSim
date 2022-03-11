@@ -611,7 +611,7 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
 
     def _test_weighted_avg_reduction(
         self, estimator_type, global_param: float, client_param: float, max_clip_norm
-    ):
+    ) -> str:
         delta = global_param - client_param
         global_model = create_ref_model(ref_model_param_value=global_param)
         num_params = self._get_num_params(global_model.fl_get_module())

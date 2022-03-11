@@ -45,8 +45,8 @@ class TestSyncDPSGDServer:
         cls,
         rank: int,
         world_size: int,
-        clip,
-        noise,
+        clip: float,
+        noise: float,
         models,
         file_loc,
         pipe,
@@ -158,7 +158,7 @@ class TestSyncDPSGDServer:
     @pytest.mark.parametrize(
         "clipping_value, num_clients", itertools.product([1, 1e10], [1, 10])
     )
-    def test_no_noise_with_clip(self, clipping_value, num_clients) -> None:
+    def test_no_noise_with_clip(self, clipping_value: float, num_clients: int) -> None:
         """
         Test DP-SGD with no noise and with user norm clipping.
         """
@@ -188,7 +188,9 @@ class TestSyncDPSGDServer:
         "clipping_value, noise, num_clients",
         itertools.product([1], [1], [1, 10]),
     )
-    def test_noise_and_clip(self, clipping_value, noise, num_clients) -> None:
+    def test_noise_and_clip(
+        self, clipping_value: float, noise: float, num_clients: int
+    ) -> None:
         """
         Test user-level DP-SGD.
         We assume the following:
@@ -363,7 +365,7 @@ class TestSyncDPSGDServer:
         [1, 2, 4],
     )
     def test_sync_dp_server_with_multiple_processes(
-        self, noise, clip, use_cuda, num_processes
+        self, noise, clip, use_cuda: bool, num_processes: int
     ) -> None:
         if use_cuda and not torch.cuda.is_available():
             return

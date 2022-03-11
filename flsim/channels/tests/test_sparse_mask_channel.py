@@ -298,7 +298,7 @@ class TestSparseMaskChannel:
         assertEqual(client_to_server_bytes, true_size_bytes)
 
     @pytest.mark.parametrize("sparsity_method", ["topk", "random"])
-    def test_sparsity_after_reception(self, sparsity_method: str):
+    def test_sparsity_after_reception(self, sparsity_method: str) -> None:
         """
         Tests if the message received at the server after transmission has
         the expected sparsity
