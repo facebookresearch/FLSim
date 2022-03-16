@@ -138,7 +138,7 @@ class Client:
         accumulated in memory.
         """
         updated_model, weight, optimizer = self.copy_and_train_model(
-            model, metric_reporter
+            model, metric_reporter=metric_reporter
         )
         # 4. Store updated model if being tracked
         if self.store_last_updated_model:
@@ -152,9 +152,16 @@ class Client:
         return delta, weight
 
     def copy_and_train_model(
-        self, model: IFLModel, metric_reporter: Optional[IFLMetricsReporter] = None
+        self,
+        model: IFLModel,
+        epochs: Optional[int] = None,
+        optimizer: Optional[torch.optim.Optimizer] = None,
+        optimizer_scheduler: Optional[OptimizerScheduler] = None,
+        metric_reporter: Optional[IFLMetricsReporter] = None,
     ) -> Tuple[IFLModel, float, torch.optim.Optimizer]:
         """Copy the model then use that model to train on the client's train split
+
+        Note: Optional optimizer and optimizer_scheduler are there for easier testing
 
         Returns:
             Tuple[IFLModel, float, torch.optim.Optimizer]: The trained model, the client's weight, the optimizer used
@@ -162,10 +169,21 @@ class Client:
         # 1. pass through channel, set initial state
         updated_model = self.receive_through_channel(model)
         # 2. set up model and optimizer in the client
-        updated_model, optim, optim_scheduler = self.prepare_for_training(updated_model)
+        updated_model, default_optim, default_scheduler = self.prepare_for_training(
+            updated_model
+        )
+        optim = default_optim if optimizer is None else optimizer
+        optim_scheduler = (
+            default_scheduler if optimizer_scheduler is None else optimizer_scheduler
+        )
+
         # 3. kick off training on client
         updated_model, weight = self.train(
-            updated_model, optim, optim_scheduler, metric_reporter
+            updated_model,
+            optim,
+            optim_scheduler,
+            metric_reporter=metric_reporter,
+            epochs=epochs,
         )
         return updated_model, weight, optim
 
@@ -234,16 +252,18 @@ class Client:
         optimizer: Any,
         optimizer_scheduler: OptimizerScheduler,
         metric_reporter: Optional[IFLMetricsReporter] = None,
+        epochs: Optional[int] = None,
     ) -> Tuple[IFLModel, float]:
         total_samples = 0
         # NOTE currently weight = total_sampls, this might be a bad strategy
         # plus there are privcay implications that must be taken into account.
         num_examples_processed = 0  # number of examples processed during training
-
+        # pyre-ignore[16]:
+        epochs = epochs if epochs is not None else self.cfg.epochs
         if self.seed is not None:
             torch.manual_seed(self.seed)
-        # pyre-fixme[16]: `Client` has no attribute `cfg`.
-        for epoch in range(self.cfg.epochs):
+
+        for epoch in range(epochs):
             if self.stop_training(num_examples_processed):
                 break
 

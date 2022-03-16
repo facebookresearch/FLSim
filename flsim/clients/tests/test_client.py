@@ -19,7 +19,6 @@ from flsim.common.pytest_helper import (
     assertTrue,
     assertFalse,
     assertAlmostEqual,
-    assertNotEmpty,
 )
 from flsim.common.timeout_simulator import (
     GaussianTimeOutSimulator,
@@ -473,17 +472,6 @@ class TestBaseClient(ClientTestBase):
     def test_base_client_eval(self) -> None:
         client = self._get_client()
         self._run_client_eval_test(client)
-
-    def test_client_fine_tuning(self) -> None:
-        client = self._get_client()
-        model = utils.SampleNet(utils.TwoFC())
-        model.fl_get_module().fill_all(0.1)
-        fine_tuned_model, _, _ = client.copy_and_train_model(model)
-        mismatched = utils.verify_models_equivalent_after_training(
-            model, fine_tuned_model
-        )
-        client.eval(model)
-        assertNotEmpty(mismatched)
 
 
 class TestDPClient(ClientTestBase):

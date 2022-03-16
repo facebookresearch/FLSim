@@ -11,7 +11,7 @@ import abc
 import logging
 import sys
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, NamedTuple
 
 import torch
 from flsim.channels.base_channel import FLChannelConfig
@@ -19,6 +19,7 @@ from flsim.channels.communication_stats import (
     ChannelDirection,
 )
 from flsim.clients.base_client import ClientConfig
+from flsim.common.fine_tuner import FineTuner
 from flsim.common.logger import Logger
 from flsim.common.timeline import Timeline
 from flsim.common.timeout_simulator import (
@@ -72,6 +73,8 @@ class FLTrainer(abc.ABC):
         self.num_total_users: int = -1
         # Initialize tracker for measuring communication between the clients and
         # the server if communication metrics are enabled
+        self.clients = {}
+        self.eval_clients = {}
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
@@ -108,7 +111,6 @@ class FLTrainer(abc.ABC):
 
     def _maybe_run_evaluation(
         self,
-        model: IFLModel,
         timeline: Timeline,
         data_provider,
         metric_reporter: IFLMetricsReporter,
@@ -120,10 +122,23 @@ class FLTrainer(abc.ABC):
             return best_metric, best_model_state
         if not timeline.tick(self.cfg.eval_epoch_frequency):
             return best_metric, best_model_state
+
+        personalized_metrics = {}
+        if self.cfg.personalized:
+            # personalized eval on eval users
+            # TODO: Fix metrics reporting in order to report personalized metrics
+            personalized_metrics = self._evaluate_personalized_eval_users(  # noqa
+                timeline=timeline,
+                data_provider=data_provider,
+                global_model=self.global_model(),
+                metric_reporter=metric_reporter,
+            )
+
+        # evaluate global model on eval users
         eval_metric, eval_metric_better_than_prev = self._evaluate(
             timeline=timeline,
-            global_model=model,
             data_provider=data_provider,
+            global_model=self.global_model(),
             metric_reporter=metric_reporter,
         )
 
@@ -131,12 +146,8 @@ class FLTrainer(abc.ABC):
         # 2) if self.always_keep_trained_model is set as true, ignore the metrics and
         #    keep the trained model for each epoch
         if self.cfg.always_keep_trained_model or eval_metric_better_than_prev:
-            # last_best_epoch = epoch
-            self.logger.info(
-                f"Found a better model!, current_eval_metric:{eval_metric}"
-            )
             best_metric = eval_metric
-            model_state = model.fl_get_module().state_dict()
+            model_state = self.global_model().fl_get_module().state_dict()
             best_model_state = model_state
         sys.stdout.flush()
         return best_metric, best_model_state
@@ -198,6 +209,32 @@ class FLTrainer(abc.ABC):
             )
             self.channel.stats_collector.reset_channel_stats()
 
+    def _evaluate_personalized_eval_users(
+        self,
+        timeline: Timeline,
+        data_provider,
+        global_model: IFLModel,  # a global model
+        metric_reporter: IFLMetricsReporter,
+    ) -> Any:
+        """Finetunes global model for each eval user on their train data
+        and then evaluates performance on local eval data
+        """
+        print(
+            f"{timeline}: \t Evaluate global model w/ finetune on validation data of eval users"
+        )
+        personalized_metrics, _ = FineTuner.fine_tune_and_evaluate(
+            data=self.data_provider.eval_users(),
+            global_model=global_model,
+            # pyre-ignore[16]
+            client_config=self.cfg.client,
+            metric_reporter=metric_reporter,
+            cuda_state_manager=self._cuda_state_manager,
+            training_stage=TrainingStage.PERSONALIZED_EVAL,
+            timeline=timeline,
+            epochs=self.cfg.personalized_epochs,
+        )
+        return personalized_metrics
+
     def _evaluate(
         self,
         timeline: Timeline,
@@ -235,6 +272,21 @@ class FLTrainer(abc.ABC):
         model: IFLModel,
         metric_reporter: IFLMetricsReporter,
     ) -> Any:
+
+        personalized_metrics = {}
+        # pyre-ignore[16]
+        if self.cfg.personalized:
+            personalized_metrics, _ = FineTuner.fine_tune_and_evaluate(  # noqa
+                data=self.data_provider.test_users(),
+                global_model=model,
+                client_config=self.cfg.client,
+                metric_reporter=metric_reporter,
+                cuda_state_manager=self._cuda_state_manager,
+                training_stage=TrainingStage.PERSONALIZED_TEST,
+                timeline=timeline,
+                epochs=self.cfg.personalized_epochs,
+            )
+
         with torch.no_grad():
             self._cuda_state_manager.before_train_or_eval(model)
             model.fl_get_module().eval()
@@ -262,7 +314,7 @@ class FLTrainerConfig:
     _target_: str = MISSING
     _recursive_: bool = False
     # Training epochs
-    epochs: float = 10.0
+    epochs: float = 1000.0
     # Whether to do evaluation and model selection based on it.
     do_eval: bool = True
     # don't use metric reporter to choose: always keep trained model
@@ -282,3 +334,5 @@ class FLTrainerConfig:
     client: ClientConfig = ClientConfig()
     # config for the channels
     channel: FLChannelConfig = FLChannelConfig()
+    personalized: bool = False  # flag to personalized global model by locally fine tuning before evaluation
+    personalized_epochs: int = 1  # number of fine tune epochs to run

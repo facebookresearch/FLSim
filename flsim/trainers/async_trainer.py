@@ -180,9 +180,8 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
         self._calc_post_epoch_communication_metrics(
             self._get_timeline(), self.metric_reporter
         )
-        (self.best_metric, self.best_model_state,) = FLTrainer._maybe_run_evaluation(
+        self.best_metric, self.best_model_state = FLTrainer._maybe_run_evaluation(
             self,
-            model=self.global_model(),
             timeline=timeline,
             data_provider=self.data_provider,
             metric_reporter=self.metric_reporter,

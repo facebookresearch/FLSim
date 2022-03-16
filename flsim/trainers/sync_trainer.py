@@ -267,8 +267,7 @@ class SyncTrainer(FLTrainer):
                         )
 
                     t = time()
-                    best_metric, best_model_state = self._maybe_run_evaluation(
-                        model=self.global_model(),
+                    (best_metric, best_model_state,) = self._maybe_run_evaluation(
                         timeline=timeline,
                         data_provider=data_provider,
                         metric_reporter=metric_reporter,

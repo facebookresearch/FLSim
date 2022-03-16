@@ -74,10 +74,10 @@ class DummyUserData(IFLUserData):
             yield self.model.fl_create_training_batch(batch=batch)
 
     def num_eval_batches(self):
-        return 0
+        return self._num_batches
 
     def num_eval_examples(self):
-        return 0
+        return self._num_examples
 
 
 class Quadratic1D(nn.Module):
@@ -136,6 +136,24 @@ class TwoFC(nn.Module):
     def forward(self, x):
         x = self.fc1(x)
         x = self.fc2(x)
+        return x
+
+    def fill_all(self, value):
+        def fill(layer):
+            if type(layer) == nn.Linear:
+                layer.bias.data.fill_(value)
+                layer.weight.data.fill_(value)
+
+        self.apply(fill)
+
+
+class Linear(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(2, 1)
+
+    def forward(self, x):
+        x = self.fc1(x)
         return x
 
     def fill_all(self, value):
@@ -224,7 +242,8 @@ class SampleNet(IFLModel):
         pass
 
     def get_eval_metrics(self, batch):
-        pass
+        with torch.no_grad():
+            return self.fl_forward(batch)
 
     def get_num_examples(self, batch):
         return len(batch)
