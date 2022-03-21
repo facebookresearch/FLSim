@@ -6,8 +6,8 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
-import collections
 import json
+from collections import abc
 from typing import Any, Dict, List, Tuple, Type
 
 from hydra.experimental import initialize, compose
@@ -61,7 +61,7 @@ def init_self_cfg(
 
 # trainer config utils for consuming hydra configs
 def _flatten_dict(
-    d: collections.MutableMapping, parent_key: str = "", sep: str = "."
+    d: abc.MutableMapping, parent_key: str = "", sep: str = "."
 ) -> Dict[str, str]:
     """
     Changes json of style
@@ -90,7 +90,7 @@ def _flatten_dict(
         new_key = parent_key + sep + k if parent_key else k
         # if value is not a dict and is mutable, extend the items and flatten again.
         # > hacky way of preserving dict values by checking if key has _dict as suffix.
-        if not new_key.endswith("_dict") and isinstance(v, collections.MutableMapping):
+        if not new_key.endswith("_dict") and isinstance(v, abc.MutableMapping):
             items.extend(_flatten_dict(v, new_key, sep=sep).items())
         else:
             # check if a number needs to be retained as a string
