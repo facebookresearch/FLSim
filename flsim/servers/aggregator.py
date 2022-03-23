@@ -75,7 +75,7 @@ class Aggregator:
             operation=distributed_op,
         )
 
-        if self._is_averaged:
+        if self._is_averaged and self.sum_weights.item() != 0:
             FLModelParamUtils.multiply_model_by_weight(
                 model=self._buffer_module,
                 weight=1.0 / self.sum_weights.item(),
