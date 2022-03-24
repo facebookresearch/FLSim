@@ -37,7 +37,7 @@ python3 cifar10_example.py --config-file configs/cifar10_config.json
 
 CIFAR-10 Dirichlet
 ```
-python3 cifar10_dirichlet.py --config-file configs/cifar10_dirichlet_fedavg.json
+python3 cifar_dirichlet.py --config-file configs/cifar10_dirichlet_fedavg.json
 ```
 
 FEMNIST

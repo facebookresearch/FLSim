@@ -37,7 +37,7 @@
     "data": {
       "local_batch_size": 32,
       "eval_split": 0.1,
-      "train_file": "/Users/ngjhn/federated-asynchronous/FLSim/examples/data/cifar_10users_alpha0.1_seed0_train.pt"
+      "train_file": "/data/home/ngjhn/FLSim/examples/data/cifar_10users_alpha0.1_seed0_train.pt"
     },
     "model": {
       "use_resnet": false
