@@ -8,7 +8,7 @@
 import logging
 from enum import IntEnum
 from itertools import chain
-from typing import List, Iterable, Tuple
+from typing import List, Iterable, Optional, Tuple
 from warnings import warn
 
 import torch
@@ -376,16 +376,19 @@ class FLDistributedUtils:
             )
 
     @classmethod
-    def synchronize_across_ranks(
+    def synchronize_model_across_workers(
         cls,
-        model: nn.Module,
-        weights: torch.Tensor,
         operation: OperationType,
+        model: nn.Module,
+        weights: Optional[torch.Tensor] = None,
         only_federated_params: bool = False,
     ):
         state_dict = FLModelParamUtils.get_state_dict(
             model, only_federated_params=only_federated_params
         )
-        cls.distributed_operation(
-            params=chain([weights], state_dict.values()), op=operation
-        )
+        if weights is not None:
+            cls.distributed_operation(
+                params=chain([weights], state_dict.values()), op=operation
+            )
+        else:
+            cls.distributed_operation(params=state_dict.values(), op=operation)

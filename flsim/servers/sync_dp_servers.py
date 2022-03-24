@@ -150,10 +150,10 @@ class SyncDPSGDServer(ISyncServer):
                 self._clipping_value / self._aggregator.sum_weights.item(),
             )
 
-        FLDistributedUtils.synchronize_across_ranks(
+        FLDistributedUtils.synchronize_model_across_workers(
+            operation=OperationType.BROADCAST,
             model=aggregated_model,
             weights=self._aggregator.sum_weights,
-            operation=OperationType.BROADCAST,
         )
 
         FLModelParamUtils.set_gradient(

@@ -69,10 +69,10 @@ class Aggregator:
     def aggregate(
         self, distributed_op: OperationType = OperationType.SUM_AND_BROADCAST
     ) -> nn.Module:
-        FLDistributedUtils.synchronize_across_ranks(
+        FLDistributedUtils.synchronize_model_across_workers(
+            operation=distributed_op,
             model=self._buffer_module,
             weights=self._sum_weights,
-            operation=distributed_op,
         )
 
         if self._is_averaged and self.sum_weights.item() != 0:
