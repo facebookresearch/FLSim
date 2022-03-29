@@ -49,7 +49,6 @@ from flsim.tests.utils import (
     SimpleMetricReporter,
     verify_models_equivalent_after_training,
 )
-from flsim.tests.utils import SampleNetHive
 from flsim.trainers.async_trainer import AsyncTrainer, AsyncTrainerConfig
 from flsim.trainers.sync_trainer import SyncTrainer, SyncTrainerConfig
 from flsim.utils.config_utils import fl_config_from_json
@@ -1145,64 +1144,3 @@ class TestTrainer:
             global_steps_reported_expected,
             f"Actual global steps: {global_steps_reported_actual}, Expected global steps:{global_steps_reported_expected}",
         )
-
-    @pytest.mark.xfail
-    @pytest.mark.parametrize(
-        "page_turn_freq,users_per_round, pages_used",
-        [
-            (0.99, 5, 6),
-            (0.99, 10, 6),
-            (0.50, 10, 9),
-            (0.50, 5, 9),
-        ],
-    )
-    def test_sync_trainer_with_page_data_provider(
-        self, page_turn_freq, users_per_round: int, pages_used
-    ) -> None:
-        """
-        Test if sync trainer works properly with paged data loader
-        Assumptions:
-            users_per_page = 10 total number of users = 50
-            batch_size = 1
-            train for 2 global epochs
-
-        Cases:
-        1. Base case: user_per_round is half of page_size, turn page after all users are used
-        2. Boundary case: users_per_round = page_size, turn page after all users are used
-        3. Boundary case: users_per_round = page_size, turn page after half of users in the page are used
-        """
-        id_col = "label"
-        num_total_users = 50
-        inline_config = InlineDatasetConfig(
-            num_users=num_total_users,
-            data_cols=["user_n"],
-            id_col=id_col,
-        )
-        dataloader = create_dataloader(
-            num_users_per_page=10,
-            num_total_users=num_total_users,
-            batch_size=1,
-            inline_config=inline_config,
-            sharding_col_name=id_col,
-            use_nid=True,
-        )
-        global_model = SampleNetHive()
-        data_provider = PagedDataProvider(
-            dataloader, model=global_model, page_turn_freq=page_turn_freq
-        )
-        sync_trainer = create_sync_trainer(
-            model=global_model,
-            local_lr=0.1,
-            users_per_round=users_per_round,
-            epochs=1,
-        )
-
-        sync_trainer.train(
-            data_provider,
-            metric_reporter=FakeMetricReporter(),
-            # Note: We're using num_total_users and
-            # not data_provider.num_train_users()
-            num_total_users=num_total_users,
-            distributed_world_size=1,
-        )
-        assertEqual(data_provider.pages_used, pages_used)
