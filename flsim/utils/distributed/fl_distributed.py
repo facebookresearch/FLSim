@@ -75,7 +75,7 @@ class FLDistributedUtils:
         Checks resources on the machine and returns
         the distributed world size and the number of workers.
 
-        For cpu we do not allow more than one processes per cpu.
+        For cpu we do not allow more than one process per cpu.
         For cuda we do
         """
         if cuda:
@@ -135,7 +135,7 @@ class FLDistributedUtils:
           next param in the list.
 
         At the end the function joins all async ops and puts processed values from each flattened
-        buffer in to their respective param.
+        buffer into their respective param.
 
         Note:
             In all operations it is assumed that the master worker is the worker with rank 0.
@@ -200,7 +200,7 @@ class FLDistributedUtils:
         'params', which is a list of tensors, and copy each tensor (which is
         avset of parameters from model) to buffer one by one. After that, we
         callvall_reduce() function in PyTorch distributed as an async
-        operation tovall processes in the group (and get async handle to
+        operation to all processes in the group (and get async handle to
         return after this).
 
         Args:
@@ -273,14 +273,14 @@ class FLDistributedUtils:
             if dst < 0:
                 cls.logger.debug("dst is not defined setting 0 as the default value")
                 dst = 0
-            cls.logger.warning("Operation reduce is not supported on CPU on ")
+            cls.logger.warning("Operation reduce is not supported on CPU.")
 
             if not (
                 cls.DISTRIBUTED_TRAINING_ON_CPU
                 or cls.DISTRIBUTED_BACKEND == dist.Backend.NCCL
             ):
                 # GLOO on GPU does not support reduce
-                cls.logger.warning("Chaning reduce operation to reduce all.")
+                cls.logger.warning("Changing reduce operation to reduce all.")
                 handle = dist.all_reduce(
                     buffer,
                     op=dist.ReduceOp.SUM,
@@ -320,7 +320,7 @@ class FLDistributedUtils:
         i.e. Copies all-reduced grads back into their original place. However,
         more generally speaking, what this function actually does is treating the
         'buffer' (i.e. the 2nd param) as a well-flattened 1D tensor of the list
-        of params and copy all the params back to buffer.
+        of params and copy all the params back to the buffer.
         """
         # TODO: (jesikmin) T55869097 Check whether the size of buffer is same as
         # the total number of elements of params
@@ -338,7 +338,7 @@ class FLDistributedUtils:
     @classmethod
     def is_master_worker(cls):
         """
-        we assume that worker 0 is the master worker."
+        We assume that worker 0 is the master worker.
         """
         return (not dist.is_initialized()) or dist.get_rank() == 0
 
