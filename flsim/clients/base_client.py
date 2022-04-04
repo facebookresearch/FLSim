@@ -382,6 +382,7 @@ class Client:
 class ClientConfig:
     _target_: str = fullclassname(Client)
     _recursive_: bool = False
+    _partial_: bool = True
     epochs: int = 1  # No. of epochs for local training
     optimizer: LocalOptimizerConfig = LocalOptimizerConfig()
     lr_scheduler: OptimizerSchedulerConfig = OptimizerSchedulerConfig()

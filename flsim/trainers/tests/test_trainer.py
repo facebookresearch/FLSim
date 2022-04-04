@@ -983,7 +983,7 @@ class TestTrainer:
                         ),
                         active_user_selector=SequentialActiveUserSelectorConfig(),
                     ),
-                    report_client_metrics=True,
+                    stateful_clients=True,
                     report_client_metrics_after_epoch=True,
                     client_metrics_reported_per_epoch=3,
                 )
