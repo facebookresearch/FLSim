@@ -15,7 +15,8 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import torch
 from flsim.clients.base_client import Client
-from flsim.clients.dp_client import DPClientConfig
+from flsim.clients.dp_client import DPClientConfig, DPClient
+from flsim.clients.fednova_client import FedNovaClientConfig, FedNovaClient
 from flsim.common.timeline import Timeline
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.metrics_reporter import IFLMetricsReporter, Metric, TrainingStage
@@ -382,15 +383,8 @@ class SyncTrainer(FLTrainer):
         self.server.init_round()
         self.logger.info(f"Round initialization took {time() - t} s.")
 
-        def update(client):
-            client_delta, weight = client.generate_local_update(
-                self.global_model(), metric_reporter
-            )
-            self.server.receive_update_from_client(Message(client_delta, weight))
-
         t = time()
         for client in clients:
-            # client.copy_and_train_model(model=self.global_model(), epochs=1, optimizer=)
             message = client.generate_local_update(self.global_model(), metric_reporter)
             self.server.receive_update_from_client(message)
         self.logger.info(f"Collecting round's clients took {time() - t} s.")

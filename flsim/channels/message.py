@@ -68,3 +68,8 @@ class Message:
             self.model_state_dict
         ), "Message state dict is empty. Please check if message.state_dict is populated."
         self.model.fl_get_module().load_state_dict(self.model_state_dict)
+
+@dataclass
+class FedNovaMessage(Message):
+    num_local_steps: int = 0
+    num_examples: float = 0

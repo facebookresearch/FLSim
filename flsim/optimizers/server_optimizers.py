@@ -26,6 +26,7 @@ import torch
 import torch.nn as nn
 from flsim.optimizers.layerwise_optimizers import LAMB, LARS
 from flsim.utils.config_utils import fullclassname, init_self_cfg, is_target
+from hydra.utils import instantiate
 from omegaconf import MISSING
 
 
@@ -258,12 +259,85 @@ class FedLAMBOptimizerConfig(ServerOptimizerConfig):
     eps: float = 1e-8
 
 
+class FedNovaOptimizer(IServerOptimizer):
+    def __init__(self, *, model: nn.Module, **kwargs) -> None:
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=FedNovaOptimizerConfig,
+            **kwargs,
+        )
+        # pyre-ignore[16]
+        self.gmf = self.cfg.gmf
+        self.mu = self.cfg.mu
+        self.local_counter = 0
+        self.local_normalizing_vec = 0
+        self.local_steps = 0
+
+    def step(self, weight=0, tau_eff=0, closure=None):
+        if weight == 0:
+            weight = self.ratio
+        if tau_eff == 0:
+            if self.mu != 0:
+                tau_eff_cuda = torch.tensor(self.local_steps * self.ratio).cuda()
+            else:
+                tau_eff_cuda = torch.tensor(
+                    self.local_normalizing_vec * self.ratio
+                ).cuda()
+            # dist.all_reduce(tau_eff_cuda, op=dist.ReduceOp.SUM)
+            tau_eff = tau_eff_cuda.item()
+
+        param_list = []
+        for group in self.param_groups:
+            for p in group["params"]:
+                param_state = self.state[p]
+                scale = tau_eff / self.local_normalizing_vec
+                param_state["cum_grad"].mul_(weight * scale)
+                param_list.append(param_state["cum_grad"])
+
+        for group in self.param_groups:
+            lr = group["lr"]
+            for p in group["params"]:
+                param_state = self.state[p]
+
+                if self.gmf != 0:
+                    if "global_momentum_buffer" not in param_state:
+                        buf = param_state["global_momentum_buffer"] = torch.clone(
+                            param_state["cum_grad"]
+                        ).detach()
+                        buf.div_(lr)
+                    else:
+                        buf = param_state["global_momentum_buffer"]
+                        buf.mul_(self.gmf).add_(1 / lr, param_state["cum_grad"])
+                    param_state["old_init"].sub_(lr, buf)
+                else:
+                    param_state["old_init"].sub_(param_state["cum_grad"])
+
+                p.data.copy_(param_state["old_init"])
+                param_state["cum_grad"].zero_()
+
+    def zero_grad(self, set_to_none: bool = False):
+        self.local_counter = 0
+        self.local_normalizing_vec = 0
+        self.local_steps = 0
+
+
+@dataclass
+class FedNovaOptimizerConfig(ServerOptimizerConfig):
+    _target_: str = fullclassname(FedNovaOptimizer)
+    lr: float = 0.1
+    monentum: float = 0.0
+    mu: float = 0
+    gmf: float = 0
+
+
 class OptimizerType(Enum):
     fed_avg: str = FedAvgOptimizerConfig._target_
     fed_avg_with_lr: str = FedAvgWithLROptimizerConfig._target_
     fed_adam: str = FedAdamOptimizerConfig._target_
     fed_lamb: str = FedLAMBOptimizerConfig._target_
     fed_lars: str = FedLARSOptimizerConfig._target_
+    fed_nova: str = FedNovaOptimizerConfig._target_
 
     @staticmethod
     def create_optimizer(
@@ -314,6 +388,8 @@ class OptimizerType(Enum):
                 lr=1.0,
                 momentum=0,
             )
+        elif is_target(config, FedNovaOptimizerConfig):
+            return instantiate(config, model=model)
         else:
             raise ValueError(
                 f"Optimizer type {config._target_} not found. Please update OptimizerType.create_optimizer"

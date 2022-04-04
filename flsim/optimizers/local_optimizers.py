@@ -15,6 +15,7 @@ from flsim.utils.config_utils import fullclassname
 from flsim.utils.config_utils import init_self_cfg
 from omegaconf import MISSING
 from torch.nn import Module as Model  # @manual
+from torch.optim.optimizer import Optimizer, required
 
 
 class LocalOptimizer:

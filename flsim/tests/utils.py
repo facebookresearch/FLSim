@@ -146,6 +146,22 @@ class TwoFC(nn.Module):
 
         self.apply(fill)
 
+class Linear(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(2, 1)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        return x
+
+    def fill_all(self, value):
+        def fill(layer):
+            if type(layer) == nn.Linear:
+                layer.bias.data.fill_(value)
+                layer.weight.data.fill_(value)
+
+        self.apply(fill)
 
 class Linear(nn.Module):
     def __init__(self):
@@ -464,6 +480,6 @@ class RandomEvalMetricsReporter(IFLMetricsReporter):
 
 
 def create_model_with_value(value) -> nn.Module:
-    model = TwoFC()
+    model = Linear()
     model.fill_all(value)
     return model

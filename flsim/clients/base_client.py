@@ -126,7 +126,7 @@ class Client:
 
     def generate_local_update(
         self, model: IFLModel, metric_reporter: Optional[IFLMetricsReporter] = None
-    ) -> Tuple[IFLModel, float]:
+    ) -> Message:
         r"""
         wrapper around all functions called on a client for generating an
         updated local model.
@@ -149,7 +149,7 @@ class Client:
         )
         # 6. track state of the client
         self.track(delta=delta, weight=weight, optimizer=optimizer)
-        return delta, weight
+        return Message(delta, weight)
 
     def copy_and_train_model(
         self,
