@@ -349,10 +349,8 @@ class Client:
         metric_reporter,
         optimizer_scheduler,
     ) -> int:
-        """Trainer for NewDocModel based FL Tasks
+        """
         Run a single iteration of minibatch-gradient descent on a single user.
-        Compatible with the new tasks in which model is reponsible to
-        arrange its inputs, targets and context.
         Return number of examples in the batch.
         """
         optimizer.zero_grad()
