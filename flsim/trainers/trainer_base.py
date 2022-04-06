@@ -133,6 +133,7 @@ class FLTrainer(abc.ABC):
                 global_model=self.global_model(),
                 metric_reporter=metric_reporter,
             )
+            print(f"Eval Personalized Metrics {personalized_metrics}")
 
         # evaluate global model on eval users
         eval_metric, eval_metric_better_than_prev = self._evaluate(
@@ -286,6 +287,7 @@ class FLTrainer(abc.ABC):
                 timeline=timeline,
                 epochs=self.cfg.personalized_epochs,
             )
+            print(f"Test Personalized Metrics {personalized_metrics}")
 
         with torch.no_grad():
             self._cuda_state_manager.before_train_or_eval(model)
