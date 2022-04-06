@@ -53,9 +53,6 @@ def init_self_cfg(
     )
     cfg = OmegaConf.create(cfg)  # convert any structure to OmegaConf
     component_class._set_defaults_in_cfg(cfg)  # set default cfg params for this class
-    # convert any structure to OmegaConf again, after setting defaults
-    cfg = OmegaConf.create(cfg)  # pyre-ignore [6]
-    _validate_cfg(component_class, cfg)  # validate the config
     component_obj.cfg = cfg
 
 

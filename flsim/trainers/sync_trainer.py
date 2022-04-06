@@ -70,6 +70,7 @@ class SyncTrainer(FLTrainer):
             global_model=model,
             channel=self.channel,
         )
+        self.client_factory = instantiate(self.cfg.client)
         self.clients = {}
 
     @classmethod
@@ -95,34 +96,32 @@ class SyncTrainer(FLTrainer):
     def is_secure_aggregation_enabled(self):
         return is_target(self.cfg.server, SyncSecAggServerConfig)
 
-    def create_or_get_client_for_data(self, dataset_id: int, datasets: Any):
-        """This function is used to create clients in a round. Thus, it
-        is called UPR * num_rounds times per training run. Here, we use
-        <code>OmegaConf.structured</code> instead of <code>hydra.instantiate</code>
-        to minimize the overhead of hydra object creation.
-        """
-        if self.is_sample_level_dp:
-            client = DPClient(
-                # pyre-ignore[16]
-                **OmegaConf.structured(self.cfg.client),
-                dataset=datasets.get_train_user(dataset_id),
-                name=f"client_{dataset_id}",
-                timeout_simulator=self._timeout_simulator,
-                store_last_updated_model=self.cfg.report_client_metrics,
-                channel=self.channel,
-                cuda_manager=self._cuda_state_manager,
-            )
+    def create_client(self, dataset_id: int, data_provider: IFLDataProvider):
+        # pyre-ignore[16]
+        if self.cfg.stateful_clients:
+            return self.create_or_get_stateful_clients(dataset_id, data_provider)
         else:
-            client = Client(
-                **OmegaConf.structured(self.cfg.client),
-                dataset=datasets.get_train_user(dataset_id),
+            return self.client_factory(
+                dataset=data_provider.get_train_user(dataset_id),
                 name=f"client_{dataset_id}",
                 timeout_simulator=self._timeout_simulator,
-                store_last_updated_model=self.cfg.report_client_metrics,
+                store_last_updated_model=False,
                 channel=self.channel,
                 cuda_manager=self._cuda_state_manager,
             )
-        self.clients[dataset_id] = client
+
+    def create_or_get_stateful_clients(
+        self, dataset_id: int, data_provider: IFLDataProvider
+    ):
+        if dataset_id not in self.clients:
+            self.clients[dataset_id] = self.client_factory(
+                dataset=data_provider.get_train_user(dataset_id),
+                name=f"client_{dataset_id}",
+                timeout_simulator=self._timeout_simulator,
+                store_last_updated_model=True,
+                channel=self.channel,
+                cuda_manager=self._cuda_state_manager,
+            )
         return self.clients[dataset_id]
 
     def train(
@@ -356,8 +355,7 @@ class SyncTrainer(FLTrainer):
             epoch=epoch,
         )
         clients_triggered = [
-            self.create_or_get_client_for_data(i, self.data_provider)
-            for i in user_indices_overselected
+            self.create_client(i, self.data_provider) for i in user_indices_overselected
         ]
         clients_to_train = self._drop_overselected_users(
             clients_triggered, users_per_round
@@ -442,8 +440,7 @@ class SyncTrainer(FLTrainer):
         ).tolist()
 
         agg_metric_clients = [
-            self.create_or_get_client_for_data(i, self.data_provider)
-            for i in agg_metric_client_idcs
+            self.create_client(i, self.data_provider) for i in agg_metric_client_idcs
         ]
         return agg_metric_clients
 
@@ -590,7 +587,7 @@ class SyncTrainer(FLTrainer):
         if (
             metric_reporter is not None
             # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
-            and self.cfg.report_client_metrics
+            and self.cfg.stateful_clients
             and self.cfg.report_client_metrics_after_epoch
             and (timeline.epoch % self.cfg.client_metrics_reported_per_epoch == 0)
         ):
@@ -666,8 +663,8 @@ class SyncTrainerConfig(FLTrainerConfig):
     dropout_rate: float = 1.0
     report_train_metrics_after_aggregation: bool = False
     report_client_metrics_after_epoch: bool = False
-    # Whether client metrics on eval data should be computed and reported.
-    report_client_metrics: bool = False
+    # Should we store the state of each client.
+    stateful_clients: bool = False
     # how many times per epoch should we report client metrics
     # numbers greater than 1 help with plotting more precise training curves
     client_metrics_reported_per_epoch: int = 1
