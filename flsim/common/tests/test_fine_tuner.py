@@ -29,7 +29,7 @@ class TestFineTuner:
         model.fl_get_module().fill_all(value)
         return model
 
-    def test_fine_tune_model(self):
+    def test_fine_tune_model(self) -> None:
         """
         Global model starts at 1, grad = 1, then model after
         1 batch is going be 0
@@ -43,13 +43,15 @@ class TestFineTuner:
             data,
             client_config,
             metrics_reporter,
+            # pyre-fixme[6]: Expected `CudaTransferMinimizer` for 5th param but got
+            #  `ICudaStateManager`.
             DEFAULT_CUDA_MANAGER,
             epochs=1,
         )
         error_msg = utils.model_parameters_equal_to_value(fine_tuned_model, 0.0)
         assertEmpty(error_msg, error_msg)
 
-    def test_fine_tune_and_evaluate(self):
+    def test_fine_tune_and_evaluate(self) -> None:
         global_model = self._get_model(1)
         num_clients = 10
         num_batches = 10
@@ -66,6 +68,8 @@ class TestFineTuner:
             global_model,
             client_config,
             metrics_reporter,
+            # pyre-fixme[6]: Expected `CudaTransferMinimizer` for 5th param but got
+            #  `ICudaStateManager`.
             DEFAULT_CUDA_MANAGER,
             TrainingStage.PERSONALIZED_TEST,
             Timeline(epoch=1, round=2, global_round=2, rounds_per_epoch=10),
