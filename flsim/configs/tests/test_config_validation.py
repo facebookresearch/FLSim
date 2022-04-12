@@ -9,6 +9,7 @@ import flsim.configs  # noqa
 import omegaconf
 from flsim.common.pytest_helper import assertRaises
 from flsim.utils.sample_model import DummyAlphabetFLModel
+from hydra.errors import InstantiationException
 from hydra.experimental import compose, initialize
 from hydra.utils import instantiate
 
@@ -27,6 +28,6 @@ class TestConfigValidation:
                 ],
             )
         with assertRaises(
-            omegaconf.errors.MissingMandatoryValue,  # with Hydra 1.1
+            InstantiationException,  # with Hydra 1.1
         ):
             instantiate(cfg.trainer, model=DummyAlphabetFLModel(), cuda_enabled=False)
