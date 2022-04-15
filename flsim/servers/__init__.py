@@ -7,6 +7,7 @@
 
 from hydra.core.config_store import ConfigStore  #  @manual
 
+from .fednova_server import FedNovaServerConfig
 from .sync_dp_servers import SyncDPSGDServerConfig
 from .sync_secagg_servers import SyncSecAggServerConfig
 from .sync_servers import SyncServerConfig
@@ -26,5 +27,11 @@ ConfigStore.instance().store(
 ConfigStore.instance().store(
     name="base_sync_secagg_server",
     node=SyncSecAggServerConfig,
+    group="server",
+)
+
+ConfigStore.instance().store(
+    name="base_sync_fednova_server",
+    node=FedNovaServerConfig,
     group="server",
 )

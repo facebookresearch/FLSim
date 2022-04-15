@@ -15,6 +15,7 @@ from flsim.utils.config_utils import fullclassname
 from flsim.utils.config_utils import init_self_cfg
 from omegaconf import MISSING
 from torch.nn import Module as Model  # @manual
+from torch.optim.optimizer import Optimizer, required
 
 
 class LocalOptimizer:
@@ -70,6 +71,32 @@ class LocalOptimizerSGD(LocalOptimizer, torch.optim.SGD):
             "momentum": momentum,
             "weight_decay": weight_decay,
         }
+
+
+class LocalOptimizerAdam(LocalOptimizer, torch.optim.Adam):
+    def __init__(self, *, model: Model, **kwargs) -> None:
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=LocalOptimizerAdamConfig,
+            **kwargs,
+        )
+
+        super().__init__(model=model, **kwargs)
+
+        torch.optim.Adam.__init__(
+            self=self,
+            params=self.model.parameters(),
+            # pyre-fixme[16]: `LocalOptimizerSGD` has no attribute `cfg`.
+            lr=self.cfg.lr,
+            betas=(self.cfg.beta1, self.cfg.beta2),
+            weight_decay=self.cfg.weight_decay,
+            eps=self.cfg.eps,
+        )
+
+    @classmethod
+    def _set_defaults_in_cfg(cls, cfg):
+        pass
 
 
 class LocalOptimizerFedProx(LocalOptimizer, torch.optim.SGD):
@@ -166,3 +193,13 @@ class LocalOptimizerSGDConfig(LocalOptimizerConfig):
 class LocalOptimizerFedProxConfig(LocalOptimizerConfig):
     _target_: str = fullclassname(LocalOptimizerFedProx)
     mu: float = 0.0
+
+
+@dataclass
+class LocalOptimizerAdamConfig(LocalOptimizerConfig):
+    _target_: str = fullclassname(LocalOptimizerAdam)
+    lr: float = 0.001
+    weight_decay: float = 0.00001
+    beta1: float = 0.9
+    beta2: float = 0.999
+    eps: float = 1e-8
