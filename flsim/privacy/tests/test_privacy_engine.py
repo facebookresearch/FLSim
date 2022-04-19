@@ -267,24 +267,33 @@ class TestTreePrivacyEngine:
         ],
     )
     def test_tree_noise_sum_expected(self, upr, n_users, noise_multiplier, exp_var):
-        delta, _ = self._create_delta(dim=1000, value=0)
+        def test_one_trial():
+            delta, _ = self._create_delta(dim=1000, value=0)
 
-        setting = PrivacySetting(
-            noise_multiplier=noise_multiplier,
-            noise_seed=0,
-        )
-        privacy_engine = PrivacyEngineFactory.create(
-            setting,
-            users_per_round=upr,
-            num_total_users=n_users,
-            noise_type=NoiseType.TREE_NOISE,
-        )
+            setting = PrivacySetting(
+                noise_multiplier=noise_multiplier,
+                noise_seed=0,
+            )
+            privacy_engine = PrivacyEngineFactory.create(
+                setting,
+                users_per_round=upr,
+                num_total_users=n_users,
+                noise_type=NoiseType.TREE_NOISE,
+            )
 
-        privacy_engine.add_noise(delta, sensitivity=1.0)
-        noised_delta = torch.flatten(
-            torch.stack([p for name, p in delta.named_parameters() if "weight" in name])
+            privacy_engine.add_noise(delta, sensitivity=1.0)
+            noised_delta = torch.flatten(
+                torch.stack(
+                    [p for name, p in delta.named_parameters() if "weight" in name]
+                )
+            )
+            return torch.var(noised_delta).item()
+
+        num_trials = 5
+
+        assertAlmostEqual(
+            np.mean([test_one_trial() for _ in range(num_trials)]), exp_var, delta=0.15
         )
-        assertAlmostEqual(torch.var(noised_delta), exp_var, delta=0.15)
 
     @pytest.mark.parametrize(
         "steps, upr, n_users, sigma, exp_var",
@@ -297,21 +306,28 @@ class TestTreePrivacyEngine:
         ],
     )
     def test_range_sum_noise_expected(self, steps, upr, n_users, sigma, exp_var):
+        def test_one_trial():
+            setting = PrivacySetting(
+                noise_multiplier=sigma,
+                noise_seed=2,
+            )
+            privacy_engine = PrivacyEngineFactory.create(
+                setting,
+                users_per_round=upr,
+                num_total_users=n_users,
+                noise_type=NoiseType.TREE_NOISE,
+            )
+            for i in range(steps):
+                sum_ = privacy_engine.range_sum(0, i, torch.Size((1000,)), 1.0)
+            return torch.var(sum_)
 
-        setting = PrivacySetting(
-            noise_multiplier=sigma,
-            noise_seed=2,
-        )
-        privacy_engine = PrivacyEngineFactory.create(
-            setting,
-            users_per_round=upr,
-            num_total_users=n_users,
-            noise_type=NoiseType.TREE_NOISE,
-        )
-        for i in range(steps):
-            sum_ = privacy_engine.range_sum(0, i, torch.Size((1000,)), 1.0)
+        num_trials = 5
 
-        assertAlmostEqual(torch.var(sum_), exp_var, delta=0.15)
+        assertAlmostEqual(
+            np.mean([test_one_trial() for _ in range(num_trials)]),
+            exp_var,
+            delta=0.15,
+        )
 
     @pytest.mark.parametrize(
         "n_users, upr, sigma, epsilon",
