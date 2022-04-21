@@ -406,7 +406,7 @@ class SyncTrainer(FLTrainer):
             timeline=timeline,
             metric_reporter=metric_reporter,
         )
-        self._evaluate_global_model_after_aggregation(
+        self._evaluate_global_model_after_aggregation_on_train_clients(
             clients=agg_metric_clients,
             model=self.global_model(),
             timeline=timeline,
@@ -532,7 +532,7 @@ class SyncTrainer(FLTrainer):
 
         return client_metrics
 
-    def _evaluate_global_model_after_aggregation(
+    def _evaluate_global_model_after_aggregation_on_train_clients(
         self,
         clients: Iterable[Client],
         model: IFLModel,
@@ -549,14 +549,13 @@ class SyncTrainer(FLTrainer):
         ):
             with torch.no_grad():
                 model.fl_get_module().eval()
-                for eval_user in self.data_provider.eval_users():
-                    for batch in eval_user.eval_data():
+                for train_user in self.data_provider.train_users():
+                    for batch in train_user.train_data():
                         batch_metrics = model.get_eval_metrics(batch)
                         if metric_reporter is not None:
                             metric_reporter.add_batch_metrics(batch_metrics)
                 model.fl_get_module().train()
 
-            print(f"Reporting {timeline} for aggregation")
             privacy_metrics = self._calc_privacy_metrics(
                 clients, model, metric_reporter
             )
