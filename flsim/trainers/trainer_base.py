@@ -37,7 +37,7 @@ from omegaconf import OmegaConf
 
 
 class FLTrainer(abc.ABC):
-    """Base class for FederatedLearning Training"""
+    """Base class for Federated Learning Training"""
 
     logger: logging.Logger = Logger.get_logger(__name__)
 

@@ -41,12 +41,9 @@ from tqdm import tqdm
 
 
 class SyncTrainer(FLTrainer):
-    """Implements FederatedAveraging: https://arxiv.org/abs/1602.05629
+    """Implements synchronous Federated Learning Training.
 
-    Attributes:
-        epochs (int): Training epochs
-        report_train_metrics (bool): Whether metrics on training data should be
-            computed and reported.
+    Defaults to Federated Averaging (FedAvg): https://arxiv.org/abs/1602.05629
     """
 
     def __init__(
@@ -78,9 +75,7 @@ class SyncTrainer(FLTrainer):
             cfg.server = SyncServerConfig(optimizer=FedAvgOptimizerConfig())
 
     def global_model(self) -> IFLModel:
-        """This function makes it explicit that self.global_model() is owned
-        by the server, not by SyncTrainer
-        """
+        """self.global_model() is owned by the server, not by SyncTrainer"""
         return self.server.global_model
 
     @property
@@ -96,10 +91,10 @@ class SyncTrainer(FLTrainer):
         return is_target(self.cfg.server, SyncSecAggServerConfig)
 
     def create_or_get_client_for_data(self, dataset_id: int, datasets: Any):
-        """This function is used to create clients in a round. Thus, it
-        is called UPR * num_rounds times per training run. Here, we use
-        <code>OmegaConf.structured</code> instead of <code>hydra.instantiate</code>
-        to minimize the overhead of hydra object creation.
+        """Creates clients for a round. This function is called UPR * num_rounds
+        times per training run. Here, we use <code>OmegaConf.structured</code>
+        instead of <code>hydra.instantiate</code> to minimize the overhead of
+        hydra object creation.
         """
         if self.is_sample_level_dp:
             client = DPClient(
@@ -133,33 +128,30 @@ class SyncTrainer(FLTrainer):
         distributed_world_size: int,
         rank: int = 0,
     ) -> Tuple[IFLModel, Any]:
-        """Train and eval a model, the model states will be modified. This function
-        iterates over epochs specified in config, and for each epoch:
+        """Trains and evaluates the model, modifying the model state. Iterates over the
+        number of epochs specified in the config, and for each epoch iterates over the
+        number of rounds per epoch, i.e. the number of total users divided by the number
+        of users per round. For each round:
 
-            1. Trains model in a federated way: different models are trained over data
-                from different users, and are averaged into 'model' at the end of epoch
-            2. Evaluate averaged model using evaluation data
-            3. Calculate metrics based on evaluation results and select best model
+            1. Trains the model in a federated way: different local models are trained
+                with local data from different clients, and are averaged into a new
+                global model at the end of each round.
+            2. Evaluates the new global model using evaluation data, if desired.
+            3. Calculates metrics based on evaluation results and selects the best model.
 
         Args:
-            data_provider (IFLDataProvider): provide training, evaluation, and test data
-                iterables and get a user's data based on user ID
-            metric_reporter (IFLMetricsReporter): compute metric based on training
-                output and report results to console, file, etc.
-            num_total_users (int): number of total users for training
+            data_provider: provides training, evaluation, and test data iterables and
+                gets a user's data based on user ID
+            metric_reporter: computes and reports metrics of interest such as accuracy
+                or perplexity
+            num_total_users: number of total users for training
 
         Returns:
             model, best_metric: the trained model together with the best metric
 
         Note:
-            one `epoch` = go over all users once is not True here
-            since users in each round are selected randomly, this isn't precisely true
-            we may go over some users more than once, and some users never
-            however, as long as users_per_round << num_total_users, this will work
-            the alternative is to keep track of all users that have already
-            been selected in the current epoch - impractical and not worth it
-            however, we may have that option in simulation later on.
-            TODO correct note if above option added.
+            Depending on the chosen active user selector, we may not iterate over
+            all users in a given epoch.
         """
         # set up synchronization utilities for distributed training
         FLDistributedUtils.setup_distributed_training(
@@ -306,8 +298,9 @@ class SyncTrainer(FLTrainer):
         )
 
     def stop_fl_training(self, *, epoch, round, num_rounds_in_epoch) -> bool:
-        # stop if necessary number of steps/epochs are completed in case of fractional epochs
-        # or if client times out
+        """Stops FL training when the necessary number of steps/epochs have been
+        completed in case of fractional epochs or if clients time out.
+        """
         global_round_num = (epoch - 1) * num_rounds_in_epoch + round
         return (
             (global_round_num / num_rounds_in_epoch)
@@ -318,9 +311,7 @@ class SyncTrainer(FLTrainer):
     def _drop_overselected_users(
         self, clents_triggered: List[Client], num_users_keep: int
     ) -> List[Client]:
-        """
-        sort users by their training time, and only keep num_users_keep users
-        """
+        """Sorts users by their training time, and only keeps num_users_keep users."""
         all_training_times = [c.get_total_training_time() for c in clents_triggered]
         all_training_times.sort()
         # only select first num_users_keep userids sort by their finish time
@@ -375,11 +366,15 @@ class SyncTrainer(FLTrainer):
         users_per_round: int,
         metric_reporter: Optional[IFLMetricsReporter],
     ) -> None:
-        """Args:
-        timeline: information about the round, epoch, round number, ...
-        clients: clients for the round
-        agg_metric_clients: clients for evaluating the post-aggregation training metrics
-        metric_reporter: the metric reporter to pass to other methods
+        """Trains the global model for one training round.
+
+        Args:
+            timeline: information about the round, epoch, round number, ...
+            clients: clients for the round
+            agg_metric_clients: clients for evaluating the post-aggregation
+                training metrics
+            users_per_round: the number of participating users
+            metric_reporter: the metric reporter to pass to other methods
         """
         t = time()
         self.server.init_round()
@@ -425,9 +420,8 @@ class SyncTrainer(FLTrainer):
         num_total_users: int,
         users_per_round: int,
     ) -> Iterable[Client]:
-        """
-        Chooses clients for the post-aggregation training metrics.
-        Depending on config parameters, either return the round's
+        """Chooses clients for the post-aggregation training metrics.
+        Depending on the config parameters, either returns the round's
         training clients or new randomly drawn clients.
         """
         # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
@@ -453,10 +447,7 @@ class SyncTrainer(FLTrainer):
         model: IFLModel,
         metric_reporter: Optional[IFLMetricsReporter],
     ) -> List[Metric]:
-        """
-        Calculates privacy metrics.
-        """
-
+        """Calculates privacy metrics."""
         metrics = []
         if self.is_user_level_dp:
             user_eps = self.server.privacy_budget.epsilon  # pyre-fixme
@@ -487,9 +478,7 @@ class SyncTrainer(FLTrainer):
         users_per_round: int,
         metric_reporter: Optional[IFLMetricsReporter],
     ) -> List[Metric]:
-        """
-        Calculates overflow metrics.
-        """
+        """Calculates overflow metrics."""
         metrics = []
         if self.is_secure_aggregation_enabled:
             for client in clients:
@@ -514,9 +503,7 @@ class SyncTrainer(FLTrainer):
         round_timeline: Timeline,
         metric_reporter: IFLMetricsReporter,
     ) -> List[List[Metric]]:
-        """
-        Calculates client-side metrics on the overall evaluation set
-        """
+        """Calculates client-side metrics on the overall evaluation set."""
         client_metrics = []
         if metric_reporter is not None:
             for client, model in tqdm(client_models.items()):
@@ -577,7 +564,7 @@ class SyncTrainer(FLTrainer):
         self, users_per_round_on_worker: int, num_users_on_worker: int
     ):
         assert users_per_round_on_worker <= num_users_on_worker, (
-            "Users per round is greater than number of users in data provider for the worker."
+            "Users per round is greater than the number of users in the data provider for the worker."
             "If you are using paged dataloader, increase your num_users_per_page >> users_per_round"
         )
 
