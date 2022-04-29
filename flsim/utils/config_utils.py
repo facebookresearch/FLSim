@@ -6,8 +6,8 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
+import collections.abc as abc
 import json
-from collections import abc
 from typing import Any, Dict, List, Tuple, Type
 
 from hydra.experimental import initialize, compose
