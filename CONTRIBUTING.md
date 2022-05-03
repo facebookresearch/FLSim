@@ -1,6 +1,6 @@
 # Contributing to FLSim
 
-We want to make contributing to FLSim is as easy and transparent as possible.
+We want to make contributing to FLSim as easy and transparent as possible.
 
 ## Development installation
 
@@ -28,7 +28,7 @@ from the repository root. No additional configuration should be needed (see the
 for advanced usage).
 
 FLSim also soon will use [isort](https://github.com/timothycrosley/isort) to sort imports
-alphabetically and separate into sections. isort is installed easily via
+alphabetically and separate them into sections. isort is installed easily via
 pip using `pip install isort`, and run locally by calling
 ```bash
 isort -v -l 88 -o FLSim --lines-after-imports 2 -m 3 --trailing-comma  .
@@ -40,7 +40,7 @@ CircleCI will fail on your PR if it does not adhere to the black or flake8 forma
 
 #### Type Hints
 
-FLSim is fully typed using python 3.6+
+FLSim is fully typed using Python 3.6+
 [type hints](https://www.python.org/dev/peps/pep-0484/).
 We expect any contributions to also use proper type annotations.
 While we currently do not enforce full consistency of these in our continuous integration
@@ -53,7 +53,7 @@ To run the unit tests, you can either use `pytest` (if installed):
 ```bash
 pytest -ra
 ```
-or python's `unittest`:
+or Python's `unittest`:
 ```bash
 python -m unittest
 ```
