@@ -57,6 +57,8 @@ class TestSparseMaskChannel:
         )
         for module, name in params_to_prune:
             prune.remove(module, name)
+        # pyre-fixme[6]: Expected `OrderedDict[typing.Any, typing.Any]` for 1st
+        #  param but got `Dict[str, typing.Any]`.
         sparsity = self.calc_model_sparsity(model.state_dict())
         assertAlmostEqual(
             0.75,

@@ -187,6 +187,8 @@ class CountSketch:
             self.n += param.numel()
 
     def sketch_model(self, model: IFLModel) -> None:
+        # pyre-fixme[6]: Expected `OrderedDict[typing.Any, typing.Any]` for 1st
+        #  param but got `Dict[str, typing.Any]`.
         self.sketch_state_dict(model.fl_get_module().state_dict())
 
     def unsketch_model(self, k: int = -1) -> OrderedDict:
