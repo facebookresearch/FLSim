@@ -14,6 +14,7 @@ from flsim.data.data_provider import FLDataProviderFromList
 from flsim.data.data_sharder import SequentialSharder, PowerLawSharder
 from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
 from flsim.interfaces.model import IFLModel
+from flsim.utils.sample_model import DummyAlphabetFLModel
 from flsim.utils.sample_model import TestDataSetting
 from torch.utils.data import Dataset
 
@@ -110,6 +111,39 @@ class DummyAlphabetDataset(Dataset):
             batch_size,
             batch_size,
             batch_size,
+        )
+        fl_data_provider = FLDataProviderFromList(
+            fl_data_loader.fl_train_set(),
+            fl_data_loader.fl_eval_set(),
+            fl_data_loader.fl_test_set(),
+            model,
+        )
+        return fl_data_provider, fl_data_loader
+
+    @staticmethod
+    def create_data_provider_and_loader_train_and_eval_users(
+        num_train_examples: int,
+        num_eval_examples: int,
+        examples_per_user: int,
+        train_batch_size: int,
+        eval_batch_size: int,
+    ) -> Tuple[FLDataProviderFromList, FLDatasetDataLoaderWithBatch]:
+        """
+        Creates a data proivder and data loader with different number of
+        train and eval clients
+        """
+        model = DummyAlphabetFLModel()
+        train_dataset = DummyAlphabetDataset(num_train_examples)
+        eval_dataset = DummyAlphabetDataset(num_eval_examples)
+        fl_data_sharder = SequentialSharder(examples_per_shard=examples_per_user)
+        fl_data_loader = FLDatasetDataLoaderWithBatch(
+            train_dataset,
+            eval_dataset,
+            eval_dataset,
+            fl_data_sharder,
+            train_batch_size,
+            eval_batch_size,
+            eval_batch_size,
         )
         fl_data_provider = FLDataProviderFromList(
             fl_data_loader.fl_train_set(),

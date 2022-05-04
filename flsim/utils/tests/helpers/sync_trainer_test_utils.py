@@ -46,6 +46,7 @@ def create_sync_trainer(
     report_train_metrics: bool = False,
     report_train_metrics_after_aggregation: bool = False,
     dropout_rate: float = 1.0,
+    train_metrics_reported_per_epoch: int = 1,
 ):
     # first disable report_train_metrics_after_aggregation. we will call
     # it outside of train() afterwise the post aggregation train metrics is
@@ -59,7 +60,7 @@ def create_sync_trainer(
                 do_eval=do_eval,
                 always_keep_trained_model=False,
                 timeout_simulator=timeout_simulator_config,
-                train_metrics_reported_per_epoch=1,
+                train_metrics_reported_per_epoch=train_metrics_reported_per_epoch,
                 eval_epoch_frequency=1,
                 report_train_metrics=report_train_metrics,
                 report_train_metrics_after_aggregation=report_train_metrics_after_aggregation,

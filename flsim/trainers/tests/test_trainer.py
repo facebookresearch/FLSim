@@ -204,8 +204,8 @@ class TestTrainer:
             epochs=3,
             user_epochs_per_round=2,
             report_train_metrics=True,
+            report_train_metrics_after_aggregation=True,
         )
-        sync_trainer_report.cfg.report_train_metrics_after_aggregation = True
 
         data_provider = FLDataProviderFromList(
             data_loader.fl_train_set(),
@@ -227,6 +227,43 @@ class TestTrainer:
 
         # make sure metrics reporting after aggregation does not change global model
         assertEqual(FLModelParamUtils.get_mismatched_param(modules), "")
+
+    def test_evaluate_global_model_after_aggregation(self):
+        (
+            data_provider,
+            _,
+        ) = DummyAlphabetDataset.create_data_provider_and_loader_train_and_eval_users(
+            num_train_examples=10,
+            num_eval_examples=20,
+            examples_per_user=1,
+            train_batch_size=1,
+            eval_batch_size=1,
+        )
+        global_model = DummyAlphabetFLModel()
+        metrics_reporter = MetricsReporterWithMockedChannels()
+        trainer = create_sync_trainer(
+            model=FLModelParamUtils.clone(global_model),
+            local_lr=1.0,
+            users_per_round=1,
+            epochs=3,
+            user_epochs_per_round=1,
+            report_train_metrics=True,
+            report_train_metrics_after_aggregation=True,
+            train_metrics_reported_per_epoch=10,
+        )
+
+        trainer.train(
+            data_provider,
+            metrics_reporter,
+            num_total_users=data_provider.num_train_users(),
+            distributed_world_size=1,
+        )
+        agg_metrics = [
+            m[0] for m in metrics_reporter.stdout_results if "Aggregation" in m[0]
+        ]
+        eval_metrics = [m[0] for m in metrics_reporter.stdout_results if "Eval" in m[0]]
+        assertEqual(len(agg_metrics), 30)
+        assertEqual(len(eval_metrics), 3)
 
     def test_client_optimizer_creation_from_config(self) -> None:
         """

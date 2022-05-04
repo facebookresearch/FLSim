@@ -536,8 +536,8 @@ class SyncTrainer(FLTrainer):
         ):
             with torch.no_grad():
                 model.fl_get_module().eval()
-                for train_user in self.data_provider.train_users():
-                    for batch in train_user.train_data():
+                for client in clients:
+                    for batch in client.dataset.train_data():
                         batch_metrics = model.get_eval_metrics(batch)
                         if metric_reporter is not None:
                             metric_reporter.add_batch_metrics(batch_metrics)
