@@ -14,7 +14,7 @@ from flsim.interfaces.metrics_reporter import TrainingStage
 from flsim.optimizers.local_optimizers import (
     LocalOptimizerSGDConfig,
 )
-from flsim.tests import utils
+from flsim.utils import test_utils as utils
 from flsim.utils.cuda import DEFAULT_CUDA_MANAGER
 
 

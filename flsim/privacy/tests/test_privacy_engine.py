@@ -28,7 +28,7 @@ from flsim.privacy.privacy_engine import (
     PrivacyEngineNotAttachedException,
 )
 from flsim.privacy.privacy_engine_factory import PrivacyEngineFactory, NoiseType
-from flsim.tests import utils
+from flsim.utils import test_utils as utils
 from flsim.utils.fl.common import FLModelParamUtils
 from opacus.accountants.analysis import rdp as privacy_analysis
 

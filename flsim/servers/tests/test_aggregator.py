@@ -18,11 +18,11 @@ from flsim.common.pytest_helper import (
     assertEmpty,
 )
 from flsim.servers.aggregator import Aggregator, AggregationType
-from flsim.tests.utils import (
+from flsim.utils.distributed.fl_distributed import FLDistributedUtils, OperationType
+from flsim.utils.test_utils import (
     create_model_with_value,
     model_parameters_equal_to_value,
 )
-from flsim.utils.distributed.fl_distributed import FLDistributedUtils, OperationType
 
 
 def init_process(

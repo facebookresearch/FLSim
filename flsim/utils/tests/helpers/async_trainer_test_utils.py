@@ -23,10 +23,6 @@ from flsim.optimizers.optimizer_scheduler import (
     OptimizerSchedulerConfig,
     ConstantLRSchedulerConfig,
 )
-from flsim.tests.utils import (
-    FakeMetricReporter,
-    verify_models_equivalent_after_training,
-)
 from flsim.trainers.async_trainer import AsyncTrainer, AsyncTrainerConfig
 from flsim.utils.async_trainer.async_example_weights import (
     EqualExampleWeightConfig,
@@ -45,6 +41,10 @@ from flsim.utils.async_trainer.training_event_generator import (
 )
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.sample_model import DummyAlphabetFLModel
+from flsim.utils.test_utils import (
+    FakeMetricReporter,
+    verify_models_equivalent_after_training,
+)
 from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
 from flsim.utils.tests.helpers.test_utils import FLTestUtils
 from flsim.utils.timing.training_duration_distribution import (

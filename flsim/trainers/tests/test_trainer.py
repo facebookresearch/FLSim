@@ -42,18 +42,18 @@ from flsim.optimizers.server_optimizers import (
 from flsim.servers.sync_servers import (
     SyncServerConfig,
 )
-from flsim.tests.utils import (
+from flsim.trainers.async_trainer import AsyncTrainer, AsyncTrainerConfig
+from flsim.trainers.sync_trainer import SyncTrainer, SyncTrainerConfig
+from flsim.utils.config_utils import fl_config_from_json
+from flsim.utils.fl.common import FLModelParamUtils
+from flsim.utils.sample_model import DummyAlphabetFLModel
+from flsim.utils.test_utils import (
     FakeMetricReporter,
     MockRecord,
     MetricsReporterWithMockedChannels,
     SimpleMetricReporter,
     verify_models_equivalent_after_training,
 )
-from flsim.trainers.async_trainer import AsyncTrainer, AsyncTrainerConfig
-from flsim.trainers.sync_trainer import SyncTrainer, SyncTrainerConfig
-from flsim.utils.config_utils import fl_config_from_json
-from flsim.utils.fl.common import FLModelParamUtils
-from flsim.utils.sample_model import DummyAlphabetFLModel
 from flsim.utils.tests.helpers.sync_trainer_test_utils import create_sync_trainer
 from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
 from flsim.utils.tests.helpers.test_utils import FLTestUtils

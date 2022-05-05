@@ -11,7 +11,7 @@ from flsim.optimizers.optimizer_scheduler import (
     ArmijoLineSearch,
     ArmijoLineSearchSchedulerConfig,
 )
-from flsim.tests.utils import MockQuadratic1DFL, Quadratic1D
+from flsim.utils.test_utils import MockQuadratic1DFL, Quadratic1D
 from omegaconf import OmegaConf
 
 

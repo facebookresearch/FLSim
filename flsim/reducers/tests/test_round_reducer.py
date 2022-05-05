@@ -36,7 +36,7 @@ from flsim.reducers.weighted_dp_round_reducer import (
     WeightedDPRoundReducer,
     WeightedDPRoundReducerConfig,
 )
-from flsim.tests import utils
+from flsim.utils import test_utils as utils
 from flsim.utils.async_trainer.async_example_weights import EqualExampleWeightConfig
 from flsim.utils.async_trainer.async_staleness_weights import (
     PolynomialStalenessWeightConfig,

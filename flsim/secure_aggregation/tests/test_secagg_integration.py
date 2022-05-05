@@ -11,12 +11,12 @@ from flsim.secure_aggregation.secure_aggregator import FixedPointConfig
 from flsim.servers.aggregator import AggregationType
 from flsim.servers.sync_secagg_servers import SyncSecAggServerConfig
 from flsim.servers.sync_servers import SyncServerConfig
-from flsim.tests.utils import (
+from flsim.utils.fl.common import FLModelParamUtils
+from flsim.utils.sample_model import DummyAlphabetFLModel
+from flsim.utils.test_utils import (
     MetricsReporterWithMockedChannels,
     FakeMetricReporter,
 )
-from flsim.utils.fl.common import FLModelParamUtils
-from flsim.utils.sample_model import DummyAlphabetFLModel
 from flsim.utils.tests.helpers.sync_trainer_test_utils import (
     create_sync_trainer,
 )

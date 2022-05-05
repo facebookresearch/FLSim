@@ -17,7 +17,7 @@ from flsim.channels.scalar_quantization_channel import (
     ScalarQuantizationChannel,
 )
 from flsim.common.pytest_helper import assertEqual, assertIsInstance
-from flsim.tests import utils
+from flsim.utils import test_utils as utils
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 

@@ -29,11 +29,6 @@ from flsim.optimizers.async_aggregators import (
     FedAvgWithLRHybridAggregatorConfig,
 )
 from flsim.optimizers.optimizer_scheduler import LRBatchSizeNormalizerSchedulerConfig
-from flsim.tests.utils import (
-    verify_models_equivalent_after_training,
-    RandomEvalMetricsReporter,
-    MetricsReporterWithMockedChannels,
-)
 from flsim.utils.async_trainer.async_example_weights import (
     EqualExampleWeightConfig,
     LinearExampleWeightConfig,
@@ -46,6 +41,11 @@ from flsim.utils.async_trainer.training_event_generator import (
 )
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.sample_model import DummyAlphabetFLModel, ConstantGradientFLModel
+from flsim.utils.test_utils import (
+    verify_models_equivalent_after_training,
+    RandomEvalMetricsReporter,
+    MetricsReporterWithMockedChannels,
+)
 from flsim.utils.tests.helpers.async_trainer_test_utils import (
     async_train_one_user,
     create_async_trainer,

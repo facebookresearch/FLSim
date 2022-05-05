@@ -21,11 +21,11 @@ from flsim.optimizers.async_aggregators import (
     FedAvgWithLRWithMomentumAsyncAggregatorConfig,
     FedAvgWithLRHybridAggregatorConfig,
 )
-from flsim.tests.utils import MockQuadratic1DFL, Quadratic1D, SampleNet, TwoFC
-from flsim.tests.utils import (
+from flsim.utils.fl.common import FLModelParamUtils
+from flsim.utils.test_utils import MockQuadratic1DFL, Quadratic1D, SampleNet, TwoFC
+from flsim.utils.test_utils import (
     verify_models_equivalent_after_training,
 )
-from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 
 

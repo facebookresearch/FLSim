@@ -15,8 +15,8 @@ from flsim.secure_aggregation.secure_aggregator import (
     utility_config_flatter,
 )
 from flsim.servers.sync_secagg_servers import SyncSecAggServerConfig
-from flsim.tests import utils
-from flsim.tests.utils import (
+from flsim.utils import test_utils as utils
+from flsim.utils.test_utils import (
     SampleNet,
     model_parameters_equal_to_value,
     create_model_with_value,

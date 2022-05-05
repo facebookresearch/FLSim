@@ -24,17 +24,17 @@ from flsim.reducers.weighted_dp_round_reducer import WeightedDPRoundReducerConfi
 from flsim.servers.aggregator import AggregationType
 from flsim.servers.sync_dp_servers import SyncDPSGDServerConfig
 from flsim.servers.sync_servers import SyncServerConfig
-from flsim.tests.utils import (
-    MetricsReporterWithMockedChannels,
-    FakeMetricReporter,
-    verify_models_equivalent_after_training,
-)
 from flsim.trainers.sync_trainer import SyncTrainer, SyncTrainerConfig
 from flsim.utils.async_trainer.async_staleness_weights import (
     PolynomialStalenessWeightConfig,
 )
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.sample_model import DummyAlphabetFLModel
+from flsim.utils.test_utils import (
+    MetricsReporterWithMockedChannels,
+    FakeMetricReporter,
+    verify_models_equivalent_after_training,
+)
 from flsim.utils.tests.helpers.async_trainer_test_utils import (
     get_fl_data_provider,
     run_fl_training,

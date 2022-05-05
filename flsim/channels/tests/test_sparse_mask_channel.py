@@ -19,7 +19,7 @@ from flsim.channels.sparse_mask_channel import (
     SparseMaskChannelConfig,
 )
 from flsim.common.pytest_helper import assertEqual, assertIsInstance, assertAlmostEqual
-from flsim.tests import utils
+from flsim.utils import test_utils as utils
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.tests.helpers.test_models import FCModel
 from hydra.utils import instantiate

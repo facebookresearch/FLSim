@@ -14,7 +14,7 @@ from flsim.common.pytest_helper import (
     assertFalse,
 )
 from flsim.privacy.user_update_clip import UserUpdateClipper
-from flsim.tests import utils
+from flsim.utils import test_utils as utils
 
 
 @pytest.fixture(scope="class")

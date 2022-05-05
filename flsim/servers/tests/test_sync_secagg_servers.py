@@ -9,7 +9,7 @@ from flsim.channels.message import Message
 from flsim.common.pytest_helper import assertEqual
 from flsim.secure_aggregation.secure_aggregator import FixedPointConfig
 from flsim.servers.sync_secagg_servers import SyncSecAggServerConfig
-from flsim.tests.utils import (
+from flsim.utils.test_utils import (
     SampleNet,
     TwoFC,
     model_parameters_equal_to_value,

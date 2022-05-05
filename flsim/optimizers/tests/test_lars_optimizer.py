@@ -13,7 +13,7 @@ from flsim.optimizers.sync_aggregators import (
     FedLARSSyncAggregatorConfig,
     FedAvgWithLRSyncAggregatorConfig,
 )
-from flsim.tests.utils import MockQuadratic1DFL, Quadratic1D
+from flsim.utils.test_utils import MockQuadratic1DFL, Quadratic1D
 from omegaconf import OmegaConf
 
 

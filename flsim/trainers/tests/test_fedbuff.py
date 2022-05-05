@@ -29,15 +29,15 @@ from flsim.optimizers.server_optimizers import (
 from flsim.servers.sync_servers import (
     SyncServerConfig,
 )
-from flsim.tests.utils import (
-    MetricsReporterWithMockedChannels,
-    verify_models_equivalent_after_training,
-)
 from flsim.trainers.async_trainer import AsyncTrainerConfig
 from flsim.trainers.sync_trainer import SyncTrainerConfig
 from flsim.utils.config_utils import is_target
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.sample_model import DummyAlphabetFLModel
+from flsim.utils.test_utils import (
+    MetricsReporterWithMockedChannels,
+    verify_models_equivalent_after_training,
+)
 from flsim.utils.tests.helpers.async_trainer_test_utils import (
     create_async_trainer,
     create_event_generator_config,

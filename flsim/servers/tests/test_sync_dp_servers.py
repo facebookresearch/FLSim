@@ -24,14 +24,14 @@ from flsim.privacy.privacy_engine import GaussianPrivacyEngine
 from flsim.servers.aggregator import AggregationType
 from flsim.servers.sync_dp_servers import SyncDPSGDServerConfig
 from flsim.servers.sync_servers import FedAvgOptimizerConfig, SyncServerConfig
-from flsim.tests.utils import (
+from flsim.utils.distributed.fl_distributed import FLDistributedUtils
+from flsim.utils.fl.common import FLModelParamUtils
+from flsim.utils.test_utils import (
     create_model_with_value,
     model_parameters_equal_to_value,
     verify_models_equivalent_after_training,
     SampleNet,
 )
-from flsim.utils.distributed.fl_distributed import FLDistributedUtils
-from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 
 

@@ -22,7 +22,6 @@ from flsim.common.pytest_helper import (
 from flsim.common.training_event_handler import TestAsyncTrainingEventHandler
 from flsim.common.training_simulator import AsyncTrainingSimulator
 from flsim.data.data_provider import FLDataProviderFromList, IFLDataProvider
-from flsim.tests.utils import check_inherit_logging_level
 from flsim.utils.async_trainer.async_user_selector import (
     AsyncUserSelector,
     RandomAsyncUserSelector,
@@ -39,6 +38,7 @@ from flsim.utils.async_trainer.training_event_generator import (
     PoissonAsyncTrainingStartTimeDistrConfig,
 )
 from flsim.utils.sample_model import MockFLModel
+from flsim.utils.test_utils import check_inherit_logging_level
 from flsim.utils.tests.helpers.test_training_simulator_utils import (  # noqa: B950 line is too long
     ConstantEventGenTestConfig,
     ConstantEventGenTestConfigPerUserGaussian,

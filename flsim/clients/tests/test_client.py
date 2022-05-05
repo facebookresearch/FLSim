@@ -35,7 +35,7 @@ from flsim.optimizers.local_optimizers import (
 from flsim.optimizers.optimizer_scheduler import ConstantLRScheduler
 from flsim.optimizers.optimizer_scheduler import ConstantLRSchedulerConfig
 from flsim.privacy.common import PrivacySetting
-from flsim.tests import utils
+from flsim.utils import test_utils as utils
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.timing.training_duration_distribution import (
     PerExampleGaussianDurationDistributionConfig,
