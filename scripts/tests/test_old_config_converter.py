@@ -12,14 +12,14 @@ from flsim.common.pytest_helper import assertTrue
 from scripts.old_config_converter import get_new_fl_config
 
 OLD_CONFIGS = [
-    "configs/hybrid_fedadam_old.json",
+    "configs/fedbuff_fedadam_old.json",
     "configs/async_fedsgd_old.json",
     "configs/sync_fedavg_old.json",
     "configs/privatesync_fedsgd_old.json",
 ]
 
 NEW_CONFIGS = [
-    "configs/hybrid_fedadam_new.json",
+    "configs/fedbuff_fedadam_new.json",
     "configs/async_fedsgd_new.json",
     "configs/sync_fedavg_new.json",
     "configs/privatesync_fedsgd_new.json",
