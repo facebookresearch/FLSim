@@ -159,24 +159,24 @@ class TestAsyncAggregator:
             for _ in range(num_clients)
         ]
 
-    def _symmetry_test(self, num_users, hybrid_config) -> str:
+    def _symmetry_test(self, num_users, fedbuff_config) -> str:
 
-        hybrid_global_model_1 = SampleNet(TwoFC())
-        hybrid_global_model_2 = FLModelParamUtils.clone(hybrid_global_model_1)
+        fedbuff_global_model_1 = SampleNet(TwoFC())
+        fedbuff_global_model_2 = FLModelParamUtils.clone(fedbuff_global_model_1)
 
-        hybrid_aggregator_1 = instantiate(
-            hybrid_config, global_model=hybrid_global_model_1
+        fedbuff_aggregator_1 = instantiate(
+            fedbuff_config, global_model=fedbuff_global_model_1
         )
 
-        hybrid_aggregator_2 = instantiate(
-            hybrid_config, global_model=hybrid_global_model_2
+        fedbuff_aggregator_2 = instantiate(
+            fedbuff_config, global_model=fedbuff_global_model_2
         )
 
         client_models = self._create_n_clients(num_users)
 
         for client_model in client_models:
-            hybrid_aggregator_1.zero_grad()
-            hybrid_aggregator_1.on_client_training_end(
+            fedbuff_aggregator_1.zero_grad()
+            fedbuff_aggregator_1.on_client_training_end(
                 client_model.delta,
                 client_model.after_train,
                 weight=client_model.weight,
@@ -184,8 +184,8 @@ class TestAsyncAggregator:
 
         random.shuffle(client_models)
         for client_model in client_models:
-            hybrid_aggregator_2.zero_grad()
-            hybrid_aggregator_2.on_client_training_end(
+            fedbuff_aggregator_2.zero_grad()
+            fedbuff_aggregator_2.on_client_training_end(
                 client_model.delta,
                 client_model.after_train,
                 weight=client_model.weight,
@@ -193,20 +193,22 @@ class TestAsyncAggregator:
 
         return FLModelParamUtils.get_mismatched_param(
             models=[
-                hybrid_global_model_1.fl_get_module(),
-                hybrid_global_model_2.fl_get_module(),
+                fedbuff_global_model_1.fl_get_module(),
+                fedbuff_global_model_2.fl_get_module(),
             ],
             rel_epsilon=1e-6,
             abs_epsilon=1e-6,
         )
 
-    def _equivalence_test(self, num_users, hybrid_config, async_config) -> str:
+    def _equivalence_test(self, num_users, fedbuff_config, async_config) -> str:
         async_global_model = SampleNet(TwoFC())
-        hybrid_global_model = FLModelParamUtils.clone(async_global_model)
+        fedbuff_global_model = FLModelParamUtils.clone(async_global_model)
 
         async_aggregator = instantiate(async_config, global_model=async_global_model)
 
-        hybrid_aggregator = instantiate(hybrid_config, global_model=hybrid_global_model)
+        fedbuff_aggregator = instantiate(
+            fedbuff_config, global_model=fedbuff_global_model
+        )
 
         client_models = self._create_n_clients(num_users)
 
@@ -219,8 +221,8 @@ class TestAsyncAggregator:
             )
 
         for client_model in client_models:
-            hybrid_aggregator.zero_grad()
-            hybrid_aggregator.on_client_training_end(
+            fedbuff_aggregator.zero_grad()
+            fedbuff_aggregator.on_client_training_end(
                 client_model.delta,
                 client_model.after_train,
                 weight=client_model.weight,
@@ -229,41 +231,43 @@ class TestAsyncAggregator:
         return FLModelParamUtils.get_mismatched_param(
             models=[
                 async_global_model.fl_get_module(),
-                hybrid_global_model.fl_get_module(),
+                fedbuff_global_model.fl_get_module(),
             ],
             rel_epsilon=1e-6,
             abs_epsilon=1e-6,
         )
 
-    def test_hybrid_async_symmetry(self) -> None:
+    def test_fedbuff_async_symmetry(self) -> None:
         """
         Test for symmetry:
-        To satisfy symmetry, a hybrid async aggregation algorithm should be invariant to the order of user updates
+        To satisfy symmetry, a buffered async aggregation algorithm should be invariant to the order of user updates
         f(userA, userB) = f(userB, userA) where f() is aggregation mechanism
 
-        1. Create async and hybrid aggregators with same global model
+        1. Create async and fedbuff aggregators with same global model
         2. Create a list of N clients
-        3. Run hybrid_aggregator
+        3. Run fedbuff_aggregator
         4. Shuffle client list
         5. Run async_aggregator
         6. Both should reach the same final global model
         """
         num_users = 10
         global_lr = 1.0
-        hybrid_config = FedAvgWithLRFedBuffAggregatorConfig(lr=global_lr, buffer_size=1)
+        fedbuff_config = FedAvgWithLRFedBuffAggregatorConfig(
+            lr=global_lr, buffer_size=1
+        )
 
         error_msg = self._symmetry_test(
-            num_users=num_users, hybrid_config=hybrid_config
+            num_users=num_users, fedbuff_config=fedbuff_config
         )
         assertEmpty(error_msg, msg=error_msg)
 
-    def test_hybrid_async_equivalence(self) -> None:
+    def test_fedbuff_async_equivalence(self) -> None:
         """
         To satisfy equivalence,
         1. Assume both mechanisms have the same starting point
         2. Denote N = number of users
         3. Assume buffer_size is a factor of N
-        4. Pure async and hybrid-async would reach the same final global model
+        4. Pure async and fedbuff-async would reach the same final global model
 
         For simplicity, we assume buffer_size = N
         """
@@ -271,12 +275,14 @@ class TestAsyncAggregator:
         global_lr = 1.00
 
         async_config = FedAvgWithLRAsyncAggregatorConfig(lr=global_lr)
-        hybrid_config = FedAvgWithLRFedBuffAggregatorConfig(
+        fedbuff_config = FedAvgWithLRFedBuffAggregatorConfig(
             lr=global_lr, buffer_size=10
         )
 
         error_msg = self._equivalence_test(
-            num_users=num_users, hybrid_config=hybrid_config, async_config=async_config
+            num_users=num_users,
+            fedbuff_config=fedbuff_config,
+            async_config=async_config,
         )
         assertEmpty(error_msg, msg=error_msg)
 
@@ -290,14 +296,14 @@ class TestAsyncAggregator:
             num_total_users = np.random.randint(1, 20)
             buffer_size = np.random.randint(1, num_total_users + 1)
 
-            hybrid_config = FedAvgWithLRFedBuffAggregatorConfig(
+            fedbuff_config = FedAvgWithLRFedBuffAggregatorConfig(
                 lr=1.0, buffer_size=buffer_size
             )
             global_model = SampleNet(TwoFC())
-            hybrid_aggregator = instantiate(hybrid_config, global_model=global_model)
+            fedbuff_aggregator = instantiate(fedbuff_config, global_model=global_model)
             client_models = self._create_n_clients(num_total_users)
             for client_num, client in enumerate(client_models):
-                is_global_model_updated = hybrid_aggregator.on_client_training_end(
+                is_global_model_updated = fedbuff_aggregator.on_client_training_end(
                     client.delta, client.after_train, weight=1
                 )
                 # client_num is 0th index hence we need the + 1
