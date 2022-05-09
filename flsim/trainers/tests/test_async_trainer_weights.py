@@ -20,7 +20,7 @@ from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.async_aggregators import (
     FedAvgWithLRAsyncAggregatorConfig,
-    FedAvgWithLRHybridAggregatorConfig,
+    FedAvgWithLRFedBuffAggregatorConfig,
 )
 from flsim.utils.async_trainer.async_example_weights import (
     AsyncExampleWeightConfig,
@@ -566,7 +566,7 @@ class TestAsyncTrainerWeights:
             fl_data_provider=data_provider,
             epochs=epochs,
             local_lr=local_lr,
-            aggregator_config=FedAvgWithLRHybridAggregatorConfig(
+            aggregator_config=FedAvgWithLRFedBuffAggregatorConfig(
                 lr=example_wt_off_global_lr, buffer_size=buffer_size
             ),
             training_rate=1,
@@ -585,7 +585,7 @@ class TestAsyncTrainerWeights:
             fl_data_provider=data_provider,
             epochs=epochs,
             local_lr=local_lr,
-            aggregator_config=FedAvgWithLRHybridAggregatorConfig(
+            aggregator_config=FedAvgWithLRFedBuffAggregatorConfig(
                 lr=example_wt_on_global_lr, buffer_size=buffer_size
             ),
             training_rate=1,

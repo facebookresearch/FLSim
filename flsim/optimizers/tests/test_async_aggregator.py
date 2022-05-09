@@ -19,7 +19,7 @@ from flsim.optimizers.async_aggregators import (
     AsyncAggregatorConfig,
     FedAvgWithLRAsyncAggregatorConfig,
     FedAvgWithLRWithMomentumAsyncAggregatorConfig,
-    FedAvgWithLRHybridAggregatorConfig,
+    FedAvgWithLRFedBuffAggregatorConfig,
 )
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.test_utils import MockQuadratic1DFL, Quadratic1D, SampleNet, TwoFC
@@ -110,7 +110,7 @@ class TestAsyncAggregator:
             FedAvgWithLRAsyncAggregatorConfig(
                 aggregation_type=AsyncAggregationType.fed_buff_aggregation, lr=1.0
             ),
-            FedAvgWithLRHybridAggregatorConfig(
+            FedAvgWithLRFedBuffAggregatorConfig(
                 aggregation_type=AsyncAggregationType.fed_buff_aggregation,
                 lr=1.0,
                 buffer_size=1,
@@ -250,7 +250,7 @@ class TestAsyncAggregator:
         """
         num_users = 10
         global_lr = 1.0
-        hybrid_config = FedAvgWithLRHybridAggregatorConfig(lr=global_lr, buffer_size=1)
+        hybrid_config = FedAvgWithLRFedBuffAggregatorConfig(lr=global_lr, buffer_size=1)
 
         error_msg = self._symmetry_test(
             num_users=num_users, hybrid_config=hybrid_config
@@ -271,7 +271,9 @@ class TestAsyncAggregator:
         global_lr = 1.00
 
         async_config = FedAvgWithLRAsyncAggregatorConfig(lr=global_lr)
-        hybrid_config = FedAvgWithLRHybridAggregatorConfig(lr=global_lr, buffer_size=10)
+        hybrid_config = FedAvgWithLRFedBuffAggregatorConfig(
+            lr=global_lr, buffer_size=10
+        )
 
         error_msg = self._equivalence_test(
             num_users=num_users, hybrid_config=hybrid_config, async_config=async_config
@@ -288,7 +290,7 @@ class TestAsyncAggregator:
             num_total_users = np.random.randint(1, 20)
             buffer_size = np.random.randint(1, num_total_users + 1)
 
-            hybrid_config = FedAvgWithLRHybridAggregatorConfig(
+            hybrid_config = FedAvgWithLRFedBuffAggregatorConfig(
                 lr=1.0, buffer_size=buffer_size
             )
             global_model = SampleNet(TwoFC())

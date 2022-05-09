@@ -335,14 +335,14 @@ class FedAvgWithLRWithMomentumAsyncAggregator(FedAvgWithLRAsyncAggregator):
         return True
 
 
-class HybridAggregator(AsyncAggregator):
+class FedBuffAggregator(AsyncAggregator):
     r"""
-    Aggregator for Hybrid-FL where client update and global update are decoupled
+    Aggregator for FedBuff (Buffered Asynchronous Aggregation)
 
     Keeps track of number clients reported and take a global step after reaching the
     threshold set by the config
     """
-    logger: logging.Logger = Logger.get_logger("HybridAggregator")
+    logger: logging.Logger = Logger.get_logger("FedBuffAggregator")
 
     def __init__(
         self,
@@ -354,14 +354,14 @@ class HybridAggregator(AsyncAggregator):
         init_self_cfg(
             self,
             component_class=__class__,
-            config_class=HybridAggregatorConfig,
+            config_class=FedBuffAggregatorConfig,
             **kwargs,
         )
 
         super().__init__(global_model=global_model, channel=channel, **kwargs)
-        # pyre-fixme[16]: `HybridAggregator` has no attribute `cfg`.
+        # pyre-fixme[16]: `FedBuffAggregator` has no attribute `cfg`.
         if self.cfg.aggregation_type != AsyncAggregationType.fed_buff_aggregation:
-            raise ValueError("Hybrid Aggregator only supports delta direction")
+            raise ValueError("Buffered Aggregator only supports delta direction")
         self.num_clients_reported = 0
 
     @classmethod
@@ -401,7 +401,7 @@ class HybridAggregator(AsyncAggregator):
         return False
 
     def should_update_global_model(self) -> bool:
-        # pyre-fixme[16]: `HybridAggregator` has no attribute `cfg`.
+        # pyre-fixme[16]: `FedBuffAggregator` has no attribute `cfg`.
         return self.num_clients_reported >= self.cfg.buffer_size
 
     def on_training_epoch_end(self) -> bool:
@@ -436,7 +436,7 @@ class HybridAggregator(AsyncAggregator):
         self.num_clients_reported += 1
 
 
-class FedAvgWithLRHybridAggregator(HybridAggregator):
+class FedAvgWithLRFedBuffAggregator(FedBuffAggregator):
     def __init__(
         self,
         *,
@@ -447,7 +447,7 @@ class FedAvgWithLRHybridAggregator(HybridAggregator):
         init_self_cfg(
             self,
             component_class=__class__,
-            config_class=FedAvgWithLRHybridAggregatorConfig,
+            config_class=FedAvgWithLRFedBuffAggregatorConfig,
             **kwargs,
         )
 
@@ -458,7 +458,7 @@ class FedAvgWithLRHybridAggregator(HybridAggregator):
         pass
 
 
-class FedAdamHybridAggregator(HybridAggregator):
+class FedAdamFedBuffAggregator(FedBuffAggregator):
     def __init__(
         self,
         *,
@@ -469,7 +469,7 @@ class FedAdamHybridAggregator(HybridAggregator):
         init_self_cfg(
             self,
             component_class=__class__,
-            config_class=FedAdamHybridAggregatorConfig,
+            config_class=FedAdamFedBuffAggregatorConfig,
             **kwargs,
         )
 
@@ -483,7 +483,7 @@ class FedAdamHybridAggregator(HybridAggregator):
 def create_optimizer_for_async_aggregator(config: AsyncAggregatorConfig, model: Model):
     if config._target_ in {
         FedAvgWithLRAsyncAggregatorConfig._target_,
-        FedAvgWithLRHybridAggregatorConfig._target_,
+        FedAvgWithLRFedBuffAggregatorConfig._target_,
         FedAvgWithLRWithMomentumAsyncAggregatorConfig._target_,
     }:
         return torch.optim.SGD(
@@ -495,7 +495,7 @@ def create_optimizer_for_async_aggregator(config: AsyncAggregatorConfig, model: 
         )
     elif config._target_ in {
         FedAdamAsyncAggregatorConfig._target_,
-        FedAdamHybridAggregatorConfig._target_,
+        FedAdamFedBuffAggregatorConfig._target_,
     }:
         return torch.optim.Adam(
             model.parameters(),
@@ -547,21 +547,21 @@ class FedAdamAsyncAggregatorConfig(AsyncAggregatorConfig):
 
 
 @dataclass
-class HybridAggregatorConfig(AsyncAggregatorConfig):
+class FedBuffAggregatorConfig(AsyncAggregatorConfig):
     # number of clients to collect before taking a global step
     buffer_size: int = 1
 
 
 @dataclass
-class FedAvgWithLRHybridAggregatorConfig(HybridAggregatorConfig):
-    _target_: str = fullclassname(FedAvgWithLRHybridAggregator)
+class FedAvgWithLRFedBuffAggregatorConfig(FedBuffAggregatorConfig):
+    _target_: str = fullclassname(FedAvgWithLRFedBuffAggregator)
     lr: float = 0.001
     momentum: float = 0.0
 
 
 @dataclass
-class FedAdamHybridAggregatorConfig(HybridAggregatorConfig):
-    _target_: str = fullclassname(FedAdamHybridAggregator)
+class FedAdamFedBuffAggregatorConfig(FedBuffAggregatorConfig):
+    _target_: str = fullclassname(FedAdamFedBuffAggregator)
     lr: float = 0.001
     weight_decay: float = 0.00001
     beta1: float = 0.9

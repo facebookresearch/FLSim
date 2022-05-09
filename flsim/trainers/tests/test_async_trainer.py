@@ -26,7 +26,7 @@ from flsim.optimizers.async_aggregators import (
     AsyncAggregatorConfig,
     FedAdamAsyncAggregatorConfig,
     FedAvgWithLRAsyncAggregatorConfig,
-    FedAvgWithLRHybridAggregatorConfig,
+    FedAvgWithLRFedBuffAggregatorConfig,
 )
 from flsim.optimizers.optimizer_scheduler import LRBatchSizeNormalizerSchedulerConfig
 from flsim.utils.async_trainer.async_example_weights import (
@@ -939,7 +939,7 @@ class TestAsyncTrainer:
                 fl_data_provider=fl_data_provider,
                 epochs=num_epochs,
                 local_lr=1.0,
-                aggregator_config=FedAvgWithLRHybridAggregatorConfig(
+                aggregator_config=FedAvgWithLRFedBuffAggregatorConfig(
                     lr=1.0, buffer_size=buffer_size
                 ),
                 metrics_reporter=metric_reporter,

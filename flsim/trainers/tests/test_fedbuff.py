@@ -17,8 +17,8 @@ from flsim.optimizers.async_aggregators import (
     AsyncAggregatorConfig,
     FedAdamAsyncAggregatorConfig,
     FedAvgWithLRAsyncAggregatorConfig,
-    FedAdamHybridAggregatorConfig,
-    FedAvgWithLRHybridAggregatorConfig,
+    FedAdamFedBuffAggregatorConfig,
+    FedAvgWithLRFedBuffAggregatorConfig,
     create_optimizer_for_async_aggregator,
 )
 from flsim.optimizers.server_optimizers import (
@@ -148,10 +148,10 @@ class HybridFLTestUtils:
     @staticmethod
     def get_hybrid_aggregator(
         aggregator_config, buffer_size, hybrid_lr
-    ) -> Union[FedAdamHybridAggregatorConfig, FedAvgWithLRHybridAggregatorConfig]:
+    ) -> Union[FedAdamFedBuffAggregatorConfig, FedAvgWithLRFedBuffAggregatorConfig]:
         if isinstance(aggregator_config, AsyncAggregatorConfig):
             if "FedAdam" in aggregator_config._target_:
-                hybrid_aggregator = FedAdamHybridAggregatorConfig(
+                hybrid_aggregator = FedAdamFedBuffAggregatorConfig(
                     lr=hybrid_lr,
                     # pyre-ignore[16]
                     weight_decay=aggregator_config.weight_decay,
@@ -160,7 +160,7 @@ class HybridFLTestUtils:
                     buffer_size=buffer_size,
                 )
             else:  # "FedAvgWithLR" in aggregator_config._target_:
-                hybrid_aggregator = FedAvgWithLRHybridAggregatorConfig(
+                hybrid_aggregator = FedAvgWithLRFedBuffAggregatorConfig(
                     lr=hybrid_lr,
                     # pyre-ignore[16]
                     momentum=aggregator_config.momentum,
@@ -169,7 +169,7 @@ class HybridFLTestUtils:
             return hybrid_aggregator
         elif isinstance(aggregator_config, SyncServerConfig):
             if is_target(aggregator_config.server_optimizer, FedAdamOptimizerConfig):
-                hybrid_aggregator = FedAdamHybridAggregatorConfig(
+                hybrid_aggregator = FedAdamFedBuffAggregatorConfig(
                     lr=hybrid_lr,
                     # pyre-ignore[16]
                     weight_decay=aggregator_config.server_optimizer.weight_decay,
@@ -178,7 +178,7 @@ class HybridFLTestUtils:
                     buffer_size=buffer_size,
                 )
             else:
-                hybrid_aggregator = FedAvgWithLRHybridAggregatorConfig(
+                hybrid_aggregator = FedAvgWithLRFedBuffAggregatorConfig(
                     lr=hybrid_lr,
                     # pyre-ignore[16]
                     momentum=aggregator_config.server_optimizer.momentum,
@@ -327,7 +327,7 @@ class HybridFLTestUtils:
             fl_data_provider=hybrid_data_provider,
             epochs=epochs,
             local_lr=local_lr,
-            aggregator_config=FedAvgWithLRHybridAggregatorConfig(
+            aggregator_config=FedAvgWithLRFedBuffAggregatorConfig(
                 lr=hybrid_global_lr, buffer_size=buffer_size
             ),
             # sequential training training_rate >> training_duration
@@ -403,7 +403,7 @@ class HybridFLTestUtils:
             fl_data_provider=hybrid_data_provider,
             epochs=epochs,
             local_lr=local_lr,
-            aggregator_config=FedAvgWithLRHybridAggregatorConfig(
+            aggregator_config=FedAvgWithLRFedBuffAggregatorConfig(
                 lr=hybrid_global_lr, buffer_size=hybrid_num_fl_users
             ),
             training_rate=training_rate,

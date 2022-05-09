@@ -11,9 +11,9 @@ from flsim.optimizers.async_aggregators import (
     AsyncAggregatorConfig,
     FedAdamAsyncAggregatorConfig,
     FedAvgWithLRAsyncAggregatorConfig,
-    HybridAggregatorConfig,
-    FedAdamHybridAggregatorConfig,
-    FedAvgWithLRHybridAggregatorConfig,
+    FedBuffAggregatorConfig,
+    FedAdamFedBuffAggregatorConfig,
+    FedAvgWithLRFedBuffAggregatorConfig,
 )
 from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
 from flsim.optimizers.optimizer_test_utils import OptimizerTestUtil
@@ -94,26 +94,26 @@ class TestOptimizerFactory:
         "type_str,config", OptimizerTestUtil.provide_hybrid_factory_creation_dataset()
     )
     def test_hybrid_optimizer_config_creation_through_hydra(
-        self, type_str: str, config: HybridAggregatorConfig
+        self, type_str: str, config: FedBuffAggregatorConfig
     ) -> None:
         if type_str == "FedAvgWithLR":
             assertTrue(
                 # pyre-fixme[16]: Optional type has no attribute `__name__`.
                 OmegaConf.get_type(config).__name__,
-                FedAvgWithLRHybridAggregatorConfig.__name__,
+                FedAvgWithLRFedBuffAggregatorConfig.__name__,
             )
-            # pyre-fixme[16]: `HybridAggregatorConfig` has no attribute `lr`.
+            # pyre-fixme[16]: `FedBuffAggregatorConfig` has no attribute `lr`.
             assertEqual(config.lr, 0.1)
             assertEqual(config.buffer_size, 3)
         if type_str == "FedAdam":
             assertTrue(
                 OmegaConf.get_type(config).__name__,
-                FedAdamHybridAggregatorConfig.__name__,
+                FedAdamFedBuffAggregatorConfig.__name__,
             )
             assertEqual(config.lr, 0.1)
-            # pyre-fixme[16]: `HybridAggregatorConfig` has no attribute `weight_decay`.
+            # pyre-fixme[16]: `FedBuffAggregatorConfig` has no attribute `weight_decay`.
             assertEqual(config.weight_decay, 0.9)
-            # pyre-fixme[16]: `HybridAggregatorConfig` has no attribute `eps`.
+            # pyre-fixme[16]: `FedBuffAggregatorConfig` has no attribute `eps`.
             assertEqual(config.eps, 1e-8)
             assertEqual(config.buffer_size, 3)
 

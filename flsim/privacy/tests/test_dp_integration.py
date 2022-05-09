@@ -16,7 +16,7 @@ from flsim.active_user_selectors.simple_user_selector import (
 from flsim.clients.base_client import ClientConfig
 from flsim.clients.dp_client import DPClientConfig
 from flsim.common.pytest_helper import assertEqual, assertEmpty, assertNotEmpty
-from flsim.optimizers.async_aggregators import FedAvgWithLRHybridAggregatorConfig
+from flsim.optimizers.async_aggregators import FedAvgWithLRFedBuffAggregatorConfig
 from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
 from flsim.privacy.common import PrivacySetting
 from flsim.reducers.base_round_reducer import ReductionType
@@ -649,10 +649,10 @@ class TestDifferentialPrivacyIntegration:
             exponent=0.5, avg_staleness=0
         )
 
-        aggregator_config_nondp = FedAvgWithLRHybridAggregatorConfig(
+        aggregator_config_nondp = FedAvgWithLRFedBuffAggregatorConfig(
             lr=global_lr, buffer_size=buffer_size
         )
-        aggregator_config_dp = FedAvgWithLRHybridAggregatorConfig(
+        aggregator_config_dp = FedAvgWithLRFedBuffAggregatorConfig(
             lr=global_lr, buffer_size=buffer_size
         )
 

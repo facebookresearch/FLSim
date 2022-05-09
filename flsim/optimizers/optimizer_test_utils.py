@@ -10,8 +10,8 @@ from typing import Any, Dict, Union
 from flsim.optimizers.async_aggregators import (
     FedAdamAsyncAggregatorConfig,
     FedAvgWithLRAsyncAggregatorConfig,
-    FedAdamHybridAggregatorConfig,
-    FedAvgWithLRHybridAggregatorConfig,
+    FedAdamFedBuffAggregatorConfig,
+    FedAvgWithLRFedBuffAggregatorConfig,
     AsyncAggregator,
     FedAdamAsyncAggregator,
     FedAvgWithLRAsyncAggregator,
@@ -113,7 +113,7 @@ class OptimizerTestUtil:
             (
                 "FedAvgWithLR",
                 OmegaConf.structured(
-                    FedAvgWithLRHybridAggregatorConfig(
+                    FedAvgWithLRFedBuffAggregatorConfig(
                         lr=0.1, momentum=0.9, buffer_size=3
                     )
                 ),
@@ -121,7 +121,7 @@ class OptimizerTestUtil:
             (
                 "FedAdam",
                 OmegaConf.structured(
-                    FedAdamHybridAggregatorConfig(
+                    FedAdamFedBuffAggregatorConfig(
                         lr=0.1,
                         weight_decay=0.9,
                         eps=1e-8,

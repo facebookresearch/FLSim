@@ -11,8 +11,8 @@ from .async_aggregators import (
     FedAdamAsyncAggregatorConfig,
     FedAvgWithLRAsyncAggregatorConfig,
     FedAvgWithLRWithMomentumAsyncAggregatorConfig,
-    FedAdamHybridAggregatorConfig,
-    FedAvgWithLRHybridAggregatorConfig,
+    FedAdamFedBuffAggregatorConfig,
+    FedAvgWithLRFedBuffAggregatorConfig,
 )
 from .local_optimizers import LocalOptimizerSGDConfig, LocalOptimizerFedProxConfig
 from .optimizer_scheduler import (
@@ -126,13 +126,13 @@ ConfigStore.instance().store(
 
 ConfigStore.instance().store(
     name="base_fed_avg_with_lr_hybrid_aggregator",
-    node=FedAvgWithLRHybridAggregatorConfig,
+    node=FedAvgWithLRFedBuffAggregatorConfig,
     group="aggregator",
 )
 
 ConfigStore.instance().store(
     name="base_fed_adam_hybrid_aggregator",
-    node=FedAdamHybridAggregatorConfig,
+    node=FedAdamFedBuffAggregatorConfig,
     group="aggregator",
 )
 

@@ -24,7 +24,7 @@ from flsim.optimizers.async_aggregators import (
     AsyncAggregatorConfig,
     FedAvgWithLRAsyncAggregatorConfig,
     AsyncAggregator,
-    HybridAggregator,
+    FedBuffAggregator,
 )
 from flsim.trainers.trainer_base import FLTrainer, FLTrainerConfig
 from flsim.utils.async_trainer.async_user_selector import (
@@ -164,7 +164,7 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
         return staleness <= self.cfg.max_staleness
 
     def _num_global_steps_in_epoch(self):
-        if isinstance(self.aggregator, HybridAggregator):
+        if isinstance(self.aggregator, FedBuffAggregator):
             return math.ceil(self.num_total_users / self.aggregator.cfg.buffer_size)
         else:
             return self.num_total_users
