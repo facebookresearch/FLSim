@@ -274,7 +274,7 @@ class SyncTrainer(FLTrainer):
                     break
 
             # pyre-fixme[61]: `timeline` may not be initialized here.
-            self._post_epoch_client_metrics_eval(timeline, metric_reporter)
+            self._report_post_epoch_client_metrics(timeline, metric_reporter)
             if self.stop_fl_training(
                 epoch=epoch,
                 round=round,  # pyre-fixme[61]: `round` may not be initialized here.
@@ -286,16 +286,6 @@ class SyncTrainer(FLTrainer):
             self._save_model_and_metrics(self.global_model(), best_model_state)
 
         return self.global_model(), best_metric
-
-    def _post_epoch_client_metrics_eval(
-        self,
-        timeline: Timeline,
-        metric_reporter: IFLMetricsReporter,
-    ):
-        self._report_post_epoch_client_metrics(
-            timeline=timeline,
-            metric_reporter=metric_reporter,
-        )
 
     def stop_fl_training(self, *, epoch, round, num_rounds_in_epoch) -> bool:
         """Stops FL training when the necessary number of steps/epochs have been
@@ -497,7 +487,7 @@ class SyncTrainer(FLTrainer):
 
         return metrics
 
-    def calc_post_epoch_client_metrics(
+    def _calc_post_epoch_client_metrics(
         self,
         client_models: Dict[Client, IFLModel],
         round_timeline: Timeline,
@@ -583,7 +573,7 @@ class SyncTrainer(FLTrainer):
             client_models = {
                 client: client.last_updated_model for client in self.clients.values()
             }
-            client_scores = self.calc_post_epoch_client_metrics(
+            client_scores = self._calc_post_epoch_client_metrics(
                 client_models, timeline, metric_reporter
             )
 
