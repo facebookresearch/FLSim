@@ -108,6 +108,8 @@ class TestTrainingSimulatorUtils:
             exp_start_time,
         )
         assertEqual(
+            # pyre-fixme[16]: Item `TrainingState` of `Union[DeviceState,
+            #  TrainingState]` has no attribute `training_schedule`.
             training_event[Globals.DEVICE_STATE_IDX].training_schedule.end_time,
             exp_end_time,
         )
