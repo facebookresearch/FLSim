@@ -84,11 +84,11 @@ def _test_lamb_multiple_steps(test_case, weight_decay: int = 0) -> None:
             0
         ].grad.data.item()
 
-        bias_correction1 = 1.0 - beta1 ** i
-        bias_correction2 = 1.0 - beta2 ** i
+        bias_correction1 = 1.0 - beta1**i
+        bias_correction2 = 1.0 - beta2**i
 
         m_t = beta1 * m_t + (1.0 - beta1) * g_t
-        v_t = beta2 * v_t + (1.0 - beta2) * g_t ** 2
+        v_t = beta2 * v_t + (1.0 - beta2) * g_t**2
 
         lamb_update_unnormalized = (m_t / bias_correction1) / (
             math.sqrt(v_t / bias_correction2) + eps

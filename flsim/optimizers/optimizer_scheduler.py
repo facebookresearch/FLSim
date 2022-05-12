@@ -223,7 +223,7 @@ class ArmijoLineSearch(OptimizerScheduler):
             if (
                 float(new_loss)
                 <= loss_before_update
-                - self.cfg.c * proposed_lr[0] * grad_norm_before_update ** 2
+                - self.cfg.c * proposed_lr[0] * grad_norm_before_update**2
             ):
                 # satisfy sufficient descent, accept proposed_lr
                 # and terminate line search

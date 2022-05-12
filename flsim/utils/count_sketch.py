@@ -33,7 +33,7 @@ class CountSketch:
         self,
         width: int = 10000,
         depth: int = 11,
-        prime: int = 2 ** 31 - 1,
+        prime: int = 2**31 - 1,
         independence: int = 2,
         h: Optional[torch.Tensor] = None,
         g: Optional[torch.Tensor] = None,
@@ -232,7 +232,7 @@ class CountSketch:
         return torch.median(estimates)
 
     def approx_L2(self):
-        estimates = torch.sum(self.buckets ** 2)
+        estimates = torch.sum(self.buckets**2)
         return torch.sqrt(torch.median(estimates))
 
     def get_size_in_bytes(self):

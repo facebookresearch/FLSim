@@ -41,7 +41,7 @@ class FLDistributedUtils:
     logger: logging.Logger = Logger.get_logger(__name__)
 
     # equivalent to 256 MB of floats, same buffer size as in PyTorch DDP
-    MAX_BUFFER_SIZE = 2 ** 28
+    MAX_BUFFER_SIZE = 2**28
     WORLD_SIZE = 1  # number of processes
     NUM_WORKERS = 1  # number of CPUs or GPUs
     # run distributed training on CPU, default False

@@ -234,7 +234,7 @@ class TreePrivacyEngine(IPrivacyEngine):
     @classmethod
     def compute_rdp(cls, alphas, epoch, steps, sigma):
         alphas = np.array(alphas)
-        return alphas * epoch * np.ceil(np.log2(steps + 1e-6)) / (2 * sigma ** 2)
+        return alphas * epoch * np.ceil(np.log2(steps + 1e-6)) / (2 * sigma**2)
 
     def get_privacy_spent(self, target_delta: Optional[float] = None) -> PrivacyBudget:
         target_delta = (

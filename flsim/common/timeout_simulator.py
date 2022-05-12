@@ -204,13 +204,13 @@ class GaussianTimeOutSimulator(TimeOutSimulator):
         # update sample second moment
         self._sample_sec_moment_per_user = (
             self._sample_sec_moment_per_user * (self._num_users_tracked - 1)
-            + one_user_training_time ** 2
+            + one_user_training_time**2
         ) / self._num_users_tracked
         # update sample variance, with degree of freedom correction
         if self._num_users_tracked > 1:
             self._sample_var_per_user = (
                 self._num_users_tracked / (self._num_users_tracked - 1)
-            ) * (self._sample_sec_moment_per_user - self._sample_mean_per_user ** 2)
+            ) * (self._sample_sec_moment_per_user - self._sample_mean_per_user**2)
 
     def user_timeout(self, training_time: float) -> bool:
         """

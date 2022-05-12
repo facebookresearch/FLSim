@@ -615,7 +615,7 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
         delta = global_param - client_param
         global_model = create_ref_model(ref_model_param_value=global_param)
         num_params = self._get_num_params(global_model.fl_get_module())
-        user_norm = math.sqrt(num_params * delta ** 2)
+        user_norm = math.sqrt(num_params * delta**2)
 
         settings = WeightReducerTestSetting(
             noise=np.random.sample(),
@@ -661,7 +661,7 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
 
         global_model = create_ref_model(ref_model_param_value=global_param)
         num_params = self._get_num_params(global_model.fl_get_module())
-        user_norm = math.sqrt(num_params * delta ** 2)
+        user_norm = math.sqrt(num_params * delta**2)
         settings = WeightReducerTestSetting(
             num_clients=10,
             clients_per_round=10,
@@ -677,7 +677,7 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
             global_param=global_param,
         )
 
-        clipped_deltas = math.sqrt(settings.clipping_value ** 2 / num_params)
+        clipped_deltas = math.sqrt(settings.clipping_value**2 / num_params)
 
         model_updates = sum((w * clipped_deltas for w in weights))
         expected_param_values = model_updates + settings.noise
@@ -773,7 +773,7 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
 
         global_model = create_ref_model(ref_model_param_value=global_param)
         num_params = self._get_num_params(global_model.fl_get_module())
-        user_norm = math.sqrt(num_params * delta ** 2)
+        user_norm = math.sqrt(num_params * delta**2)
         settings = WeightReducerTestSetting(
             num_clients=10,
             clients_per_round=10,

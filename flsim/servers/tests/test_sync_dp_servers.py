@@ -167,7 +167,7 @@ class TestSyncDPSGDServer:
         delta_param = 1.0
         num_params = self._get_num_params(server_model.fl_get_module())
 
-        clipped_delta = math.sqrt(clipping_value ** 2 / num_params)
+        clipped_delta = math.sqrt(clipping_value**2 / num_params)
         expected_value = -float(min(np.average(clipped_delta), delta_param))
         server = self._create_server(
             server_model, num_rounds, num_clients, clipping_value, noise_multiplier=0
@@ -206,7 +206,7 @@ class TestSyncDPSGDServer:
         num_rounds = 10
 
         num_params = self._get_num_params(server_model.fl_get_module())
-        clipped_delta = math.sqrt(clipping_value ** 2 / num_params)
+        clipped_delta = math.sqrt(clipping_value**2 / num_params)
 
         server = self._create_server(
             server_model,
@@ -305,7 +305,7 @@ class TestSyncDPSGDServer:
         server_model = SampleNet(create_model_with_value(global_value))
 
         num_params = self._get_num_params(server_model.fl_get_module())
-        clipped_delta = math.sqrt(clipping_value ** 2 / num_params)
+        clipped_delta = math.sqrt(clipping_value**2 / num_params)
         expected_value = float(-np.average(clipped_delta) - noise)
 
         server = self._create_server(

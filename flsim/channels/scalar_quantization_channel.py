@@ -66,7 +66,7 @@ class ScalarQuantizationChannel(IdentityChannel):
             0 < self.n_bits <= 8
         ), "ScalarQuantizationChannel expects n_bits between 1 and 8 (included)."
         self.quant_min = 0
-        self.quant_max = 2 ** self.n_bits - 1
+        self.quant_max = 2**self.n_bits - 1
         self.observer, self.quantizer = self._get_observers_and_quantizers()
 
     def _calc_message_size_client_to_server(self, message: Message):
