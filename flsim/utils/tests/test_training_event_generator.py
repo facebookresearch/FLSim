@@ -10,10 +10,10 @@ from typing import Type
 import numpy as np
 import pytest
 from flsim.common.pytest_helper import (
-    assertEqual,
-    assertTrue,
     assertAlmostEqual,
+    assertEqual,
     assertGreaterEqual,
+    assertTrue,
 )
 from flsim.utils.async_trainer.training_event_generator import (
     AsyncTrainingEventGenerator,

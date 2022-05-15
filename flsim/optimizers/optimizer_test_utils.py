@@ -8,21 +8,21 @@
 from typing import Any, Dict, Union
 
 from flsim.optimizers.async_aggregators import (
-    FedAdamAsyncAggregatorConfig,
-    FedAvgWithLRAsyncAggregatorConfig,
-    FedAdamFedBuffAggregatorConfig,
-    FedAvgWithLRFedBuffAggregatorConfig,
     AsyncAggregator,
     FedAdamAsyncAggregator,
+    FedAdamAsyncAggregatorConfig,
+    FedAdamFedBuffAggregatorConfig,
     FedAvgWithLRAsyncAggregator,
+    FedAvgWithLRAsyncAggregatorConfig,
+    FedAvgWithLRFedBuffAggregatorConfig,
 )
 from flsim.optimizers.sync_aggregators import (
-    FedAdamSyncAggregatorConfig,
-    FedAvgWithLRSyncAggregatorConfig,
-    FedAvgSyncAggregatorConfig,
     FedAdamSyncAggregator,
-    FedAvgWithLRSyncAggregator,
+    FedAdamSyncAggregatorConfig,
     FedAvgSyncAggregator,
+    FedAvgSyncAggregatorConfig,
+    FedAvgWithLRSyncAggregator,
+    FedAvgWithLRSyncAggregatorConfig,
     SyncAggregator,
 )
 from flsim.trainers.async_trainer import AsyncTrainer

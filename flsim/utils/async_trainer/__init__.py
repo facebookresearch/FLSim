@@ -8,22 +8,22 @@
 from hydra.core.config_store import ConfigStore  #  @manual
 
 from .async_example_weights import (
+    EqualExampleWeightConfig,
+    LinearExampleWeightConfig,
     Log10ExampleWeightConfig,
     SqrtExampleWeightConfig,
-    LinearExampleWeightConfig,
-    EqualExampleWeightConfig,
 )
 from .async_staleness_weights import (
     ConstantStalenessWeightConfig,
-    ThresholdStalenessWeightConfig,
     PolynomialStalenessWeightConfig,
+    ThresholdStalenessWeightConfig,
 )
 from .async_weights import AsyncWeightConfig
 from .training_event_generator import (
-    PoissonAsyncTrainingStartTimeDistrConfig,
-    ConstantAsyncTrainingStartTimeDistrConfig,
-    AsyncTrainingEventGeneratorFromListConfig,
     AsyncTrainingEventGeneratorConfig,
+    AsyncTrainingEventGeneratorFromListConfig,
+    ConstantAsyncTrainingStartTimeDistrConfig,
+    PoissonAsyncTrainingStartTimeDistrConfig,
 )
 
 

@@ -6,7 +6,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
-from flsim.common.pytest_helper import assertEqual, assertTrue, assertLessEqual
+from flsim.common.pytest_helper import assertEqual, assertLessEqual, assertTrue
 from flsim.utils.data.data_utils import batchify, merge_dicts
 from flsim.utils.data.fake_data_utils import FakeDataProvider, FakeUserData
 

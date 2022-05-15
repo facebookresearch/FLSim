@@ -11,20 +11,18 @@ import abc
 import logging
 import sys
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple, NamedTuple
+from typing import Any, List, NamedTuple, Optional, Tuple
 
 import torch
 from flsim.channels.base_channel import FLChannelConfig
-from flsim.channels.communication_stats import (
-    ChannelDirection,
-)
+from flsim.channels.communication_stats import ChannelDirection
 from flsim.clients.base_client import ClientConfig
 from flsim.common.fine_tuner import FineTuner
 from flsim.common.logger import Logger
 from flsim.common.timeline import Timeline
 from flsim.common.timeout_simulator import (
-    TimeOutSimulatorConfig,
     NeverTimeOutSimulatorConfig,
+    TimeOutSimulatorConfig,
 )
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.metrics_reporter import IFLMetricsReporter, Metric, TrainingStage
@@ -32,8 +30,7 @@ from flsim.interfaces.model import IFLModel
 from flsim.utils.config_utils import init_self_cfg
 from flsim.utils.cuda import CudaTransferMinimizer
 from hydra.utils import instantiate
-from omegaconf import MISSING
-from omegaconf import OmegaConf
+from omegaconf import MISSING, OmegaConf
 
 
 class FLTrainer(abc.ABC):

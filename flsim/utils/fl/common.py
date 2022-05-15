@@ -7,7 +7,7 @@
 
 import copy
 import math
-from typing import Union, List, Optional
+from typing import List, Optional, Union
 
 import torch
 from flsim.interfaces.model import IFLModel

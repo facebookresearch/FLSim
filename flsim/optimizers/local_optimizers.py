@@ -11,8 +11,7 @@ from dataclasses import dataclass
 from typing import Any, Dict
 
 import torch
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 from omegaconf import MISSING
 from torch.nn import Module as Model  # @manual
 

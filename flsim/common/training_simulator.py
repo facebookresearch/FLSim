@@ -16,10 +16,8 @@ from flsim.common.logger import Logger
 from flsim.common.timeout_simulator import TimeOutSimulator
 from flsim.common.training_event_handler import AsyncTrainingEventHandler
 from flsim.utils.async_trainer.async_user_selector import AsyncUserSelector
-from flsim.utils.async_trainer.training_event_generator import (
-    IEventGenerator,
-)
-from flsim.utils.cuda import ICudaStateManager, DEFAULT_CUDA_MANAGER
+from flsim.utils.async_trainer.training_event_generator import IEventGenerator
+from flsim.utils.cuda import DEFAULT_CUDA_MANAGER, ICudaStateManager
 from tqdm import tqdm
 
 

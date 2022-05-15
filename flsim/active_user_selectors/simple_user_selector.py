@@ -16,8 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import torch
 from flsim.data.data_provider import IFLDataProvider, IFLUserData
 from flsim.interfaces.model import IFLModel
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 from omegaconf import MISSING
 
 

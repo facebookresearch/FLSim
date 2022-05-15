@@ -10,13 +10,8 @@ from __future__ import annotations
 from collections import OrderedDict
 from dataclasses import dataclass
 
-from flsim.channels.base_channel import (
-    IdentityChannel,
-    FLChannelConfig,
-    Message,
-)
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.channels.base_channel import FLChannelConfig, IdentityChannel, Message
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 
 
 class HalfPrecisionChannel(IdentityChannel):

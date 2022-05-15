@@ -9,15 +9,15 @@ import numpy as np
 import pytest
 from flsim.common.pytest_helper import assertEqual
 from flsim.utils.async_trainer.async_example_weights import (
-    ExampleWeight,
     AsyncExampleWeightConfig,
+    ExampleWeight,
 )
 from flsim.utils.async_trainer.async_staleness_weights import (
     AsyncStalenessWeightConfig,
-    StalenessWeight,
     ConstantStalenessWeightConfig,
-    ThresholdStalenessWeightConfig,
     PolynomialStalenessWeightConfig,
+    StalenessWeight,
+    ThresholdStalenessWeightConfig,
 )
 from flsim.utils.async_trainer.async_weights import AsyncWeightConfig
 from flsim.utils.tests.helpers.async_weights_test_utils import (

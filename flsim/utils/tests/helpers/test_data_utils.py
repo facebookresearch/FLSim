@@ -11,11 +11,10 @@ from typing import Tuple
 
 import torch
 from flsim.data.data_provider import FLDataProviderFromList
-from flsim.data.data_sharder import SequentialSharder, PowerLawSharder
+from flsim.data.data_sharder import PowerLawSharder, SequentialSharder
 from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
 from flsim.interfaces.model import IFLModel
-from flsim.utils.sample_model import DummyAlphabetFLModel
-from flsim.utils.sample_model import TestDataSetting
+from flsim.utils.sample_model import DummyAlphabetFLModel, TestDataSetting
 from torch.utils.data import Dataset
 
 

@@ -8,8 +8,8 @@
 from hydra.core.config_store import ConfigStore  #  @manual
 
 from .timeout_simulator import (
-    NeverTimeOutSimulatorConfig,
     GaussianTimeOutSimulatorConfig,
+    NeverTimeOutSimulatorConfig,
 )
 
 

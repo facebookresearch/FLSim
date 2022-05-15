@@ -20,17 +20,17 @@ from flsim.interfaces.model import IFLModel
 from flsim.optimizers.async_aggregators import AsyncAggregatorConfig
 from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
 from flsim.optimizers.optimizer_scheduler import (
-    OptimizerSchedulerConfig,
     ConstantLRSchedulerConfig,
+    OptimizerSchedulerConfig,
 )
 from flsim.trainers.async_trainer import AsyncTrainer, AsyncTrainerConfig
 from flsim.utils.async_trainer.async_example_weights import (
-    EqualExampleWeightConfig,
     AsyncExampleWeightConfig,
+    EqualExampleWeightConfig,
 )
 from flsim.utils.async_trainer.async_staleness_weights import (
-    ConstantStalenessWeightConfig,
     AsyncStalenessWeightConfig,
+    ConstantStalenessWeightConfig,
 )
 from flsim.utils.async_trainer.async_user_selector import AsyncUserSelectorType
 from flsim.utils.async_trainer.async_weights import AsyncWeightConfig

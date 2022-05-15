@@ -16,13 +16,13 @@ from flsim.active_user_selectors.simple_user_selector import (
 from flsim.channels.base_channel import IdentityChannel
 from flsim.channels.half_precision_channel import HalfPrecisionChannel
 from flsim.channels.message import Message
-from flsim.common.pytest_helper import assertEqual, assertEmpty
+from flsim.common.pytest_helper import assertEmpty, assertEqual
 from flsim.optimizers.server_optimizers import (
-    FedAvgOptimizerConfig,
     FedAdamOptimizerConfig,
+    FedAvgOptimizerConfig,
     FedAvgWithLROptimizerConfig,
-    FedLARSOptimizerConfig,
     FedLAMBOptimizerConfig,
+    FedLARSOptimizerConfig,
     OptimizerType,
 )
 from flsim.servers.aggregator import AggregationType
@@ -31,8 +31,8 @@ from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.test_utils import (
     create_model_with_value,
     model_parameters_equal_to_value,
-    verify_models_equivalent_after_training,
     SampleNet,
+    verify_models_equivalent_after_training,
 )
 from hydra.utils import instantiate
 

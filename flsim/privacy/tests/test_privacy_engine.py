@@ -13,21 +13,21 @@ import pytest
 import torch
 import torch.nn as nn
 from flsim.common.pytest_helper import (
-    assertEqual,
-    assertNotEqual,
     assertAlmostEqual,
-    assertRaises,
+    assertEqual,
     assertFalse,
     assertLessEqual,
+    assertNotEqual,
+    assertRaises,
     assertTrue,
 )
 from flsim.privacy.common import PrivacySetting
 from flsim.privacy.privacy_engine import (
     GaussianPrivacyEngine,
-    TreePrivacyEngine,
     PrivacyEngineNotAttachedException,
+    TreePrivacyEngine,
 )
-from flsim.privacy.privacy_engine_factory import PrivacyEngineFactory, NoiseType
+from flsim.privacy.privacy_engine_factory import NoiseType, PrivacyEngineFactory
 from flsim.utils import test_utils as utils
 from flsim.utils.fl.common import FLModelParamUtils
 from opacus.accountants.analysis import rdp as privacy_analysis

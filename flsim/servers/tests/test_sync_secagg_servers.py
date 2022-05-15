@@ -10,10 +10,10 @@ from flsim.common.pytest_helper import assertEqual
 from flsim.secure_aggregation.secure_aggregator import FixedPointConfig
 from flsim.servers.sync_secagg_servers import SyncSecAggServerConfig
 from flsim.utils.test_utils import (
+    create_model_with_value,
+    model_parameters_equal_to_value,
     SampleNet,
     TwoFC,
-    model_parameters_equal_to_value,
-    create_model_with_value,
 )
 from hydra.utils import instantiate
 

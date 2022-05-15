@@ -13,8 +13,7 @@ from typing import OrderedDict
 
 from flsim.channels.communication_stats import ChannelStatsCollector
 from flsim.channels.message import Message
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 
 
 class IFLChannel(abc.ABC):

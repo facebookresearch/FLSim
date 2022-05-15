@@ -8,7 +8,7 @@
 import logging
 from enum import IntEnum
 from itertools import chain
-from typing import List, Iterable, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 from warnings import warn
 
 import torch

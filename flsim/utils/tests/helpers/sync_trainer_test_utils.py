@@ -17,8 +17,8 @@ from flsim.common.timeout_simulator import (
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
 from flsim.optimizers.optimizer_scheduler import (
-    OptimizerSchedulerConfig,
     ConstantLRSchedulerConfig,
+    OptimizerSchedulerConfig,
 )
 from flsim.servers.sync_servers import SyncServerConfig
 from flsim.trainers.sync_trainer import SyncTrainer, SyncTrainerConfig

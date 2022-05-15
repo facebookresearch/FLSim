@@ -8,12 +8,10 @@
 import torch
 from flsim.clients.base_client import ClientConfig
 from flsim.common.fine_tuner import FineTuner
-from flsim.common.pytest_helper import assertEqual, assertEmpty
+from flsim.common.pytest_helper import assertEmpty, assertEqual
 from flsim.common.timeline import Timeline
 from flsim.interfaces.metrics_reporter import TrainingStage
-from flsim.optimizers.local_optimizers import (
-    LocalOptimizerSGDConfig,
-)
+from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
 from flsim.utils import test_utils as utils
 from flsim.utils.cuda import DEFAULT_CUDA_MANAGER
 

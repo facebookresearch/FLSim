@@ -9,23 +9,20 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List, Optional
 
 from flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorConfig,
     UniformlyRandomActiveUserSelectorConfig,
 )
-from flsim.channels.base_channel import (
-    IdentityChannel,
-    IFLChannel,
-)
+from flsim.channels.base_channel import IdentityChannel, IFLChannel
 from flsim.channels.message import Message
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.server_optimizers import (
-    ServerOptimizerConfig,
     FedAvgOptimizerConfig,
     OptimizerType,
+    ServerOptimizerConfig,
 )
 from flsim.servers.aggregator import AggregationType, Aggregator
 from flsim.utils.config_utils import fullclassname, init_self_cfg

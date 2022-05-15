@@ -34,8 +34,8 @@ from flsim.utils.config_utils import maybe_parse_json_config
 from flsim.utils.example_utils import (
     DataProvider,
     FLModel,
-    MetricsReporter,
     LEAFDataLoader,
+    MetricsReporter,
 )
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf

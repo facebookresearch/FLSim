@@ -20,15 +20,13 @@ from flsim.optimizers.layerwise_optimizers import LAMB, LARS
 from flsim.reducers.base_round_reducer import (
     IFLRoundReducer,
     IFLRoundReducerConfig,
+    RoundReducerConfig,
 )
-from flsim.reducers.base_round_reducer import RoundReducerConfig
 from flsim.reducers.dp_round_reducer import DPRoundReducerConfig
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
-from omegaconf import MISSING
-from omegaconf import OmegaConf, DictConfig
+from omegaconf import DictConfig, MISSING, OmegaConf
 from torch.nn import Module as Model  # @manual
 
 

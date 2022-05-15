@@ -7,7 +7,7 @@
 
 from enum import Enum
 
-from flsim.utils.fl.stats import RandomVariableStatsTrackerMA, AverageType
+from flsim.utils.fl.stats import AverageType, RandomVariableStatsTrackerMA
 
 
 class TargetMetricDirection(Enum):

@@ -13,8 +13,7 @@ from typing import Dict, Iterator, Tuple
 
 import torch
 from flsim.common.logger import Logger
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 from hydra.utils import instantiate
 from omegaconf import MISSING
 from torch import nn

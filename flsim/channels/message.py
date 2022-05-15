@@ -7,7 +7,7 @@
 
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import OrderedDict, Optional
+from typing import Optional, OrderedDict
 
 import torch.nn as nn
 from flsim.interfaces.model import IFLModel

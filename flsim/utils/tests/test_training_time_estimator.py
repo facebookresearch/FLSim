@@ -6,19 +6,19 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
-from flsim.common.pytest_helper import assertEqual, assertAlmostEqual
+from flsim.common.pytest_helper import assertAlmostEqual, assertEqual
 from flsim.utils.timing.training_duration_distribution import (
-    PerUserUniformDurationDistribution,
-    PerUserUniformDurationDistributionConfig,
+    DurationDistributionFromList,
+    DurationDistributionFromListConfig,
+    DurationInfo,
     PerUserHalfNormalDurationDistribution,
     PerUserHalfNormalDurationDistributionConfig,
-    DurationDistributionFromListConfig,
-    DurationDistributionFromList,
-    DurationInfo,
+    PerUserUniformDurationDistribution,
+    PerUserUniformDurationDistributionConfig,
 )
 from flsim.utils.timing.training_time_estimator import (
-    get_training_time,
     AsyncTrainingTimeEstimator,
+    get_training_time,
     SyncTrainingTimeEstimator,
 )
 from omegaconf import OmegaConf

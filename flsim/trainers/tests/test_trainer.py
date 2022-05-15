@@ -19,10 +19,10 @@ from flsim.active_user_selectors.simple_user_selector import (
 )
 from flsim.clients.base_client import ClientConfig
 from flsim.common.pytest_helper import (
-    assertEqual,
-    assertTrue,
-    assertIsInstance,
     assertEmpty,
+    assertEqual,
+    assertIsInstance,
+    assertTrue,
 )
 from flsim.common.timeout_simulator import GaussianTimeOutSimulatorConfig
 from flsim.data.data_provider import FLDataProviderFromList
@@ -31,17 +31,15 @@ from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
 from flsim.interfaces.metrics_reporter import TrainingStage
 from flsim.optimizers.async_aggregators import FedAdamAsyncAggregatorConfig
 from flsim.optimizers.local_optimizers import (
-    LocalOptimizerSGDConfig,
     LocalOptimizerFedProxConfig,
+    LocalOptimizerSGDConfig,
 )
 from flsim.optimizers.optimizer_scheduler import ArmijoLineSearchSchedulerConfig
 from flsim.optimizers.server_optimizers import (
     FedAdamOptimizerConfig,
     FedAvgWithLROptimizerConfig,
 )
-from flsim.servers.sync_servers import (
-    SyncServerConfig,
-)
+from flsim.servers.sync_servers import SyncServerConfig
 from flsim.trainers.async_trainer import AsyncTrainer, AsyncTrainerConfig
 from flsim.trainers.sync_trainer import SyncTrainer, SyncTrainerConfig
 from flsim.utils.config_utils import fl_config_from_json
@@ -49,8 +47,8 @@ from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.sample_model import DummyAlphabetFLModel
 from flsim.utils.test_utils import (
     FakeMetricReporter,
-    MockRecord,
     MetricsReporterWithMockedChannels,
+    MockRecord,
     SimpleMetricReporter,
     verify_models_equivalent_after_training,
 )

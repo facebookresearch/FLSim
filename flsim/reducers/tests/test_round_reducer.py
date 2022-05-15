@@ -17,12 +17,12 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from flsim.clients.base_client import Client, ClientConfig
 from flsim.common.pytest_helper import (
-    assertEqual,
     assertAlmostEqual,
-    assertNotEqual,
+    assertEqual,
     assertFalse,
-    assertTrue,
     assertIsInstance,
+    assertNotEqual,
+    assertTrue,
 )
 from flsim.privacy.common import PrivacySetting
 from flsim.reducers.base_round_reducer import (

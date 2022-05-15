@@ -14,8 +14,7 @@ from typing import Any, Optional
 
 from flsim.interfaces.batch_metrics import IFLBatchMetrics
 from flsim.interfaces.model import IFLModel
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.fl.common import FLModelParamUtils
 from omegaconf import MISSING
 from torch.optim.optimizer import Optimizer

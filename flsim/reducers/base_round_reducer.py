@@ -28,8 +28,7 @@ from flsim.channels.base_channel import IdentityChannel
 from flsim.channels.message import Message
 from flsim.common.logger import Logger
 from flsim.interfaces.model import IFLModel
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.distributed.fl_distributed import FLDistributedUtils, OperationType
 from flsim.utils.fl.common import FLModelParamUtils
 from omegaconf import MISSING

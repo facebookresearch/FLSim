@@ -12,12 +12,12 @@ import pytest
 import torch.distributed as dist
 import torch.multiprocessing as mp
 from flsim.common.pytest_helper import (
-    assertEqual,
-    assertNotEqual,
     assertAlmostEqual,
     assertEmpty,
+    assertEqual,
+    assertNotEqual,
 )
-from flsim.servers.aggregator import Aggregator, AggregationType
+from flsim.servers.aggregator import AggregationType, Aggregator
 from flsim.utils.distributed.fl_distributed import FLDistributedUtils, OperationType
 from flsim.utils.test_utils import (
     create_model_with_value,

@@ -15,7 +15,7 @@ from flsim.active_user_selectors.simple_user_selector import (
 )
 from flsim.clients.base_client import ClientConfig
 from flsim.clients.dp_client import DPClientConfig
-from flsim.common.pytest_helper import assertEqual, assertEmpty, assertNotEmpty
+from flsim.common.pytest_helper import assertEmpty, assertEqual, assertNotEmpty
 from flsim.optimizers.async_aggregators import FedAvgWithLRFedBuffAggregatorConfig
 from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
 from flsim.privacy.common import PrivacySetting
@@ -31,8 +31,8 @@ from flsim.utils.async_trainer.async_staleness_weights import (
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.sample_model import DummyAlphabetFLModel
 from flsim.utils.test_utils import (
-    MetricsReporterWithMockedChannels,
     FakeMetricReporter,
+    MetricsReporterWithMockedChannels,
     verify_models_equivalent_after_training,
 )
 from flsim.utils.tests.helpers.async_trainer_test_utils import (

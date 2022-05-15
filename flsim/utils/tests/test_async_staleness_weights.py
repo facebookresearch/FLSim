@@ -11,10 +11,10 @@ import pytest
 from flsim.common.pytest_helper import assertEqual, assertRaises
 from flsim.utils.async_trainer.async_staleness_weights import (
     AsyncStalenessWeightConfig,
-    StalenessWeight,
     ConstantStalenessWeightConfig,
-    ThresholdStalenessWeightConfig,
     PolynomialStalenessWeightConfig,
+    StalenessWeight,
+    ThresholdStalenessWeightConfig,
 )
 from flsim.utils.tests.helpers.async_weights_test_utils import (
     AsyncStalenessWeightsTestUtils,

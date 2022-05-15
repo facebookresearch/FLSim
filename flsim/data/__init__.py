@@ -8,12 +8,12 @@
 from hydra.core.config_store import ConfigStore
 
 from .data_sharder import (
-    RandomSharderConfig,
-    SequentialSharderConfig,
-    RoundRobinSharderConfig,
     BroadcastSharderConfig,
     ColumnSharderConfig,
     PowerLawSharderConfig,
+    RandomSharderConfig,
+    RoundRobinSharderConfig,
+    SequentialSharderConfig,
 )
 
 ConfigStore.instance().store(

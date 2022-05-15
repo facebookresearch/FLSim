@@ -8,15 +8,12 @@
 import numpy as np
 import pandas as pd
 import pytest
-from flsim.common.pytest_helper import (
-    assertEqual,
-    assertAlmostEqual,
-)
+from flsim.common.pytest_helper import assertAlmostEqual, assertEqual
 from flsim.utils.fl.stats import (
+    AverageType,
     ModelSequenceNumberTracker,
     RandomVariableStatsTracker,
     RandomVariableStatsTrackerMA,
-    AverageType,
 )
 
 

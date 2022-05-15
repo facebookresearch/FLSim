@@ -12,14 +12,13 @@ from typing import Any, Iterable, List, Optional, Tuple
 
 import torch
 from flsim.clients.base_client import Client
-from flsim.clients.dp_client import DPClientConfig, DPClient
+from flsim.clients.dp_client import DPClient, DPClientConfig
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.metrics_reporter import IFLMetricsReporter, Metric
 from flsim.interfaces.model import IFLModel
 from flsim.reducers.dp_round_reducer import DPRoundReducerConfig
 from flsim.trainers.sync_trainer import SyncTrainer, SyncTrainerConfig, Timeline
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 

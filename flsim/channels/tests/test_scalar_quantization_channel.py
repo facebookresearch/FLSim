@@ -8,13 +8,11 @@
 from typing import Type
 
 import pytest
-from flsim.channels.communication_stats import (
-    ChannelDirection,
-)
+from flsim.channels.communication_stats import ChannelDirection
 from flsim.channels.message import Message
 from flsim.channels.scalar_quantization_channel import (
-    ScalarQuantizationChannelConfig,
     ScalarQuantizationChannel,
+    ScalarQuantizationChannelConfig,
 )
 from flsim.common.pytest_helper import assertEqual, assertIsInstance
 from flsim.utils import test_utils as utils

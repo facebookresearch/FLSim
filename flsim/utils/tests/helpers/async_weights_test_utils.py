@@ -8,23 +8,23 @@
 from math import log10, sqrt
 
 from flsim.utils.async_trainer.async_example_weights import (
-    EqualExampleWeightConfig,
     EqualExampleWeight,
+    EqualExampleWeightConfig,
     ExampleWeight,
-    LinearExampleWeightConfig,
     LinearExampleWeight,
-    Log10ExampleWeightConfig,
+    LinearExampleWeightConfig,
     Log10ExampleWeight,
-    SqrtExampleWeightConfig,
+    Log10ExampleWeightConfig,
     SqrtExampleWeight,
+    SqrtExampleWeightConfig,
 )
 from flsim.utils.async_trainer.async_staleness_weights import (
-    ConstantStalenessWeightConfig,
     ConstantStalenessWeight,
-    PolynomialStalenessWeightConfig,
+    ConstantStalenessWeightConfig,
     PolynomialStalenessWeight,
-    ThresholdStalenessWeightConfig,
+    PolynomialStalenessWeightConfig,
     ThresholdStalenessWeight,
+    ThresholdStalenessWeightConfig,
 )
 
 

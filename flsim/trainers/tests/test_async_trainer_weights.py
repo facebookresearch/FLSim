@@ -10,10 +10,7 @@ from typing import Tuple
 
 import numpy as np
 import torch
-from flsim.common.pytest_helper import (
-    assertEqual,
-    assertEmpty,
-)
+from flsim.common.pytest_helper import assertEmpty, assertEqual
 from flsim.data.data_provider import FLDataProviderFromList, IFLDataProvider
 from flsim.data.data_sharder import RoundRobinSharder
 from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
@@ -24,11 +21,11 @@ from flsim.optimizers.async_aggregators import (
 )
 from flsim.utils.async_trainer.async_example_weights import (
     AsyncExampleWeightConfig,
-    ExampleWeight,
     EqualExampleWeightConfig,
+    ExampleWeight,
     LinearExampleWeightConfig,
-    SqrtExampleWeightConfig,
     Log10ExampleWeightConfig,
+    SqrtExampleWeightConfig,
 )
 from flsim.utils.async_trainer.async_staleness_weights import (
     ConstantStalenessWeightConfig,

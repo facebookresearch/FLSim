@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass
-from typing import Any, List, Tuple, Optional
+from typing import Any, List, Optional, Tuple
 
 from flsim.clients.async_client import AsyncClientDevice
 from flsim.common.logger import Logger
@@ -21,9 +21,9 @@ from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.metrics_reporter import IFLMetricsReporter, Metric
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.async_aggregators import (
+    AsyncAggregator,
     AsyncAggregatorConfig,
     FedAvgWithLRAsyncAggregatorConfig,
-    AsyncAggregator,
     FedBuffAggregator,
 )
 from flsim.trainers.trainer_base import FLTrainer, FLTrainerConfig
@@ -36,9 +36,8 @@ from flsim.utils.async_trainer.training_event_generator import (
     AsyncTrainingEventGeneratorConfig,
     EventGeneratorConfig,
 )
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
-from flsim.utils.cuda import GPUMemoryMinimizer, CudaTransferMinimizer
+from flsim.utils.config_utils import fullclassname, init_self_cfg
+from flsim.utils.cuda import CudaTransferMinimizer, GPUMemoryMinimizer
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from tqdm import tqdm

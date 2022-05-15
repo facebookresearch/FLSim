@@ -15,8 +15,7 @@ from typing import Any, Dict, Iterable, List, Tuple, TypeVar
 
 import numpy as np
 import torch
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 from omegaconf import MISSING
 from torch.utils.data import Dataset
 

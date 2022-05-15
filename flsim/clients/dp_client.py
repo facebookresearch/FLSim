@@ -21,9 +21,8 @@ from flsim.common.timeout_simulator import TimeOutSimulator
 from flsim.data.data_provider import IFLUserData
 from flsim.interfaces.model import IFLModel
 from flsim.privacy.common import PrivacyBudget, PrivacySetting
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
-from flsim.utils.cuda import ICudaStateManager, DEFAULT_CUDA_MANAGER
+from flsim.utils.config_utils import fullclassname, init_self_cfg
+from flsim.utils.cuda import DEFAULT_CUDA_MANAGER, ICudaStateManager
 from opacus import GradSampleModule
 from opacus.accountants import RDPAccountant
 from opacus.optimizers import DPOptimizer

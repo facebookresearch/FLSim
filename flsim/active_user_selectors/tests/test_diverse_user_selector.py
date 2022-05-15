@@ -17,7 +17,7 @@ from flsim.active_user_selectors.diverse_user_selector import (
     DiversityStatisticsReportingUserSelectorConfig,
 )
 from flsim.common.diversity_metrics import DiversityMetricType
-from flsim.common.pytest_helper import assertEqual, assertTrue, assertIsInstance
+from flsim.common.pytest_helper import assertEqual, assertIsInstance, assertTrue
 from flsim.utils.sample_model import DummyAlphabetFLModel, LinearFLModel
 from flsim.utils.tests.helpers.test_data_utils import (
     DummyAlphabetDataset,

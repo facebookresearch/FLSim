@@ -6,12 +6,12 @@
 # LICENSE file in the root directory of this source tree.
 
 import pytest
-from flsim.common.pytest_helper import assertEqual, assertAlmostEqual
+from flsim.common.pytest_helper import assertAlmostEqual, assertEqual
 from flsim.optimizers.sync_aggregators import (
-    FedLARSSyncAggregator,
     FedAvgWithLRSyncAggregator,
-    FedLARSSyncAggregatorConfig,
     FedAvgWithLRSyncAggregatorConfig,
+    FedLARSSyncAggregator,
+    FedLARSSyncAggregatorConfig,
 )
 from flsim.utils.test_utils import MockQuadratic1DFL, Quadratic1D
 from omegaconf import OmegaConf

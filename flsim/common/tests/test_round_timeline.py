@@ -6,8 +6,8 @@
 # LICENSE file in the root directory of this source tree.
 
 from flsim.common.pytest_helper import (
-    assertEqual,
     assertAlmostEqual,
+    assertEqual,
     assertFalse,
     assertTrue,
 )

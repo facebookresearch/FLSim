@@ -9,16 +9,16 @@ from hydra.core.config_store import ConfigStore  #  @manual
 
 from .async_aggregators import (
     FedAdamAsyncAggregatorConfig,
-    FedAvgWithLRAsyncAggregatorConfig,
-    FedAvgWithLRWithMomentumAsyncAggregatorConfig,
     FedAdamFedBuffAggregatorConfig,
+    FedAvgWithLRAsyncAggregatorConfig,
     FedAvgWithLRFedBuffAggregatorConfig,
+    FedAvgWithLRWithMomentumAsyncAggregatorConfig,
 )
-from .local_optimizers import LocalOptimizerSGDConfig, LocalOptimizerFedProxConfig
+from .local_optimizers import LocalOptimizerFedProxConfig, LocalOptimizerSGDConfig
 from .optimizer_scheduler import (
+    ArmijoLineSearchSchedulerConfig,
     ConstantLRSchedulerConfig,
     LRBatchSizeNormalizerSchedulerConfig,
-    ArmijoLineSearchSchedulerConfig,
 )
 from .server_optimizers import (
     FedAdamOptimizerConfig,
@@ -28,11 +28,11 @@ from .server_optimizers import (
     FedLARSOptimizerConfig,
 )
 from .sync_aggregators import (
-    FedAvgSyncAggregatorConfig,
     FedAdamSyncAggregatorConfig,
+    FedAvgSyncAggregatorConfig,
     FedAvgWithLRSyncAggregatorConfig,
-    FedLARSSyncAggregatorConfig,
     FedLAMBSyncAggregatorConfig,
+    FedLARSSyncAggregatorConfig,
 )
 
 ConfigStore.instance().store(

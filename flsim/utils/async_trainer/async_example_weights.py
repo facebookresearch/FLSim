@@ -13,8 +13,7 @@ import abc
 from dataclasses import dataclass
 from math import log10, sqrt
 
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 from omegaconf import MISSING
 
 

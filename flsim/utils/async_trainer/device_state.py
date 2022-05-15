@@ -6,7 +6,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import auto, Enum
 
 from flsim.utils.async_trainer.training_event_generator import IEventGenerator
 

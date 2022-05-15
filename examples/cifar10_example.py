@@ -24,9 +24,9 @@ from flsim.utils.config_utils import maybe_parse_json_config
 from flsim.utils.example_utils import (
     DataLoader,
     DataProvider,
-    SimpleConvNet,
     FLModel,
     MetricsReporter,
+    SimpleConvNet,
 )
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf

@@ -11,7 +11,7 @@ There are a list of helper utilities missing in PyTest.
 We define some of the helpful utilities in this one file
 so that all FL-sim PyTests can reuse them easily.
 """
-from typing import Any, Sized, List
+from typing import Any, List, Sized
 
 
 def assertIsInstance(o: object, t: type) -> None:

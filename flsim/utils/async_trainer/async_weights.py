@@ -18,15 +18,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from flsim.utils.async_trainer.async_example_weights import (
-    EqualExampleWeightConfig,
     AsyncExampleWeightConfig,
+    EqualExampleWeightConfig,
 )
 from flsim.utils.async_trainer.async_staleness_weights import (
     AsyncStalenessWeightConfig,
     ConstantStalenessWeightConfig,
 )
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.fl.stats import RandomVariableStatsTracker
 from hydra.utils import instantiate
 from omegaconf import OmegaConf

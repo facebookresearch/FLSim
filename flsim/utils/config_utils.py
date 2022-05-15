@@ -10,8 +10,8 @@ import collections.abc as abc
 import json
 from typing import Any, Dict, List, Tuple, Type
 
-from hydra.experimental import initialize, compose
-from omegaconf import OmegaConf, DictConfig
+from hydra.experimental import compose, initialize
+from omegaconf import DictConfig, OmegaConf
 
 
 def fullclassname(cls: Type[Any]) -> str:

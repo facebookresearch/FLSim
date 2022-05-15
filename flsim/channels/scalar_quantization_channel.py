@@ -11,17 +11,9 @@ from collections import OrderedDict
 from dataclasses import dataclass
 
 import torch
-from flsim.channels.base_channel import (
-    IdentityChannel,
-    FLChannelConfig,
-    Message,
-)
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
-from torch.quantization.observer import (
-    MinMaxObserver,
-    PerChannelMinMaxObserver,
-)
+from flsim.channels.base_channel import FLChannelConfig, IdentityChannel, Message
+from flsim.utils.config_utils import fullclassname, init_self_cfg
+from torch.quantization.observer import MinMaxObserver, PerChannelMinMaxObserver
 
 
 class ScalarQuantizationChannel(IdentityChannel):

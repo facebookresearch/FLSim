@@ -10,25 +10,23 @@ from typing import Union
 
 import numpy as np
 import torch
-from flsim.common.pytest_helper import assertEqual, assertEmpty
+from flsim.common.pytest_helper import assertEmpty, assertEqual
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.async_aggregators import (
     AsyncAggregatorConfig,
-    FedAdamAsyncAggregatorConfig,
-    FedAvgWithLRAsyncAggregatorConfig,
-    FedAdamFedBuffAggregatorConfig,
-    FedAvgWithLRFedBuffAggregatorConfig,
     create_optimizer_for_async_aggregator,
+    FedAdamAsyncAggregatorConfig,
+    FedAdamFedBuffAggregatorConfig,
+    FedAvgWithLRAsyncAggregatorConfig,
+    FedAvgWithLRFedBuffAggregatorConfig,
 )
 from flsim.optimizers.server_optimizers import (
     FedAdamOptimizerConfig,
     FedAvgWithLROptimizerConfig,
     OptimizerType,
 )
-from flsim.servers.sync_servers import (
-    SyncServerConfig,
-)
+from flsim.servers.sync_servers import SyncServerConfig
 from flsim.trainers.async_trainer import AsyncTrainerConfig
 from flsim.trainers.sync_trainer import SyncTrainerConfig
 from flsim.utils.config_utils import is_target

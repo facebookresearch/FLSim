@@ -21,13 +21,8 @@ from flsim.utils.async_trainer.device_state import (
     TrainingScheduleFactory,
     TrainingState,
 )
-from flsim.utils.async_trainer.training_event_generator import (
-    IEventGenerator,
-)
-from flsim.utils.cuda import (
-    ICudaStateManager,
-    DEFAULT_CUDA_MANAGER,
-)
+from flsim.utils.async_trainer.training_event_generator import IEventGenerator
+from flsim.utils.cuda import DEFAULT_CUDA_MANAGER, ICudaStateManager
 from flsim.utils.fl.common import FLModelParamUtils
 from omegaconf import OmegaConf
 

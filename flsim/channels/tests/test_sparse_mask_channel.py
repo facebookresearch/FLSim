@@ -5,20 +5,17 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import OrderedDict
-from typing import Type
+from typing import OrderedDict, Type
 
 import pytest
 import torch
 from flsim.channels.base_channel import Message
-from flsim.channels.communication_stats import (
-    ChannelDirection,
-)
+from flsim.channels.communication_stats import ChannelDirection
 from flsim.channels.sparse_mask_channel import (
     SparseMaskChannel,
     SparseMaskChannelConfig,
 )
-from flsim.common.pytest_helper import assertEqual, assertIsInstance, assertAlmostEqual
+from flsim.common.pytest_helper import assertAlmostEqual, assertEqual, assertIsInstance
 from flsim.utils import test_utils as utils
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.tests.helpers.test_models import FCModel

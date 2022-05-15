@@ -5,11 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from flsim.common.pytest_helper import (
-    assertEqual,
-    assertLess,
-    assertGreater,
-)
+from flsim.common.pytest_helper import assertEqual, assertGreater, assertLess
 from flsim.utils.async_trainer.device_state import DeviceState, TrainingSchedule
 
 

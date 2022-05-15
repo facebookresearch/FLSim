@@ -11,8 +11,7 @@ import abc
 from dataclasses import dataclass
 from typing import List
 
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.timing.training_duration_distribution import (
     PerExampleGaussianDurationDistributionConfig,
 )

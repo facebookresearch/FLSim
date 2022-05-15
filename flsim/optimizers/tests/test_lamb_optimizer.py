@@ -11,8 +11,8 @@ import pytest
 from flsim.common.pytest_helper import assertEqual
 from flsim.optimizers.sync_aggregators import (
     FedAdamSyncAggregator,
-    FedLAMBSyncAggregator,
     FedAdamSyncAggregatorConfig,
+    FedLAMBSyncAggregator,
     FedLAMBSyncAggregatorConfig,
 )
 from flsim.utils.test_utils import MockQuadratic1DFL, Quadratic1D

@@ -15,9 +15,9 @@ from flsim.clients.base_client import ClientConfig
 from flsim.common.pytest_helper import (
     assertAlmostEqual,
     assertEqual,
-    assertTrue,
-    assertLessEqual,
     assertGreaterEqual,
+    assertLessEqual,
+    assertTrue,
 )
 from flsim.common.training_event_handler import TestAsyncTrainingEventHandler
 from flsim.common.training_simulator import AsyncTrainingSimulator
@@ -48,10 +48,10 @@ from flsim.utils.tests.helpers.test_training_simulator_utils import (  # noqa: B
 from flsim.utils.timing.training_duration_distribution import (
     DurationDistributionConfig,
     PerExampleGaussianDurationDistributionConfig,
+    PerUserExponentialDurationDistributionConfig,
     PerUserGaussianDurationDistributionConfig,
     PerUserHalfNormalDurationDistributionConfig,
     PerUserUniformDurationDistributionConfig,
-    PerUserExponentialDurationDistributionConfig,
 )
 from omegaconf import OmegaConf
 

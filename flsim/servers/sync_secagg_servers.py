@@ -14,26 +14,18 @@ from flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorConfig,
     UniformlyRandomActiveUserSelectorConfig,
 )
-from flsim.channels.base_channel import (
-    IFLChannel,
-    IdentityChannel,
-)
+from flsim.channels.base_channel import IdentityChannel, IFLChannel
 from flsim.channels.message import Message
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
-from flsim.optimizers.server_optimizers import (
-    FedAvgOptimizerConfig,
-)
+from flsim.optimizers.server_optimizers import FedAvgOptimizerConfig
 from flsim.secure_aggregation.secure_aggregator import (
     FixedPointConfig,
     SecureAggregator,
     utility_config_flatter,
 )
 from flsim.servers.aggregator import AggregationType, Aggregator
-from flsim.servers.sync_servers import (
-    ISyncServer,
-    SyncServerConfig,
-)
+from flsim.servers.sync_servers import ISyncServer, SyncServerConfig
 from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate

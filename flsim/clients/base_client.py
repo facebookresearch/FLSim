@@ -38,13 +38,12 @@ from flsim.optimizers.local_optimizers import (
     LocalOptimizerSGDConfig,
 )
 from flsim.optimizers.optimizer_scheduler import (
+    ConstantLRSchedulerConfig,
     OptimizerScheduler,
     OptimizerSchedulerConfig,
-    ConstantLRSchedulerConfig,
 )
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
-from flsim.utils.cuda import ICudaStateManager, DEFAULT_CUDA_MANAGER
+from flsim.utils.config_utils import fullclassname, init_self_cfg
+from flsim.utils.cuda import DEFAULT_CUDA_MANAGER, ICudaStateManager
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 from omegaconf import OmegaConf

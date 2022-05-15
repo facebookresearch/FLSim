@@ -23,8 +23,7 @@ from flsim.common.diversity_metrics import (
 )
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 
 
 class DiverseUserSelectorUtils:

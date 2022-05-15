@@ -7,19 +7,19 @@
 
 import torch
 from flsim.channels.message import Message
-from flsim.common.pytest_helper import assertEqual, assertTrue, assertRaises
+from flsim.common.pytest_helper import assertEqual, assertRaises, assertTrue
 from flsim.secure_aggregation.secure_aggregator import (
+    FixedPointConfig,
     FixedPointConverter,
     SecureAggregator,
-    FixedPointConfig,
     utility_config_flatter,
 )
 from flsim.servers.sync_secagg_servers import SyncSecAggServerConfig
 from flsim.utils import test_utils as utils
 from flsim.utils.test_utils import (
-    SampleNet,
-    model_parameters_equal_to_value,
     create_model_with_value,
+    model_parameters_equal_to_value,
+    SampleNet,
 )
 from hydra.utils import instantiate
 from omegaconf import OmegaConf

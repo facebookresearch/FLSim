@@ -10,18 +10,18 @@ from flsim.common.pytest_helper import assertEqual, assertTrue
 from flsim.optimizers.async_aggregators import (
     AsyncAggregatorConfig,
     FedAdamAsyncAggregatorConfig,
-    FedAvgWithLRAsyncAggregatorConfig,
-    FedBuffAggregatorConfig,
     FedAdamFedBuffAggregatorConfig,
+    FedAvgWithLRAsyncAggregatorConfig,
     FedAvgWithLRFedBuffAggregatorConfig,
+    FedBuffAggregatorConfig,
 )
 from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
 from flsim.optimizers.optimizer_test_utils import OptimizerTestUtil
 from flsim.optimizers.sync_aggregators import (
-    SyncAggregatorConfig,
     FedAdamSyncAggregatorConfig,
-    FedAvgWithLRSyncAggregatorConfig,
     FedAvgSyncAggregatorConfig,
+    FedAvgWithLRSyncAggregatorConfig,
+    SyncAggregatorConfig,
 )
 from flsim.utils.sample_model import TwoLayerNet
 from hydra.utils import instantiate

@@ -6,8 +6,8 @@
 # LICENSE file in the root directory of this source tree.
 
 import abc
-from enum import Enum, auto
-from typing import Any, Dict, List, Optional, Union, Tuple
+from enum import auto, Enum
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from flsim.interfaces.batch_metrics import IFLBatchMetrics
 from torch import Tensor

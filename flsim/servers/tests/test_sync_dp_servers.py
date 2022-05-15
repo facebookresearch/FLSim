@@ -29,8 +29,8 @@ from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.test_utils import (
     create_model_with_value,
     model_parameters_equal_to_value,
-    verify_models_equivalent_after_training,
     SampleNet,
+    verify_models_equivalent_after_training,
 )
 from hydra.utils import instantiate
 

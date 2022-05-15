@@ -8,16 +8,16 @@
 from hydra.core.config_store import ConfigStore  #  @manual
 
 from .diverse_user_selector import (
+    DiversityMaximizingUserSelectorConfig,
     DiversityReportingUserSelectorConfig,
     DiversityStatisticsReportingUserSelectorConfig,
-    DiversityMaximizingUserSelectorConfig,
 )
 from .simple_user_selector import (
-    UniformlyRandomActiveUserSelectorConfig,
-    SequentialActiveUserSelectorConfig,
-    RandomRoundRobinActiveUserSelectorConfig,
-    NumberOfSamplesActiveUserSelectorConfig,
     HighLossActiveUserSelectorConfig,
+    NumberOfSamplesActiveUserSelectorConfig,
+    RandomRoundRobinActiveUserSelectorConfig,
+    SequentialActiveUserSelectorConfig,
+    UniformlyRandomActiveUserSelectorConfig,
 )
 
 

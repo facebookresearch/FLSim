@@ -9,9 +9,7 @@ import random
 from typing import List, Optional
 
 import numpy as np
-from flsim.utils.timing.training_duration_distribution import (
-    IDurationDistribution,
-)
+from flsim.utils.timing.training_duration_distribution import IDurationDistribution
 
 
 class TrainingTimeEstimator:

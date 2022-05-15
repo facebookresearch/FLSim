@@ -8,7 +8,7 @@
 import argparse
 import copy
 import json
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 def _handle_optimizer(trainer):

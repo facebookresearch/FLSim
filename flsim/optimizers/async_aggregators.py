@@ -17,14 +17,10 @@ from flsim.channels.base_channel import IdentityChannel
 from flsim.common.logger import Logger
 from flsim.interfaces.model import IFLModel
 from flsim.privacy.common import PrivacyBudget
-from flsim.reducers.base_round_reducer import (
-    ReductionType,
-    RoundReducerConfig,
-)
+from flsim.reducers.base_round_reducer import ReductionType, RoundReducerConfig
 from flsim.reducers.dp_round_reducer import DPRoundReducerConfig
 from flsim.reducers.weighted_dp_round_reducer import WeightedDPRoundReducerConfig
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.fl.stats import ModelSequenceNumberTracker
 from hydra.utils import instantiate

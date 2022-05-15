@@ -8,12 +8,12 @@
 from hydra.core.config_store import ConfigStore  #  @manual
 
 from .training_duration_distribution import (
+    DurationDistributionFromListConfig,
     PerExampleGaussianDurationDistributionConfig,
+    PerUserExponentialDurationDistributionConfig,
     PerUserGaussianDurationDistributionConfig,
     PerUserHalfNormalDurationDistributionConfig,
     PerUserUniformDurationDistributionConfig,
-    PerUserExponentialDurationDistributionConfig,
-    DurationDistributionFromListConfig,
 )
 
 

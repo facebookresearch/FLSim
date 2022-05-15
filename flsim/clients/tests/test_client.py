@@ -13,12 +13,12 @@ import torch.nn as nn
 from flsim.clients.base_client import Client, ClientConfig
 from flsim.clients.dp_client import DPClient, DPClientConfig
 from flsim.common.pytest_helper import (
+    assertAlmostEqual,
     assertEqual,
+    assertFalse,
     assertIsInstance,
     assertNotEqual,
     assertTrue,
-    assertFalse,
-    assertAlmostEqual,
 )
 from flsim.common.timeout_simulator import (
     GaussianTimeOutSimulator,
@@ -28,12 +28,14 @@ from flsim.common.timeout_simulator import (
 )
 from flsim.data.data_provider import IFLUserData
 from flsim.optimizers.local_optimizers import (
-    LocalOptimizerSGD,
     LocalOptimizerFedProxConfig,
+    LocalOptimizerSGD,
     LocalOptimizerSGDConfig,
 )
-from flsim.optimizers.optimizer_scheduler import ConstantLRScheduler
-from flsim.optimizers.optimizer_scheduler import ConstantLRSchedulerConfig
+from flsim.optimizers.optimizer_scheduler import (
+    ConstantLRScheduler,
+    ConstantLRSchedulerConfig,
+)
 from flsim.privacy.common import PrivacySetting
 from flsim.utils import test_utils as utils
 from flsim.utils.fl.common import FLModelParamUtils

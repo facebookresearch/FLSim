@@ -12,18 +12,21 @@ from typing import List
 import numpy as np
 import pytest
 import torch
-from flsim.common.pytest_helper import assertTrue, assertEqual, assertEmpty
+from flsim.common.pytest_helper import assertEmpty, assertEqual, assertTrue
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.async_aggregators import (
     AsyncAggregationType,
     AsyncAggregatorConfig,
     FedAvgWithLRAsyncAggregatorConfig,
-    FedAvgWithLRWithMomentumAsyncAggregatorConfig,
     FedAvgWithLRFedBuffAggregatorConfig,
+    FedAvgWithLRWithMomentumAsyncAggregatorConfig,
 )
 from flsim.utils.fl.common import FLModelParamUtils
-from flsim.utils.test_utils import MockQuadratic1DFL, Quadratic1D, SampleNet, TwoFC
 from flsim.utils.test_utils import (
+    MockQuadratic1DFL,
+    Quadratic1D,
+    SampleNet,
+    TwoFC,
     verify_models_equivalent_after_training,
 )
 from hydra.utils import instantiate

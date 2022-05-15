@@ -15,15 +15,12 @@ import math
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List, Optional
 
 import numpy as np
 import torch
 from flsim.common.logger import Logger
-from flsim.privacy.common import (
-    PrivacyBudget,
-    PrivacySetting,
-)
+from flsim.privacy.common import PrivacyBudget, PrivacySetting
 from opacus.accountants.analysis import rdp as privacy_analysis
 from torch import nn
 

@@ -14,8 +14,7 @@ from typing import Optional
 from flsim.channels.base_channel import IdentityChannel
 from flsim.interfaces.model import IFLModel
 from flsim.reducers.dp_round_reducer import DPRoundReducer, DPRoundReducerConfig
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.fl.common import FLModelParamUtils
 from omegaconf import MISSING
 from torch import nn

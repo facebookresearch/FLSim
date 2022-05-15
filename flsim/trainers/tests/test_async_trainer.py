@@ -5,21 +5,21 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, List, Dict
+from typing import Any, Dict, List
 
 import numpy as np
 import pytest
 import torch
 from flsim.common.pytest_helper import (
-    assertTrue,
+    assertAlmostEqual,
     assertEqual,
     assertLess,
-    assertAlmostEqual,
     assertListEqual,
+    assertTrue,
 )
 from flsim.common.timeline import Timeline
 from flsim.common.timeout_simulator import GaussianTimeOutSimulatorConfig
-from flsim.interfaces.metrics_reporter import TrainingStage, Channel
+from flsim.interfaces.metrics_reporter import Channel, TrainingStage
 from flsim.interfaces.model import IFLModel
 from flsim.metrics_reporter.tensorboard_metrics_reporter import FLMetricsReporter
 from flsim.optimizers.async_aggregators import (
@@ -35,18 +35,20 @@ from flsim.utils.async_trainer.async_example_weights import (
 )
 from flsim.utils.async_trainer.training_event_generator import (
     AsyncTrainingEventGeneratorConfig,
-    ConstantAsyncTrainingStartTimeDistrConfig,
     AsyncTrainingEventGeneratorFromListConfig,
+    ConstantAsyncTrainingStartTimeDistrConfig,
     EventTimingInfo,
 )
 from flsim.utils.fl.common import FLModelParamUtils
-from flsim.utils.sample_model import DummyAlphabetFLModel, ConstantGradientFLModel
+from flsim.utils.sample_model import ConstantGradientFLModel, DummyAlphabetFLModel
 from flsim.utils.test_utils import (
-    verify_models_equivalent_after_training,
-    RandomEvalMetricsReporter,
     MetricsReporterWithMockedChannels,
+    RandomEvalMetricsReporter,
+    verify_models_equivalent_after_training,
 )
 from flsim.utils.tests.helpers.async_trainer_test_utils import (
+    assert_fl_nonfl_same,
+    assert_fl_nonfl_same_equal_data_split,
     async_train_one_user,
     create_async_trainer,
     create_event_generator_config,
@@ -55,15 +57,11 @@ from flsim.utils.tests.helpers.async_trainer_test_utils import (
     get_fl_data_provider,
     get_safe_global_lr,
     get_unequal_split_data,
-    run_fl_training_with_event_generator,
     run_fl_training,
-    assert_fl_nonfl_same,
-    assert_fl_nonfl_same_equal_data_split,
+    run_fl_training_with_event_generator,
 )
 from flsim.utils.timing.training_duration_distribution import (
     PerExampleGaussianDurationDistributionConfig,
-)
-from flsim.utils.timing.training_duration_distribution import (
     PerUserUniformDurationDistributionConfig,
 )
 

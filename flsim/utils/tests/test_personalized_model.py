@@ -6,11 +6,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import pytest
-from flsim.common.pytest_helper import (
-    assertEqual,
-    assertRaises,
-    assertEmpty,
-)
+from flsim.common.pytest_helper import assertEmpty, assertEqual, assertRaises
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.fl.personalized_model import FLModelWithPrivateModules
 from flsim.utils.tests.helpers.test_models import (

@@ -16,7 +16,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import torch
 from flsim.channels.message import Message
 from flsim.clients.base_client import Client
-from flsim.clients.dp_client import DPClientConfig, DPClient
+from flsim.clients.dp_client import DPClient, DPClientConfig
 from flsim.common.timeline import Timeline
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.metrics_reporter import IFLMetricsReporter, Metric, TrainingStage
@@ -24,14 +24,12 @@ from flsim.interfaces.model import IFLModel
 from flsim.servers.sync_dp_servers import SyncDPSGDServerConfig
 from flsim.servers.sync_secagg_servers import SyncSecAggServerConfig
 from flsim.servers.sync_servers import (
+    FedAvgOptimizerConfig,
     ISyncServer,
     SyncServerConfig,
-    FedAvgOptimizerConfig,
 )
 from flsim.trainers.trainer_base import FLTrainer, FLTrainerConfig
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
-from flsim.utils.config_utils import is_target
+from flsim.utils.config_utils import fullclassname, init_self_cfg, is_target
 from flsim.utils.distributed.fl_distributed import FLDistributedUtils
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.fl.stats import RandomVariableStatsTracker

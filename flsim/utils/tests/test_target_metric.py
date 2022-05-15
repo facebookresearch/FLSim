@@ -6,15 +6,13 @@
 # LICENSE file in the root directory of this source tree.
 
 from flsim.common.pytest_helper import (
-    assertTrue,
-    assertLess,
-    assertGreater,
     assertFalse,
+    assertGreater,
+    assertLess,
+    assertTrue,
 )
-from flsim.utils.fl.stats import (
-    AverageType,
-)
-from flsim.utils.fl.target_metric import TargetMetricTracker, TargetMetricDirection
+from flsim.utils.fl.stats import AverageType
+from flsim.utils.fl.target_metric import TargetMetricDirection, TargetMetricTracker
 
 
 class TestTargetMetricTest:

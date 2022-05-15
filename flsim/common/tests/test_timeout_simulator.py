@@ -8,10 +8,10 @@
 import numpy as np
 import torch
 from flsim.common.pytest_helper import (
-    assertTrue,
-    assertIsInstance,
     assertAlmostEqual,
     assertEqual,
+    assertIsInstance,
+    assertTrue,
 )
 from flsim.common.timeout_simulator import (
     GaussianTimeOutSimulator,

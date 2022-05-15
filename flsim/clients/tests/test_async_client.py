@@ -29,9 +29,9 @@ from flsim.utils.data.fake_data_utils import create_mock_data_provider
 from flsim.utils.sample_model import DummyAlphabetFLModel, MockFLModel
 from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
 from flsim.utils.timing.training_duration_distribution import (
+    DurationDistributionConfig,
     PerExampleGaussianDurationDistributionConfig,
     PerUserGaussianDurationDistributionConfig,
-    DurationDistributionConfig,
 )
 from omegaconf import OmegaConf
 

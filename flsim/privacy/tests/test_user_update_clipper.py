@@ -9,9 +9,9 @@ import pytest
 import torch
 from flsim.common.pytest_helper import (
     assertAlmostEqual,
-    assertTrue,
     assertEqual,
     assertFalse,
+    assertTrue,
 )
 from flsim.privacy.user_update_clip import UserUpdateClipper
 from flsim.utils import test_utils as utils

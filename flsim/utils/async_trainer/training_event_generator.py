@@ -14,15 +14,13 @@ from dataclasses import dataclass
 from typing import List
 
 import numpy as np
-from flsim.utils.config_utils import fullclassname
-from flsim.utils.config_utils import init_self_cfg
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.timing.training_duration_distribution import (
-    PerExampleGaussianDurationDistributionConfig,
     DurationDistributionConfig,
+    PerExampleGaussianDurationDistributionConfig,
 )
 from hydra.utils import instantiate
-from omegaconf import MISSING
-from omegaconf import OmegaConf
+from omegaconf import MISSING, OmegaConf
 
 
 @dataclass

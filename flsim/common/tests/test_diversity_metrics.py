@@ -13,10 +13,7 @@ from flsim.common.diversity_metrics import (
     DiversityMetricType,
     DiversityStatistics,
 )
-from flsim.common.pytest_helper import (
-    assertEqual,
-    assertTrue,
-)
+from flsim.common.pytest_helper import assertEqual, assertTrue
 
 
 class TestDiversityStatistics:

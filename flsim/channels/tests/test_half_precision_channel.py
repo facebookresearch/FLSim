@@ -8,12 +8,10 @@
 from typing import Type
 
 import pytest
-from flsim.channels.communication_stats import (
-    ChannelDirection,
-)
+from flsim.channels.communication_stats import ChannelDirection
 from flsim.channels.half_precision_channel import (
-    HalfPrecisionChannelConfig,
     HalfPrecisionChannel,
+    HalfPrecisionChannelConfig,
 )
 from flsim.channels.message import Message
 from flsim.common.pytest_helper import assertEqual, assertIsInstance

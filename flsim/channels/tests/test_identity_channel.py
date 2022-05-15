@@ -9,9 +9,7 @@ from typing import Type
 
 import pytest
 from flsim.channels.base_channel import FLChannelConfig, IdentityChannel
-from flsim.channels.communication_stats import (
-    ChannelDirection,
-)
+from flsim.channels.communication_stats import ChannelDirection
 from flsim.channels.message import Message
 from flsim.common.pytest_helper import assertEqual, assertIsInstance
 from flsim.utils import test_utils as utils

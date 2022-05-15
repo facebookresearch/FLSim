@@ -24,9 +24,9 @@ from flsim.active_user_selectors.simple_user_selector import (
 )
 from flsim.common.pytest_helper import (
     assertEqual,
-    assertTrue,
-    assertRaises,
     assertIsInstance,
+    assertRaises,
+    assertTrue,
 )
 from flsim.utils.sample_model import DummyAlphabetFLModel
 from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset

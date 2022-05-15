@@ -7,7 +7,7 @@
 
 import abc
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import auto, Enum
 
 import numpy as np
 from flsim.data.data_provider import IFLDataProvider, IFLUserData

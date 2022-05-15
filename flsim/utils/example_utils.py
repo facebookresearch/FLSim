@@ -8,13 +8,12 @@
 # Cifar-10 dataset specific utils for use in the tutorials
 
 import random
-from typing import Any, Tuple, Iterator, List, Generator, Dict, Iterable, Optional
+from typing import Any, Dict, Generator, Iterable, Iterator, List, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
 from flsim.data.data_provider import IFLDataProvider, IFLUserData
-from flsim.data.data_sharder import FLDataSharder
-from flsim.data.data_sharder import SequentialSharder
+from flsim.data.data_sharder import FLDataSharder, SequentialSharder
 from flsim.interfaces.data_loader import IFLDataLoader
 from flsim.interfaces.metrics_reporter import Channel
 from flsim.interfaces.model import IFLModel

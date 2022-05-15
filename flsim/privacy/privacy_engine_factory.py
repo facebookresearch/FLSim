@@ -8,10 +8,10 @@
 from enum import Enum
 
 from flsim.privacy.privacy_engine import (
-    TreePrivacyEngine,
     GaussianPrivacyEngine,
-    PrivacySetting,
     IPrivacyEngine,
+    PrivacySetting,
+    TreePrivacyEngine,
 )
 
 

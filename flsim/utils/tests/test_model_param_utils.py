@@ -11,11 +11,11 @@ import math
 import torch
 import torch.nn as nn
 from flsim.common.pytest_helper import (
-    assertEqual,
-    assertTrue,
     assertAlmostEqual,
+    assertEqual,
     assertFalse,
     assertRaises,
+    assertTrue,
 )
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.fl.personalized_model import FLModelWithPrivateModules
