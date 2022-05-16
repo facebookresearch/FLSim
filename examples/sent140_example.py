@@ -7,8 +7,8 @@
 
 """In this tutorial, we will train a binary sentiment classifier on LEAF's Sent140 dataset with FLSim.
 
-Before running this file, you need to download the dataset, and partition the data by users. We
-provided the script get_data.sh for such task.
+Before running this file, you need to download the dataset and partition the data by users. We
+provide the script get_data.sh for this purpose.
 
     Typical usage example:
 
