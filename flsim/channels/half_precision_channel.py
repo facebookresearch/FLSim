@@ -19,7 +19,7 @@ class HalfPrecisionChannel(IdentityChannel):
     Implements a channel that emulates upload of model from client
     to server using half precision (fp16). We emulate this by
     casting successively to half() and back to float(). This way,
-    the rest of the training is transparent for aggreagators, reducers,
+    the rest of the training is transparent for aggregators, reducers,
     trainers and so on.
 
     Note that model.half().float() is *not* in general a no-operation,
@@ -29,7 +29,7 @@ class HalfPrecisionChannel(IdentityChannel):
 
     We do not override the method ``_during_transmission_client_to_server``
     from IdentityChannel since it can be applied here without modification to
-    measure the message size. Inded, it relies on ``element_size()``, which is,
+    measure the message size. Indeed, it relies on ``element_size()``, which is,
     as expected, 2 bytes for half precision and 4 bytes for fp32.
     """
 

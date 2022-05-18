@@ -38,7 +38,7 @@ class Message:
     # add any meta information here
     weight: float = field(default_factory=float)
 
-    # here we store state dict for conveninence
+    # here we store state dict for convenience
     model_state_dict: OrderedDict[str, Tensor] = field(
         default_factory=OrderedDict[str, Tensor], init=True
     )
@@ -47,11 +47,11 @@ class Message:
 
     def populate_state_dict(self, **kwargs):
         """
-        We copy the model's state dict and add is as attribute to the message.
+        We copy the model's state dict and add it as an attribute to the message.
 
         Notes:
           - We deepcopy the state dict to avoid side effects in case we manipulate
-            the state dict inplace.
+            the state dict in place.
           - We rely on a model's state dict as it will be easier to change the
             type of the underlying tensors (say int8) versus replacing every
             nn.Module with its corresponding counterpart.

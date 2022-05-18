@@ -21,7 +21,7 @@ class ScalarQuantizationChannel(IdentityChannel):
     Implements a channel that emulates scalar quantization from 1 to 8
     bits per weight (8 bits per weight corresponds to int8 quantization).
     We emulate this by successively quantizing and dequantizing. This way,
-    the rest of the training is transparent for aggreagators, reducers,
+    the rest of the training is transparent for aggregators, reducers,
     trainers and so on.
 
     Notes:
@@ -163,7 +163,7 @@ class ScalarQuantizationChannel(IdentityChannel):
     def _on_server_after_reception(self, message: Message) -> Message:
         """
         We dequantize the weights and do not dequantize the biases
-        since they have not beed quantized in the first place. We
+        since they have not been quantized in the first place. We
         copy the state dict since the tensor format changes.
         """
         new_state_dict = OrderedDict()

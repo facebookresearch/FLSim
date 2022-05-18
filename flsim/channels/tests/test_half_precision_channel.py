@@ -136,7 +136,7 @@ class TestHalfPrecisionChannel:
         message = Message(upload_model)
         message = channel.client_to_server(message)
 
-        # test communiction stats measurements
+        # test communication stats measurements
         stats = channel.stats_collector.get_channel_stats()
         client_to_server_bytes = stats[ChannelDirection.CLIENT_TO_SERVER].mean()
         server_to_client_bytes = stats[ChannelDirection.SERVER_TO_CLIENT].mean()

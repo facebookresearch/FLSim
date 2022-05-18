@@ -95,7 +95,7 @@ class SparseMaskChannel(IdentityChannel):
               separately depending on the magnitude of the values; the smallest values
               get pruned.
             - The message is pruned so that the number of non-sparse entries is
-              deterministc and constant across runs for a given weight matrix.
+              deterministic and constant across runs for a given weight matrix.
         """
         message.populate_state_dict()
         new_state_dict = OrderedDict()
