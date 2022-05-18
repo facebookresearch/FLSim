@@ -77,7 +77,7 @@ class TestDiverseUserSelector:
 
     def test_diversity_maximizing_user_selector(self) -> None:
         # Check that the selector actually chooses the cohort with maximum GD.
-        # For cohort size 3 our of 4 users, there are 4 possible cohorts.
+        # For cohort size 3 out of 4 users, there are 4 possible cohorts.
         # With 100 candidate cohorts we will try all 4 with very high probability.
         num_total_users, users_per_round = 4, 3
         num_data_per_user, dim_data = 6, 40
@@ -179,9 +179,6 @@ class TestDiverseUserSelector:
 
 
 class TestDiverseUserSelectorUtils:
-
-    tolerence = 1e-5
-
     def test_calculate_diversity_metrics(self) -> None:
         # We construct nonoverlapping data for each user so that the gradient diversity will be 1
         num_total_users, users_per_round = 10, 3
@@ -544,7 +541,7 @@ class TestDiverseUserSelectorUtils:
                 >= 1.0 / min(num_total_users, len(available_users))
             )
 
-            # The gradient diversity should be equal to the minimium in the statistics
+            # The gradient diversity should be equal to the minimum in the statistics
             diverse_cohort_diversity = (
                 DiverseUserSelectorUtils.calculate_diversity_metrics(
                     data_provider=data_provider,

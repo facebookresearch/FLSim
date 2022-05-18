@@ -254,7 +254,7 @@ class TestActiveUserSelector:
 
 class TestActiveUserSelectorUtils:
 
-    tolerence = 1e-5
+    tolerance = 1e-5
 
     def test_convert_to_probability(self) -> None:
         valuations = torch.tensor([1, 1, 1, 2, 2], dtype=torch.float)
@@ -270,11 +270,11 @@ class TestActiveUserSelectorUtils:
             valuations, 0, 1, weights
         )
         prob_2 = ActiveUserSelectorUtils.convert_to_probability(valuations, 0, 1)
-        assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerence))
+        assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerance))
 
         prob_1 = ActiveUserSelectorUtils.convert_to_probability(valuations, 0, 1)
         prob_2 = torch.exp(valuations) / sum(torch.exp(valuations))
-        assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerence))
+        assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerance))
 
         weights = torch.tensor([1, 2, 1, 2, 1], dtype=torch.float)
         unnormalized_probs = torch.tensor(
@@ -285,15 +285,15 @@ class TestActiveUserSelectorUtils:
         prob_2 = ActiveUserSelectorUtils.convert_to_probability(
             valuations, 0, 1, weights
         )
-        assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerence))
+        assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerance))
 
         prob_1 = ActiveUserSelectorUtils.convert_to_probability(valuations, 0, 0)
         prob_2 = torch.tensor([0.2] * 5, dtype=torch.float)
-        assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerence))
+        assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerance))
 
         prob_1 = ActiveUserSelectorUtils.convert_to_probability(valuations, 0, 25)
         prob_2 = torch.tensor([0, 0, 0, 0.5, 0.5], dtype=torch.float)
-        assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerence))
+        assertTrue(torch.allclose(prob_1, prob_2, rtol=self.tolerance))
 
         prob = ActiveUserSelectorUtils.convert_to_probability(valuations, 0.5, 1)
         assertEqual(len(torch.nonzero(prob)), 3)
@@ -308,13 +308,13 @@ class TestActiveUserSelectorUtils:
         no_normalization = ActiveUserSelectorUtils.normalize_by_sample_count(
             user_utility, counts, 0
         )
-        assertTrue(torch.allclose(no_normalization, user_utility, rtol=self.tolerence))
+        assertTrue(torch.allclose(no_normalization, user_utility, rtol=self.tolerance))
 
         avged = user_utility / counts
         avg_normalization = ActiveUserSelectorUtils.normalize_by_sample_count(
             user_utility, counts, 1
         )
-        assertTrue(torch.allclose(avg_normalization, avged, rtol=self.tolerence))
+        assertTrue(torch.allclose(avg_normalization, avged, rtol=self.tolerance))
 
     def test_samples_per_user(self) -> None:
         shard_size = 4
@@ -334,7 +334,7 @@ class TestActiveUserSelectorUtils:
 
     def test_select_users(self) -> None:
         """select_users has two mechanisms for selecting users: p proportion are
-        selected according to the probabilties in probs, and (1-p) proportion are
+        selected according to the probabilities in probs, and (1-p) proportion are
         selected uniformly at random, where p = fraction_uniformly_random. This test
         ensures that the correct number of users are returned for different values
         of p.

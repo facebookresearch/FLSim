@@ -206,7 +206,7 @@ class UniformlyRandomActiveUserSelector(ActiveUserSelector):
 class SequentialActiveUserSelector(ActiveUserSelector):
     """Simple User Selector which chooses users in sequential manner.
     e.g. if 2 users (user0 and user1) were trained in the previous round,
-    next 2 users (user2 and user3) will be picked in the current round.
+    the next 2 users (user2 and user3) will be picked in the current round.
     """
 
     def __init__(self, **kwargs):
