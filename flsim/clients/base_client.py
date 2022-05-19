@@ -133,7 +133,7 @@ class Client:
         Note:
         -----
         Only pass a ``metric_reporter`` if reporting is needed, i.e.
-        report_metrics will be called ont the reporter, o.w. reports will be
+        report_metrics will be called on the reporter, o.w. reports will be
         accumulated in memory.
         """
         updated_model, weight, optimizer = self.copy_and_train_model(
@@ -201,7 +201,7 @@ class Client:
 
     def receive_through_channel(self, model: IFLModel) -> IFLModel:
         """
-        Receives a reference to a state (refered to a model state_dict)
+        Receives a reference to a state (referred to as model state_dict)
         over the channel. Any channel effect is applied as part of this
         receive function.
         """
@@ -209,7 +209,7 @@ class Client:
         self.ref_model = model
 
         # need to clone the model because it's a reference to the global model
-        # modifying model will moidify the global model
+        # modifying model will modify the global model
         message = self.channel.server_to_client(
             Message(model=FLModelParamUtils.clone(model))
         )
@@ -220,7 +220,7 @@ class Client:
         self, model: IFLModel
     ) -> Tuple[IFLModel, torch.optim.Optimizer, OptimizerScheduler]:
         """
-        1- instansiate a model with the given initial state
+        1- instantiate a model with the given initial state
         2- create an optimizer
         """
         # inform cuda_state_manager that we're about to train a model
@@ -255,7 +255,7 @@ class Client:
     ) -> Tuple[IFLModel, float]:
         total_samples = 0
         # NOTE currently weight = total_sampls, this might be a bad strategy
-        # plus there are privcay implications that must be taken into account.
+        # plus there are privacy implications that must be taken into account.
         num_examples_processed = 0  # number of examples processed during training
         # pyre-ignore[16]:
         epochs = epochs if epochs is not None else self.cfg.epochs
@@ -350,8 +350,8 @@ class Client:
     ) -> int:
         """Trainer for NewDocModel based FL Tasks
         Run a single iteration of minibatch-gradient descent on a single user.
-        Compatible with the new tasks in which model is reponsible to
-        arrange its inputs, targets and context.
+        Compatible with the new tasks in which the model is responsible for
+        arranging its inputs, targets and context.
         Return number of examples in the batch.
         """
         optimizer.zero_grad()
@@ -389,4 +389,4 @@ class ClientConfig:
     random_seed: Optional[int] = None  # random seed for deterministic response
     shuffle_batch_order: bool = False  # shuffle the ordering of batches
     store_models_and_optimizers: bool = False  # name clear
-    track_multiple_selection: bool = False  # track if client appears in 2+ rounds.
+    track_multiple_selection: bool = False  # track if the client appears in 2+ rounds.

@@ -106,7 +106,7 @@ class TestAsyncClientDeviceGeneration:
     def test_sequential_client_training_schedule(self) -> None:
         r"""
         Check that training event generator produces TrainingSchedule sequentially
-        (where mean and SD of training time is 0), clients are truly produced sequentialy:
+        (where mean and SD of training time is 0), clients are truly produced sequentially:
         i.e, if client starts training, client A ends training before any other client start
         """
         num_users = 100
@@ -148,7 +148,7 @@ class TestAsyncClientDeviceGeneration:
 
         # verify that clients were produced and hence trained sequentially
         for client_1, client_2 in zip(clients, clients[1:]):
-            # check that client_1 should end trainign before  client_2 start training
+            # check that client_1 should end training before client_2 start training
             assert (
                 client_1.training_schedule.end_time
                 <= client_2.training_schedule.start_time

@@ -531,7 +531,7 @@ class TestDPClient(ClientTestBase):
         delta, weight1 = client.generate_local_update(model0)
 
         assertEqual(client.times_selected, 1)
-        # test existance of privacy_engine
+        # test existence of privacy_engine
         # model1 should be the first model stored
         optim = client.optimizers[0]
         assertIsInstance(optim, DPOptimizer)

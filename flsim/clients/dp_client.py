@@ -135,7 +135,7 @@ class DPClient(Client):
     ):
         if self.privacy_on and sample_count > optimizer.expected_batch_size:
             raise ValueError(
-                "Batchsize was not properly calculated!"
+                "Batch size was not properly calculated!"
                 " Calculated Epsilons are not Correct"
             )
 
