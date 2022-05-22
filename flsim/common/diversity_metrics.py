@@ -48,7 +48,7 @@ class DiversityMetrics:
     sum_client_delta_norm_sq is the sum of client gradient updates.
 
     sum_client_delta_mutual_angles depends only on the sum of mutual angles
-    between each pair client gradients. It can be positive or negative.
+    between each pair of client gradients. It can be positive or negative.
 
     The comparators will output a comparison of GD (or ORTH), not 1/GD.
     So a > b means GD(a) > GD(b), i.e. internal comparison of 1/GD(a) < 1/GD(b)

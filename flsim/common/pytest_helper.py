@@ -5,9 +5,9 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""Contains helper for Python PyTest tests.
+"""Contains helpers for Python PyTest tests.
 
-There are a list of helper utilities missing in PyTest.
+There is a list of helper utilities missing in PyTest.
 We define some of the helpful utilities in this one file
 so that all FL-sim PyTests can reuse them easily.
 """
@@ -19,7 +19,7 @@ def assertIsInstance(o: object, t: type) -> None:
 
 
 def assertAlmostEqual(first, second, places=None, msg=None, delta=None) -> None:
-    """Assert that ``first`` and ``second`` is almost equal to each other.
+    """Assert that ``first`` and ``second`` are almost equal to each other.
 
     The equality of ``first`` and ``second`` is determined in a similar way to
     the ``assertAlmostEqual`` function of the standard library.

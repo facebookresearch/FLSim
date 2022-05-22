@@ -268,7 +268,7 @@ class TestTrainingSimulatorUtils:
 
     def test_sequential_training(self) -> None:
         """Check that in sequential training (where mean and SD of training
-        time is zero), jobs are truly trained sequentialy: i.e, if job A
+        time is zero), jobs are truly trained sequentially: i.e, if job A
         starts training, job A ends training before any other jobs start
         training
         """
@@ -620,7 +620,7 @@ class TestTrainingSimulatorUtils:
             heavy tailed and there is no concentration of users with low
             staleness more than usual
         Condition 2:
-            Check that the distribution has a long tail that approximate a guassian tail
+            Check that the distribution has a long tail that approximates a Gaussian tail
             All values should be within 6 std of the mean
         """
         num_users = 1000

@@ -18,8 +18,8 @@ class Timeline(NamedTuple):
 
     This contains epoch, round, and rounds_per_epoch or
     global_round and rounds_per_epoch. All of these values
-    start from 1 by flsim convention. If any of these
-    need not be set the default value of 0 is assinged, which
+    start from 1 by FLSim convention. If any of these
+    need not be set, the default value of 0 is assigned, which
     helps us handle collision cases / initialization errors.
 
     Timeline usually refers to how many epochs/rounds have *finished*
@@ -34,7 +34,7 @@ class Timeline(NamedTuple):
         r"""
         Returns the global round number starting from 1.
 
-        For example, if round is 2 and epoch is 10 and num_rounds_per_epoch is 10
+        For example, if round is 2 and epoch is 10 and num_rounds_per_epoch is 10,
         it will return 102.
         """
         assert (self.epoch and self.round) or self.global_round
@@ -46,7 +46,7 @@ class Timeline(NamedTuple):
         r"""
         prints the time-line as a floating number.
 
-        E.g. if round is 2 and epoch is 10 and num_rounds_per_epoch is 10
+        E.g. if round is 2 and epoch is 10 and num_rounds_per_epoch is 10,
         it will return 10.2. By default uses the round value of the object
         but can also show a value for a run that is offset away from the
         current round.

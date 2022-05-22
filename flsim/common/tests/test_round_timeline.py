@@ -20,7 +20,7 @@ class TestTimeline:
         tl = Timeline(epoch=1, round=1)
         assertEqual(tl.global_round_num(), 1)
 
-        # test first round does not depned on rounds_per_epoch
+        # test first round does not depend on rounds_per_epoch
         tl = Timeline(epoch=1, round=1, rounds_per_epoch=100)
         assertEqual(tl.global_round_num(), 1)
 
@@ -45,7 +45,7 @@ class TestTimeline:
         tl = Timeline(epoch=10, round=1)
         assertAlmostEqual(tl.as_float(), 10.0)
 
-        # test first round does not depned on rounds_per_epoch
+        # test first round does not depend on rounds_per_epoch
         tl = Timeline(epoch=10, round=1, rounds_per_epoch=100)
         assertAlmostEqual(tl.as_float(), 9 + (1 / 100))
 

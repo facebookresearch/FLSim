@@ -45,7 +45,7 @@ class IAsyncTrainingEventHandler(abc.ABC):
         r"""
         Callback to notify the trainer of a training end event.
 
-        Trains local model for the client and incoporates it to the global model
+        Trains local model for the client and incorporates it into the global model
         """
         pass
 

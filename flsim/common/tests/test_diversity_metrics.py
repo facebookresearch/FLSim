@@ -164,7 +164,7 @@ class TestDiversityMetrics:
                 DiversityMetricType.gradient_diversity
             )
 
-            # Check that metric_value returns the value of the poperty of interest
+            # Check that metric_value returns the value of the property of interest
             diversity_metrics.diversity_metric_type = DiversityMetricType.orthogonality
             assertTrue(
                 math.isclose(

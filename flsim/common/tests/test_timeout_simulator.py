@@ -70,7 +70,7 @@ class TestTrainingTimeOutSimulator:
         create a dummy "training loop" (loop through users and rounds
         without actual training) and stops the training loop by explicitly
         comparing against fl_stopping_time, versus stopping the training
-        loop via internally tracked variablesin timeout_simulator and
+        loop via internally tracked variables in timeout_simulator and
         timeout_simulator.stop_fl() method.
         """
 
@@ -95,7 +95,7 @@ class TestTrainingTimeOutSimulator:
         ]
         elapsed_time_each_round = []
         torch.manual_seed(1)
-        # ground-truth: maually calling private functions in timeout_simulator and
+        # ground-truth: manually calling private functions in timeout_simulator and
         # record all elapsed time into list for book-keeping
         for r in range(num_rounds):
             training_time_users_in_round = []

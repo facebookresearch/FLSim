@@ -67,7 +67,7 @@ class AsyncTrainingSimulator:
     AsyncJobScheduler’s on_training_start_function, put the DeviceState back
     to the min_heap, and log to the JobQueueStats.
     Otherwise, it simply ends the training. Note that this works, because
-    relevant_tmie is set to training end time after training is triggered.
+    relevant_time is set to training end time after training is triggered.
     """
 
     logger: logging.Logger = Logger.get_logger(__name__)
