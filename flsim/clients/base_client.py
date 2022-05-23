@@ -124,7 +124,7 @@ class Client:
         return [self._tracked[s]["weight"] for s in range(self.times_selected)]
 
     def generate_local_update(
-        self, model: IFLModel, metric_reporter: Optional[IFLMetricsReporter] = None
+        self, model: IFLModel, metrics_reporter: Optional[IFLMetricsReporter] = None
     ) -> Tuple[IFLModel, float]:
         r"""
         wrapper around all functions called on a client for generating an
@@ -132,12 +132,12 @@ class Client:
 
         Note:
         -----
-        Only pass a ``metric_reporter`` if reporting is needed, i.e.
+        Only pass a ``metrics_reporter`` if reporting is needed, i.e.
         report_metrics will be called on the reporter, o.w. reports will be
         accumulated in memory.
         """
         updated_model, weight, optimizer = self.copy_and_train_model(
-            model, metric_reporter=metric_reporter
+            model, metrics_reporter=metrics_reporter
         )
         # 4. Store updated model if being tracked
         if self.store_last_updated_model:
@@ -156,7 +156,7 @@ class Client:
         epochs: Optional[int] = None,
         optimizer: Optional[torch.optim.Optimizer] = None,
         optimizer_scheduler: Optional[OptimizerScheduler] = None,
-        metric_reporter: Optional[IFLMetricsReporter] = None,
+        metrics_reporter: Optional[IFLMetricsReporter] = None,
     ) -> Tuple[IFLModel, float, torch.optim.Optimizer]:
         """Copy the model then use that model to train on the client's train split
 
@@ -181,7 +181,7 @@ class Client:
             updated_model,
             optim,
             optim_scheduler,
-            metric_reporter=metric_reporter,
+            metrics_reporter=metrics_reporter,
             epochs=epochs,
         )
         return updated_model, weight, optim
@@ -250,7 +250,7 @@ class Client:
         model: IFLModel,
         optimizer: Any,
         optimizer_scheduler: OptimizerScheduler,
-        metric_reporter: Optional[IFLMetricsReporter] = None,
+        metrics_reporter: Optional[IFLMetricsReporter] = None,
         epochs: Optional[int] = None,
     ) -> Tuple[IFLModel, float]:
         total_samples = 0
@@ -277,7 +277,7 @@ class Client:
                     optimizer=optimizer,
                     training_batch=batch,
                     epoch=epoch,
-                    metric_reporter=metric_reporter,
+                    metrics_reporter=metrics_reporter,
                     optimizer_scheduler=optimizer_scheduler,
                 )
                 self.post_batch_train(epoch, model, sample_count, optimizer)
@@ -320,7 +320,7 @@ class Client:
         self,
         model: IFLModel,
         dataset: Optional[IFLUserData] = None,
-        metric_reporter: Optional[IFLMetricsReporter] = None,
+        metrics_reporter: Optional[IFLMetricsReporter] = None,
     ):
         """
         Client evaluates the model based on its evaluation data split
@@ -334,8 +334,8 @@ class Client:
             model.fl_get_module().eval()
             for batch in data.eval_data():
                 batch_metrics = model.get_eval_metrics(batch)
-                if metric_reporter is not None:
-                    metric_reporter.add_batch_metrics(batch_metrics)
+                if metrics_reporter is not None:
+                    metrics_reporter.add_batch_metrics(batch_metrics)
         model.fl_get_module().train()
         self.cuda_state_manager.after_train_or_eval(model)
 
@@ -345,7 +345,7 @@ class Client:
         optimizer,
         training_batch,
         epoch,
-        metric_reporter,
+        metrics_reporter,
         optimizer_scheduler,
     ) -> int:
         """Trainer for NewDocModel based FL Tasks
@@ -371,8 +371,8 @@ class Client:
         optimizer_scheduler.step(batch_metrics, model, training_batch, epoch)
         optimizer.step()
 
-        if metric_reporter is not None:
-            metric_reporter.add_batch_metrics(batch_metrics)
+        if metrics_reporter is not None:
+            metrics_reporter.add_batch_metrics(batch_metrics)
 
         return num_examples
 

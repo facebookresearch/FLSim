@@ -295,7 +295,7 @@ def run_fl_training(
         metrics_reporter = FakeMetricReporter()
     fl_trained_model, test_metrics = async_trainer.train(
         data_provider=fl_data_provider,
-        metric_reporter=metrics_reporter,
+        metrics_reporter=metrics_reporter,
         num_total_users=fl_data_provider.num_train_users(),
         distributed_world_size=1,
     )
@@ -583,7 +583,7 @@ def run_fl_training_with_event_generator(
     )
     fl_trained_model, _ = async_trainer.train(
         data_provider=fl_data_provider,
-        metric_reporter=FakeMetricReporter(),
+        metrics_reporter=FakeMetricReporter(),
         num_total_users=fl_data_provider.num_train_users(),
         distributed_world_size=1,
     )

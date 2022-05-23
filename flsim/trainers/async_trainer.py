@@ -90,7 +90,7 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
         )
         # for pyre; declare instance variables (https://fburl.com/88n6i71r)
         # pyre-fixme[8]: Attribute has type `IFLMetricsReporter`; used as `None`.
-        self.metric_reporter: "IFLMetricsReporter" = None
+        self.metrics_reporter: "IFLMetricsReporter" = None
         self.best_metric = None
         self.best_model_state = self.global_model().fl_get_module().state_dict()
 
@@ -137,7 +137,7 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
         self.aggregator.zero_grad()
         # 2. train client on local data
         client_delta, final_local_model, num_examples = client.train_local_model(
-            self.metric_reporter
+            self.metrics_reporter
         )
         assert num_examples > 0, "Client must have more than one example"
         # 3. get client staleness
@@ -173,17 +173,17 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
         self._report_train_metrics(
             model=self.global_model(),
             timeline=timeline,
-            metric_reporter=self.metric_reporter,
+            metrics_reporter=self.metrics_reporter,
             extra_metrics=self._get_training_metrics(),
         )
         self._calc_post_epoch_communication_metrics(
-            self._get_timeline(), self.metric_reporter
+            self._get_timeline(), self.metrics_reporter
         )
         self.best_metric, self.best_model_state = FLTrainer._maybe_run_evaluation(
             self,
             timeline=timeline,
             data_provider=self.data_provider,
-            metric_reporter=self.metric_reporter,
+            metrics_reporter=self.metrics_reporter,
             best_metric=self.best_metric,
             best_model_state=self.best_model_state,
         )
@@ -220,7 +220,7 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
     def train(
         self,
         data_provider: IFLDataProvider,
-        metric_reporter: IFLMetricsReporter,
+        metrics_reporter: IFLMetricsReporter,
         num_total_users: int,
         distributed_world_size: int = 1,
         rank: int = 0,
@@ -231,7 +231,7 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
                 each batch iterator represents data from a single 'user'
             eval_iter (Iterable[Any]): batch iterator of evaluation data
             model (Model): model to be trained
-            metric_reporter (IFLMetricsReporter): compute metric based on training
+            metrics_reporter (IFLMetricsReporter): compute metric based on training
                 output and report results to console, file.. etc
 
         Returns:
@@ -244,7 +244,7 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
         self.best_metric = None
         self.best_model_state = self.global_model().fl_get_module().state_dict()
         self.data_provider = data_provider
-        self.metric_reporter = metric_reporter
+        self.metrics_reporter = metrics_reporter
         self.num_total_users = data_provider.num_train_users()
         self.aggregator.set_num_total_users(self.num_total_users)
         user_selector = AsyncUserSelectorFactory.create_users_selector(

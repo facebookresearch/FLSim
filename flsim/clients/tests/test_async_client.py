@@ -370,7 +370,7 @@ class TestAsyncClientDevice:
             client_delta,
             final_local_model,
             num_examples_trained,
-        ) = client.train_local_model(metric_reporter=None)
+        ) = client.train_local_model(metrics_reporter=None)
         client.training_ended()
 
         assertEqual(num_examples_trained, examples_per_user)

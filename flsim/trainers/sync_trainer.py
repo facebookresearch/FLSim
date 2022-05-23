@@ -121,7 +121,7 @@ class SyncTrainer(FLTrainer):
     def train(
         self,
         data_provider: IFLDataProvider,
-        metric_reporter: IFLMetricsReporter,
+        metrics_reporter: IFLMetricsReporter,
         num_total_users: int,
         distributed_world_size: int,
         rank: int = 0,
@@ -140,7 +140,7 @@ class SyncTrainer(FLTrainer):
         Args:
             data_provider: provides training, evaluation, and test data iterables and
                 gets a user's data based on user ID
-            metric_reporter: computes and reports metrics of interest such as accuracy
+            metrics_reporter: computes and reports metrics of interest such as accuracy
                 or perplexity
             num_total_users: number of total users for training
 
@@ -228,7 +228,7 @@ class SyncTrainer(FLTrainer):
                     clients=clients,
                     agg_metric_clients=agg_metric_clients,
                     users_per_round=users_per_round,
-                    metric_reporter=metric_reporter
+                    metrics_reporter=metrics_reporter
                     if self.cfg.report_train_metrics
                     else None,
                 )
@@ -260,7 +260,7 @@ class SyncTrainer(FLTrainer):
                     (best_metric, best_model_state,) = self._maybe_run_evaluation(
                         timeline=timeline,
                         data_provider=data_provider,
-                        metric_reporter=metric_reporter,
+                        metrics_reporter=metrics_reporter,
                         best_metric=best_metric,
                         best_model_state=best_model_state,
                     )
@@ -272,7 +272,7 @@ class SyncTrainer(FLTrainer):
                     break
 
             # pyre-fixme[61]: `timeline` may not be initialized here.
-            self._report_post_epoch_client_metrics(timeline, metric_reporter)
+            self._report_post_epoch_client_metrics(timeline, metrics_reporter)
             if self.stop_fl_training(
                 epoch=epoch,
                 round=round,  # pyre-fixme[61]: `round` may not be initialized here.
@@ -352,7 +352,7 @@ class SyncTrainer(FLTrainer):
         clients: Iterable[Client],
         agg_metric_clients: Iterable[Client],
         users_per_round: int,
-        metric_reporter: Optional[IFLMetricsReporter],
+        metrics_reporter: Optional[IFLMetricsReporter],
     ) -> None:
         """Trains the global model for one training round.
 
@@ -362,7 +362,7 @@ class SyncTrainer(FLTrainer):
             agg_metric_clients: clients for evaluating the post-aggregation
                 training metrics
             users_per_round: the number of participating users
-            metric_reporter: the metric reporter to pass to other methods
+            metrics_reporter: the metric reporter to pass to other methods
         """
         t = time()
         self.server.init_round()
@@ -370,7 +370,7 @@ class SyncTrainer(FLTrainer):
 
         def update(client):
             client_delta, weight = client.generate_local_update(
-                self.global_model(), metric_reporter
+                self.global_model(), metrics_reporter
             )
             self.server.receive_update_from_client(Message(client_delta, weight))
 
@@ -387,18 +387,18 @@ class SyncTrainer(FLTrainer):
         self._report_train_metrics(
             model=self.global_model(),
             timeline=timeline,
-            metric_reporter=metric_reporter,
+            metrics_reporter=metrics_reporter,
         )
         self._evaluate_global_model_after_aggregation_on_train_clients(
             clients=agg_metric_clients,
             model=self.global_model(),
             timeline=timeline,
             users_per_round=users_per_round,
-            metric_reporter=metric_reporter,
+            metrics_reporter=metrics_reporter,
         )
         self._calc_post_epoch_communication_metrics(
             timeline,
-            metric_reporter,
+            metrics_reporter,
         )
         self.logger.info(f"Aggregate round reporting took {time() - t} s.")
 
@@ -433,7 +433,7 @@ class SyncTrainer(FLTrainer):
         self,
         clients: Iterable[Client],
         model: IFLModel,
-        metric_reporter: Optional[IFLMetricsReporter],
+        metrics_reporter: Optional[IFLMetricsReporter],
     ) -> List[Metric]:
         """Calculates privacy metrics."""
         metrics = []
@@ -464,13 +464,13 @@ class SyncTrainer(FLTrainer):
         clients: Iterable[Client],
         model: IFLModel,
         users_per_round: int,
-        metric_reporter: Optional[IFLMetricsReporter],
+        metrics_reporter: Optional[IFLMetricsReporter],
     ) -> List[Metric]:
         """Calculates overflow metrics."""
         metrics = []
         if self.is_secure_aggregation_enabled:
             for client in clients:
-                client.eval(model=model, metric_reporter=metric_reporter)
+                client.eval(model=model, metrics_reporter=metrics_reporter)
             (
                 convert_overflow_perc,
                 aggregate_overflow_perc,
@@ -489,20 +489,20 @@ class SyncTrainer(FLTrainer):
         self,
         client_models: Dict[Client, IFLModel],
         round_timeline: Timeline,
-        metric_reporter: IFLMetricsReporter,
+        metrics_reporter: IFLMetricsReporter,
     ) -> List[List[Metric]]:
         """Calculates client-side metrics on the overall evaluation set."""
         client_metrics = []
-        if metric_reporter is not None:
+        if metrics_reporter is not None:
             for client, model in tqdm(client_models.items()):
-                metric_reporter.reset()
+                metrics_reporter.reset()
                 client.eval(
                     model=model,
-                    metric_reporter=metric_reporter,
+                    metrics_reporter=metrics_reporter,
                 )
                 # pyre-fixme[16]: `IFLMetricsReporter` has no attribute
                 #  `compute_scores`.
-                score = metric_reporter.compute_scores()
+                score = metrics_reporter.compute_scores()
                 client_metrics.append(Metric.from_dict(score))
 
         return client_metrics
@@ -513,10 +513,10 @@ class SyncTrainer(FLTrainer):
         model: IFLModel,
         timeline: Timeline,
         users_per_round: int,
-        metric_reporter: Optional[IFLMetricsReporter] = None,
+        metrics_reporter: Optional[IFLMetricsReporter] = None,
     ):
         if (
-            metric_reporter is not None
+            metrics_reporter is not None
             # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
             and self.cfg.report_train_metrics
             and self.cfg.report_train_metrics_after_aggregation
@@ -527,18 +527,18 @@ class SyncTrainer(FLTrainer):
                 for client in clients:
                     for batch in client.dataset.train_data():
                         batch_metrics = model.get_eval_metrics(batch)
-                        if metric_reporter is not None:
-                            metric_reporter.add_batch_metrics(batch_metrics)
+                        if metrics_reporter is not None:
+                            metrics_reporter.add_batch_metrics(batch_metrics)
                 model.fl_get_module().train()
 
             privacy_metrics = self._calc_privacy_metrics(
-                clients, model, metric_reporter
+                clients, model, metrics_reporter
             )
             overflow_metrics = self._calc_overflow_metrics(
-                clients, model, users_per_round, metric_reporter
+                clients, model, users_per_round, metrics_reporter
             )
 
-            metric_reporter.report_metrics(
+            metrics_reporter.report_metrics(
                 model=model,
                 reset=True,
                 stage=TrainingStage.AGGREGATION,
@@ -559,10 +559,10 @@ class SyncTrainer(FLTrainer):
     def _report_post_epoch_client_metrics(
         self,
         timeline: Timeline,
-        metric_reporter: Optional[IFLMetricsReporter],
+        metrics_reporter: Optional[IFLMetricsReporter],
     ):
         if (
-            metric_reporter is not None
+            metrics_reporter is not None
             # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
             and self.cfg.report_client_metrics
             and self.cfg.report_client_metrics_after_epoch
@@ -572,7 +572,7 @@ class SyncTrainer(FLTrainer):
                 client: client.last_updated_model for client in self.clients.values()
             }
             client_scores = self._calc_post_epoch_client_metrics(
-                client_models, timeline, metric_reporter
+                client_models, timeline, metrics_reporter
             )
 
             # Find stats over the client_metrics (mean, min, max, median, std)
@@ -603,7 +603,7 @@ class SyncTrainer(FLTrainer):
                     score = client_stats_trackers[score_name].__getattribute__(stat_key)
                     reportable_client_metrics.append(Metric(stat_name, score))
 
-            metric_reporter.report_metrics(
+            metrics_reporter.report_metrics(
                 model=None,
                 reset=True,
                 stage=TrainingStage.PER_CLIENT_EVAL,

@@ -409,7 +409,7 @@ class TestAsyncTrainer:
             )
             trained_fl_model, _ = async_trainer.train(
                 data_provider=fl_data_provider,
-                metric_reporter=MetricsReporterWithMockedChannels(),
+                metrics_reporter=MetricsReporterWithMockedChannels(),
                 num_total_users=num_users,
                 distributed_world_size=1,
             )
@@ -432,7 +432,7 @@ class TestAsyncTrainer:
             )
             trained_fl_model, _ = async_trainer.train(
                 data_provider=fl_data_provider,
-                metric_reporter=MetricsReporterWithMockedChannels(),
+                metrics_reporter=MetricsReporterWithMockedChannels(),
                 num_total_users=num_users,
                 distributed_world_size=1,
             )
@@ -468,14 +468,14 @@ class TestAsyncTrainer:
              t3: user2 finishes training (should cause metric reporting with #examples=1)
              t11: user1 finishes training (should cause metric reporting with #examples=8)
              We verify the order in which metrics were reported.
-             metric_reporter.num_examples_list should be = [1, 8]
+             metrics_reporter.num_examples_list should be = [1, 8]
         b) Creating training event order as following:
              t1: user1 starts training
              t2: user2 starts training
              t3: user1 finishes training (should cause metric reporting with #examples=8)
              t10: user2 finishes training (should cause metric reporting with #examples=1)
              We verify the order in which metrics were reported.
-             metric_reporter.num_examples_list should be = [8, 1]
+             metrics_reporter.num_examples_list should be = [8, 1]
         """
         # first entry in tuple: time gap between training start and previous training start
         # second entry in tuple: training duration
@@ -522,15 +522,15 @@ class TestAsyncTrainer:
                 ),
             )
 
-            metric_reporter = TestMetricsReporter()
+            metrics_reporter = TestMetricsReporter()
             fl_model, _ = async_trainer.train(
                 data_provider=fl_data_provider,
-                metric_reporter=metric_reporter,
+                metrics_reporter=metrics_reporter,
                 num_total_users=fl_data_provider.num_train_users(),
                 distributed_world_size=1,
             )
             assertEqual(
-                metric_reporter.num_examples_list, expected_num_examples * num_epochs
+                metrics_reporter.num_examples_list, expected_num_examples * num_epochs
             )
 
         # user2 completes training before user1
@@ -779,7 +779,7 @@ class TestAsyncTrainer:
 
         final_model, _ = async_trainer.train(
             data_provider=data_provider,
-            metric_reporter=metrics_reporter,
+            metrics_reporter=metrics_reporter,
             num_total_users=num_users,
             distributed_world_size=1,
         )
@@ -827,7 +827,7 @@ class TestAsyncTrainer:
 
         final_model, _ = async_trainer.train(
             data_provider=data_provider,
-            metric_reporter=metrics_reporter,
+            metrics_reporter=metrics_reporter,
             num_total_users=num_users,
             distributed_world_size=1,
         )
@@ -857,7 +857,7 @@ class TestAsyncTrainer:
 
         final_model, _ = async_trainer.train(
             data_provider=data_provider,
-            metric_reporter=metrics_reporter,
+            metrics_reporter=metrics_reporter,
             num_total_users=num_users,
             distributed_world_size=1,
         )
@@ -928,7 +928,7 @@ class TestAsyncTrainer:
                 batch_size=batch_size,
                 model=fl_model,
             )
-            metric_reporter = RandomEvalMetricsReporter()
+            metrics_reporter = RandomEvalMetricsReporter()
             # run_fl_training returns test results. However,
             # RandomEvalMetricsReporter() fakes it so test results are always
             # the best_eval_results
@@ -940,13 +940,13 @@ class TestAsyncTrainer:
                 aggregator_config=FedAvgWithLRFedBuffAggregatorConfig(
                     lr=1.0, buffer_size=buffer_size
                 ),
-                metrics_reporter=metric_reporter,
+                metrics_reporter=metrics_reporter,
                 do_eval=True,
                 report_train_metrics_after_aggregation=True,
                 eval_epoch_frequency=0.001,  # report every global model update
             )
-            assertEqual(best_eval_results, metric_reporter.best_eval_result)
-            # TODO: also check that best_model matches metric_reporter.best_eval_model
+            assertEqual(best_eval_results, metrics_reporter.best_eval_result)
+            # TODO: also check that best_model matches metrics_reporter.best_eval_model
             # after fixing code
 
     @pytest.mark.parametrize(
@@ -1000,7 +1000,7 @@ class TestAsyncTrainer:
 
         final_model, _ = async_trainer.train(
             data_provider=data_provider,
-            metric_reporter=metrics_reporter,
+            metrics_reporter=metrics_reporter,
             num_total_users=num_users,
         )
         # invariant 1, after check that concurrency eventually reaches

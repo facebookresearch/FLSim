@@ -84,7 +84,7 @@ class FedBuffTestUtils:
         training_duration_mean: float,
         training_duration_sd: float,
     ) -> IFLModel:
-        metric_reporter = MetricsReporterWithMockedChannels()
+        metrics_reporter = MetricsReporterWithMockedChannels()
         if trainer_to_compare_fedbuff_with == TrainerType.SYNC:
             trainer = create_sync_trainer(
                 model=global_model,
@@ -95,7 +95,7 @@ class FedBuffTestUtils:
             )
             model_to_compare, _ = trainer.train(
                 data_provider=data_provider,
-                metric_reporter=metric_reporter,
+                metrics_reporter=metrics_reporter,
                 num_total_users=data_provider.num_train_users(),
                 distributed_world_size=1,
             )
@@ -113,7 +113,7 @@ class FedBuffTestUtils:
             )
             model_to_compare, _ = trainer.train(
                 data_provider=data_provider,
-                metric_reporter=metric_reporter,
+                metrics_reporter=metrics_reporter,
                 num_total_users=data_provider.num_train_users(),
                 distributed_world_size=1,
             )
@@ -137,7 +137,7 @@ class FedBuffTestUtils:
                 data_provider=data_provider,
                 global_model=global_model,
                 optimizer=optimizer,
-                metrics_reporter=metric_reporter,
+                metrics_reporter=metrics_reporter,
                 epochs=epochs,
             )
         # pyre-fixme[61]: `model_to_compare` may not be initialized here.
@@ -248,7 +248,7 @@ class FedBuffTestUtils:
 
             fedbuff_model, _ = fedbuff_trainer.train(
                 data_provider=data_provider,
-                metric_reporter=MetricsReporterWithMockedChannels(),
+                metrics_reporter=MetricsReporterWithMockedChannels(),
                 num_total_users=data_provider.num_train_users(),
                 distributed_world_size=1,
             )

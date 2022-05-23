@@ -54,7 +54,7 @@ class PrivateSyncTrainer(SyncTrainer):
     def train(
         self,
         data_provider: IFLDataProvider,
-        metric_reporter: IFLMetricsReporter,
+        metrics_reporter: IFLMetricsReporter,
         num_total_users: int,
         distributed_world_size: int,
         rank: int = 0,
@@ -71,7 +71,7 @@ class PrivateSyncTrainer(SyncTrainer):
         self.aggregator.init_round(dp_round_reducer)
         return super().train(
             data_provider,
-            metric_reporter,
+            metrics_reporter,
             num_total_users,
             distributed_world_size,
             rank,
@@ -98,10 +98,10 @@ class PrivateSyncTrainer(SyncTrainer):
         self,
         clients: Iterable[Client],
         model: IFLModel,
-        metric_reporter: Optional[IFLMetricsReporter],
+        metrics_reporter: Optional[IFLMetricsReporter],
     ) -> List[Metric]:
 
-        metrics = super()._calc_privacy_metrics(clients, model, metric_reporter)
+        metrics = super()._calc_privacy_metrics(clients, model, metrics_reporter)
 
         # calculate sample level dp privacy loss statistics.
         all_client_eps = torch.Tensor(

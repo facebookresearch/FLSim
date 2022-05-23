@@ -27,7 +27,7 @@ class FineTuner:
         data: Iterable[IFLUserData],
         global_model: IFLModel,
         client_config: ClientConfig,
-        metric_reporter: IFLMetricsReporter,
+        metrics_reporter: IFLMetricsReporter,
         cuda_state_manager: CudaTransferMinimizer,
         training_stage: TrainingStage,
         timeline: Timeline,
@@ -42,12 +42,12 @@ class FineTuner:
                 global_model=global_model,
                 data=user_data,
                 client_config=client_config,
-                metric_reporter=metric_reporter,
+                metrics_reporter=metrics_reporter,
                 cuda_state_manager=cuda_state_manager,
                 epochs=epochs,
             )
 
-        return metric_reporter.report_metrics(
+        return metrics_reporter.report_metrics(
             model=global_model,
             reset=True,
             stage=training_stage,
@@ -62,7 +62,7 @@ class FineTuner:
         global_model: IFLModel,
         data: IFLUserData,
         client_config: ClientConfig,
-        metric_reporter: IFLMetricsReporter,
+        metrics_reporter: IFLMetricsReporter,
         cuda_state_manager: CudaTransferMinimizer,
         epochs: int,
     ) -> IFLModel:
@@ -75,5 +75,5 @@ class FineTuner:
         fine_tuned_model, _, _ = eval_client.copy_and_train_model(
             model=global_model, epochs=epochs
         )
-        eval_client.eval(model=fine_tuned_model, metric_reporter=metric_reporter)
+        eval_client.eval(model=fine_tuned_model, metrics_reporter=metrics_reporter)
         return fine_tuned_model

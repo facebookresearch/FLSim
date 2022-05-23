@@ -698,7 +698,7 @@ class TestTrainer:
         )
         fl_model, _ = sync_trainer.train(
             data_provider,
-            metric_reporter=FakeMetricReporter(),
+            metrics_reporter=FakeMetricReporter(),
             num_total_users=data_provider.num_train_users(),
             distributed_world_size=world_size,
         )
@@ -838,7 +838,7 @@ class TestTrainer:
         )
         model_with_overselection, _ = sync_trainer_overselection.train(
             data_provider,
-            metric_reporter=FakeMetricReporter(),
+            metrics_reporter=FakeMetricReporter(),
             num_total_users=data_provider.num_train_users(),
             distributed_world_size=1,
         )
@@ -861,7 +861,7 @@ class TestTrainer:
         )
         model_single_user, _ = sync_trainer_single_user.train(
             data_provider,
-            metric_reporter=FakeMetricReporter(),
+            metrics_reporter=FakeMetricReporter(),
             num_total_users=data_provider.num_train_users(),
             distributed_world_size=1,
         )
@@ -924,7 +924,7 @@ class TestTrainer:
         )
         model_with_timeout, _ = sync_trainer_timeout.train(
             data_provider,
-            metric_reporter=FakeMetricReporter(),
+            metrics_reporter=FakeMetricReporter(),
             num_total_users=data_provider.num_train_users(),
             distributed_world_size=1,
         )
@@ -951,7 +951,7 @@ class TestTrainer:
         )
         model_no_timeout, _ = sync_trainer_timeout.train(
             data_provider,
-            metric_reporter=FakeMetricReporter(),
+            metrics_reporter=FakeMetricReporter(),
             num_total_users=data_provider.num_train_users(),
             distributed_world_size=1,
         )
@@ -1028,7 +1028,7 @@ class TestTrainer:
 
         model, _ = sync_trainer_with_client_reports.train(
             data_provider,
-            metric_reporter=metrics_reporter,
+            metrics_reporter=metrics_reporter,
             num_total_users=data_provider.num_train_users(),
             distributed_world_size=1,
         )

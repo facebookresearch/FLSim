@@ -86,7 +86,7 @@ class FLTrainer(abc.ABC):
     def train(
         self,
         data_provider: IFLDataProvider,
-        metric_reporter: IFLMetricsReporter,
+        metrics_reporter: IFLMetricsReporter,
         num_total_users: int,
         distributed_world_size: int = 1,
         rank: int = 0,
@@ -94,13 +94,13 @@ class FLTrainer(abc.ABC):
         pass
 
     def test(
-        self, data_provider: IFLDataProvider, metric_reporter: IFLMetricsReporter
+        self, data_provider: IFLDataProvider, metrics_reporter: IFLMetricsReporter
     ) -> Any:
         return self._test(
             timeline=Timeline(global_round=1),
             data_provider=data_provider,
             model=self.global_model(),
-            metric_reporter=metric_reporter,
+            metrics_reporter=metrics_reporter,
         )
 
     def global_model(self) -> IFLModel:
@@ -110,7 +110,7 @@ class FLTrainer(abc.ABC):
         self,
         timeline: Timeline,
         data_provider,
-        metric_reporter: IFLMetricsReporter,
+        metrics_reporter: IFLMetricsReporter,
         best_metric,
         best_model_state,
     ):
@@ -128,7 +128,7 @@ class FLTrainer(abc.ABC):
                 timeline=timeline,
                 data_provider=data_provider,
                 global_model=self.global_model(),
-                metric_reporter=metric_reporter,
+                metrics_reporter=metrics_reporter,
             )
 
         # evaluate global model on eval users
@@ -136,10 +136,10 @@ class FLTrainer(abc.ABC):
             timeline=timeline,
             data_provider=data_provider,
             global_model=self.global_model(),
-            metric_reporter=metric_reporter,
+            metrics_reporter=metrics_reporter,
         )
 
-        # 1) keep the best model so far if metric_reporter.compare_metrics is specified
+        # 1) keep the best model so far if metrics_reporter.compare_metrics is specified
         # 2) if self.always_keep_trained_model is set as true, ignore the metrics and
         #    keep the trained model for each epoch
         if self.cfg.always_keep_trained_model or eval_metric_better_than_prev:
@@ -156,17 +156,17 @@ class FLTrainer(abc.ABC):
         self,
         model: IFLModel,
         timeline: Timeline,
-        metric_reporter: Optional[IFLMetricsReporter] = None,
+        metrics_reporter: Optional[IFLMetricsReporter] = None,
         extra_metrics: Optional[List[Metric]] = None,
     ) -> None:
         if (
             # pyre-fixme[16]: `FLTrainer` has no attribute `cfg`.
             self.cfg.report_train_metrics
-            and metric_reporter is not None
+            and metrics_reporter is not None
             and timeline.tick(1.0 / self.cfg.train_metrics_reported_per_epoch)
         ):
             self._print_training_stats(timeline)
-            metric_reporter.report_metrics(
+            metrics_reporter.report_metrics(
                 model=model,
                 reset=True,
                 stage=TrainingStage.TRAINING,
@@ -177,11 +177,11 @@ class FLTrainer(abc.ABC):
             )
 
     def _calc_post_epoch_communication_metrics(
-        self, timeline: Timeline, metric_reporter: Optional[IFLMetricsReporter]
+        self, timeline: Timeline, metrics_reporter: Optional[IFLMetricsReporter]
     ):
 
         if (
-            metric_reporter is not None
+            metrics_reporter is not None
             and self.channel.cfg.report_communication_metrics
             # pyre-fixme[16]: `FLTrainer` has no attribute `cfg`
             and timeline.tick(1.0 / self.cfg.train_metrics_reported_per_epoch)
@@ -195,7 +195,7 @@ class FLTrainer(abc.ABC):
                 )
                 for name, tracker in self.channel.stats_collector.get_channel_stats().items()
             ]
-            metric_reporter.report_metrics(
+            metrics_reporter.report_metrics(
                 model=None,
                 reset=False,
                 stage=TrainingStage.TRAINING,
@@ -211,7 +211,7 @@ class FLTrainer(abc.ABC):
         timeline: Timeline,
         data_provider,
         global_model: IFLModel,  # a global model
-        metric_reporter: IFLMetricsReporter,
+        metrics_reporter: IFLMetricsReporter,
     ) -> Any:
         """Finetunes global model for each eval user on their train data
         and then evaluates performance on local eval data
@@ -224,7 +224,7 @@ class FLTrainer(abc.ABC):
             global_model=global_model,
             # pyre-ignore[16]
             client_config=self.cfg.client,
-            metric_reporter=metric_reporter,
+            metrics_reporter=metrics_reporter,
             cuda_state_manager=self._cuda_state_manager,
             training_stage=TrainingStage.PERSONALIZED_EVAL,
             timeline=timeline,
@@ -237,7 +237,7 @@ class FLTrainer(abc.ABC):
         timeline: Timeline,
         data_provider: IFLDataProvider,
         global_model: IFLModel,
-        metric_reporter: IFLMetricsReporter,
+        metrics_reporter: IFLMetricsReporter,
     ) -> Tuple[Any, bool]:
         """
         Evaluate global model on eval users
@@ -249,9 +249,9 @@ class FLTrainer(abc.ABC):
             for user in data_provider.eval_users():
                 for batch in user.eval_data():
                     batch_metrics = global_model.get_eval_metrics(batch)
-                    metric_reporter.add_batch_metrics(batch_metrics)
+                    metrics_reporter.add_batch_metrics(batch_metrics)
 
-            metrics, found_best_model = metric_reporter.report_metrics(
+            metrics, found_best_model = metrics_reporter.report_metrics(
                 model=global_model,
                 reset=True,
                 stage=TrainingStage.EVAL,
@@ -267,7 +267,7 @@ class FLTrainer(abc.ABC):
         timeline: Timeline,
         data_provider: IFLDataProvider,
         model: IFLModel,
-        metric_reporter: IFLMetricsReporter,
+        metrics_reporter: IFLMetricsReporter,
     ) -> Any:
 
         personalized_metrics = {}
@@ -277,7 +277,7 @@ class FLTrainer(abc.ABC):
                 data=self.data_provider.test_users(),
                 global_model=model,
                 client_config=self.cfg.client,
-                metric_reporter=metric_reporter,
+                metrics_reporter=metrics_reporter,
                 cuda_state_manager=self._cuda_state_manager,
                 training_stage=TrainingStage.PERSONALIZED_TEST,
                 timeline=timeline,
@@ -292,9 +292,9 @@ class FLTrainer(abc.ABC):
             for test_user in data_provider.test_users():
                 for batch in test_user.eval_data():
                     batch_metrics = model.get_eval_metrics(batch)
-                    metric_reporter.add_batch_metrics(batch_metrics)
+                    metrics_reporter.add_batch_metrics(batch_metrics)
 
-            metrics, _ = metric_reporter.report_metrics(
+            metrics, _ = metrics_reporter.report_metrics(
                 model=model,
                 reset=True,
                 stage=TrainingStage.TEST,

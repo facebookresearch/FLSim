@@ -212,14 +212,14 @@ def main_worker(
 
     final_model, eval_score = trainer.train(
         data_provider=data_provider,
-        metric_reporter=metrics_reporter,
+        metrics_reporter=metrics_reporter,
         num_total_users=data_provider.num_train_users(),
         distributed_world_size=distributed_world_size,
     )
 
     trainer.test(
         data_iter=data_provider.test_data(),
-        metric_reporter=MetricsReporter([Channel.STDOUT]),
+        metrics_reporter=MetricsReporter([Channel.STDOUT]),
     )
 
 

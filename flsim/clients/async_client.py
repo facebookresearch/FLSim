@@ -86,7 +86,7 @@ class AsyncClientDevice(DeviceState):
         self.model_seqnum = model_seqnum
 
     def train_local_model(
-        self, metric_reporter: Any = None
+        self, metrics_reporter: Any = None
     ) -> Tuple[IFLModel, IFLModel, float]:
         r"""
         Performs local training loop
@@ -102,7 +102,7 @@ class AsyncClientDevice(DeviceState):
         )
         # 3. Train model on local data
         after_train_local, weight = self.client.train(
-            self.local_model, optim, optim_scheduler, metric_reporter
+            self.local_model, optim, optim_scheduler, metrics_reporter
         )
         # 3. Compute delta
         delta = self.client.compute_delta(
