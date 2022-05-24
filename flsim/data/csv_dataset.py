@@ -26,7 +26,7 @@ class FLCSVDataset(FLDataset):
                 "label": torch.Tensor(raw_row["label"]),
             }
     ```
-    then, one can simply enumerate over this Dataset as s/he usually doee
+    then, you can simply enumerate over this Dataset as you would usually
     with PyTorch Dataset to iterate over training/eval/test batches.
     However, note that you will most likely be encapsulating this within
     a concrete implementation of IFLDataLoader to use this within FL

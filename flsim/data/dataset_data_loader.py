@@ -11,7 +11,7 @@ import torch
 from flsim.data.data_sharder import FLDataSharder
 from flsim.interfaces.data_loader import IFLDataLoader
 from flsim.interfaces.dataset import FLDataset
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
 
 class FLDatasetDataLoader(IFLDataLoader):

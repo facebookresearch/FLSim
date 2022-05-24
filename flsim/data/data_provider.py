@@ -76,7 +76,7 @@ class IFLDataProvider(ABC):
     """
     Provides data to the trainer
 
-    IFLDataProvider is resposible for
+    IFLDataProvider is responsible for
         1. Enforcing a uniform interface that trainer expects
         2. Transforming data into what IFLModel.fl_forward() is going to consume
         3. Keeping track of the sharded client data

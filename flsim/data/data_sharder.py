@@ -49,7 +49,7 @@ class FLDataSharder(abc.ABC):
         pass
 
     def shard_rows(self, data_rows: Shardable) -> Iterable[Tuple[str, Any]]:
-        """Partition a set of rows into mulitple sets using a sharding strategy.
+        """Partition a set of rows into multiple sets using a sharding strategy.
 
         Args:
             data_rows: Iterable[Dict[str, Any]]]: iterable over dictionary mapping column
