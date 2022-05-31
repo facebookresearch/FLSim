@@ -16,7 +16,7 @@ from flsim.utils.async_trainer.async_staleness_weights import (
     StalenessWeight,
     ThresholdStalenessWeightConfig,
 )
-from flsim.utils.tests.helpers.async_weights_test_utils import (
+from flsim.utils.tests.helpers.test_async_weights_utils import (
     AsyncStalenessWeightsTestUtils,
 )
 from hydra.utils import instantiate

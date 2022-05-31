@@ -35,7 +35,7 @@ from flsim.utils.test_utils import (
     MetricsReporterWithMockedChannels,
     verify_models_equivalent_after_training,
 )
-from flsim.utils.tests.helpers.async_trainer_test_utils import (
+from flsim.utils.tests.helpers.test_async_trainer_utils import (
     get_fl_data_provider,
     run_fl_training,
 )

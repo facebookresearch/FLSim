@@ -46,7 +46,7 @@ from flsim.utils.test_utils import (
     RandomEvalMetricsReporter,
     verify_models_equivalent_after_training,
 )
-from flsim.utils.tests.helpers.async_trainer_test_utils import (
+from flsim.utils.tests.helpers.test_async_trainer_utils import (
     assert_fl_nonfl_same,
     assert_fl_nonfl_same_equal_data_split,
     async_train_one_user,

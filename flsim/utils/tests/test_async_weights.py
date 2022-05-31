@@ -20,7 +20,7 @@ from flsim.utils.async_trainer.async_staleness_weights import (
     ThresholdStalenessWeightConfig,
 )
 from flsim.utils.async_trainer.async_weights import AsyncWeightConfig
-from flsim.utils.tests.helpers.async_weights_test_utils import (
+from flsim.utils.tests.helpers.test_async_weights_utils import (
     AsyncExampleWeightsTestUtils,
     AsyncStalenessWeightsTestUtils,
 )

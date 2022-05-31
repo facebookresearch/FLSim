@@ -16,13 +16,13 @@ from flsim.optimizers.async_aggregators import (
     FedBuffAggregatorConfig,
 )
 from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
-from flsim.optimizers.optimizer_test_utils import OptimizerTestUtil
 from flsim.optimizers.sync_aggregators import (
     FedAdamSyncAggregatorConfig,
     FedAvgSyncAggregatorConfig,
     FedAvgWithLRSyncAggregatorConfig,
     SyncAggregatorConfig,
 )
+from flsim.optimizers.tests.test_optimizer_utils import OptimizerTestUtil
 from flsim.utils.sample_model import TwoLayerNet
 from hydra.utils import instantiate
 from omegaconf import OmegaConf

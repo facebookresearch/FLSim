@@ -52,8 +52,8 @@ from flsim.utils.test_utils import (
     SimpleMetricReporter,
     verify_models_equivalent_after_training,
 )
-from flsim.utils.tests.helpers.sync_trainer_test_utils import create_sync_trainer
 from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
+from flsim.utils.tests.helpers.test_sync_trainer_utils import create_sync_trainer
 from flsim.utils.tests.helpers.test_utils import FLTestUtils
 from flsim.utils.timing.training_duration_distribution import (
     PerExampleGaussianDurationDistributionConfig,
