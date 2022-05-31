@@ -8,9 +8,9 @@
 import argparse
 import collections.abc as abc
 import json
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple, Type
 
-from hydra.experimental import compose, initialize
+from hydra import compose, initialize
 from omegaconf import DictConfig, OmegaConf
 
 
@@ -190,7 +190,7 @@ def fl_config_from_json(
         return cfg
 
 
-def maybe_parse_json_config():
+def maybe_parse_json_config() -> Optional[DictConfig]:
     """
     Parse the command line args and build a config object if json config is supplied.
     This comes in handy when we want to supply a json config file during to buck run.
@@ -209,5 +209,5 @@ def maybe_parse_json_config():
     return cfg
 
 
-def is_target(config, cls):
+def is_target(config, cls) -> bool:
     return config._target_ == cls._target_
