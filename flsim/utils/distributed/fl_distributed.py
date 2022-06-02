@@ -27,10 +27,9 @@ class OperationType(IntEnum):
 
 class FLDistributedUtils:
     """
-    More detailed note: https://fburl.com/5n8mnaf3. We cannot use PyTorch
-    DDP here, because DDP is tied to backward() and only provides
-    high-level APIs for reducing gradients, but in FL, after each round, we
-    need to perform all-reduce on the models (optionally with some pre and
+    We cannot use PyTorch DDP here, because DDP is tied to backward() and only
+    provides high-level APIs for reducing gradients, but in FL, after each round,
+    we need to perform all-reduce on the models (optionally with some pre and
     post-processing) instead of just model gradients (e.g. FedAvg).
     We reduce the number of all-reduce operations by flatten an entire model
     into a 1D tensor, if the model size is less than a buffer limit of 256MB.

@@ -11,7 +11,6 @@ class attributes for our Configs and Pyre just complains that it cannot
 figure out where the attributes are getting initialized. Putting Optional here
 is not a choice for us, because we want to differentiate between Optional and
 strictly required attributes in our Config classes.
-Reference: https://fburl.com/4cdf3akr
 """
 from __future__ import annotations
 

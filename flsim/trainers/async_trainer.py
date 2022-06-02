@@ -88,7 +88,8 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
         self._event_generator = instantiate(
             self.cfg.training_event_generator,
         )
-        # for pyre; declare instance variables (https://fburl.com/88n6i71r)
+        # for pyre; declare instance variables
+        # https://stackoverflow.com/questions/56584140/python-3-5-type-annotated-variable-without-initial-value
         # pyre-fixme[8]: Attribute has type `IFLMetricsReporter`; used as `None`.
         self.metrics_reporter: "IFLMetricsReporter" = None
         self.best_metric = None
