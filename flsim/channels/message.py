@@ -7,11 +7,10 @@
 
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Optional, OrderedDict
+from typing import Any, Optional, OrderedDict
 
 import torch.nn as nn
 from flsim.interfaces.model import IFLModel
-from flsim.utils.count_sketch import CountSketch
 from torch import Tensor
 
 
@@ -43,7 +42,7 @@ class Message:
         default_factory=OrderedDict[str, Tensor], init=True
     )
     # count sketch
-    count_sketch: Optional[CountSketch] = field(default=None)
+    count_sketch: Optional[Any] = field(default=None)
 
     def populate_state_dict(self, **kwargs):
         """
