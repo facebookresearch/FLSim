@@ -207,6 +207,10 @@ class FLModelParamUtils:
         return filter(lambda p: p.requires_grad, model.parameters())
 
     @classmethod
+    def get_trainable_named_parameters(cls, model: nn.Module):
+        return filter(lambda np: np[1].requires_grad, model.named_parameters())
+
+    @classmethod
     def get_gradient_l2_norm_raw(cls, model: nn.Module) -> float:
         total_norm = 0
         for p in cls.get_trainable_params(model):

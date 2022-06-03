@@ -14,6 +14,7 @@ from typing import Dict, Iterator, Tuple
 import torch
 from flsim.common.logger import Logger
 from flsim.utils.config_utils import fullclassname, init_self_cfg
+from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 from omegaconf import MISSING
 from torch import nn
@@ -133,7 +134,7 @@ def utility_config_flatter(
         returns the flat fixedpoint_config_dict
     """
     config: Dict[str, FixedPointConfig] = {}
-    for name, _ in model.named_parameters():
+    for name, _ in FLModelParamUtils.get_trainable_named_parameters(model):
         config[name] = flat_config
     return config
 
@@ -177,7 +178,13 @@ class SecureAggregator:
             ValueError: If some layers of the model do not have their
                 corresponding configs
         """
-        unset_configs = set(model.state_dict()) - set(self.converters)
+        unset_configs = {
+            param_name
+            for param_name, _param in FLModelParamUtils.get_trainable_named_parameters(
+                model
+            )
+            if param_name not in self.converters.keys()
+        }
         if unset_configs:
             error_msg = (
                 "Not all "
@@ -199,7 +206,7 @@ class SecureAggregator:
         """
         self._check_converter_dict_items(model)
         state_dict = model.state_dict()
-        for name in state_dict.keys():
+        for name, _ in FLModelParamUtils.get_trainable_named_parameters(model):
             converter = self.converters[name]
             state_dict[name] = converter.to_fixedpoint(state_dict[name])
             converter.logger.debug(
@@ -222,7 +229,7 @@ class SecureAggregator:
         """
         self._check_converter_dict_items(model)
         state_dict = model.state_dict()
-        for name in state_dict.keys():
+        for name, _ in FLModelParamUtils.get_trainable_named_parameters(model):
             state_dict[name] = self.converters[name].to_float(state_dict[name])
         model.load_state_dict(state_dict)
 
@@ -325,7 +332,7 @@ class SecureAggregator:
             monitored.
         """
         state_dict = model.state_dict()
-        for name in state_dict.keys():
+        for name, _ in FLModelParamUtils.get_trainable_named_parameters(model):
             numbers = state_dict[name]
             converter = self.converters[name]
             overflow_matrix = torch.div(  # FIXME: div blows up when MAX_WIDTH_BYTES >7

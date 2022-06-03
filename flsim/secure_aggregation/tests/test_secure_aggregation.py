@@ -16,6 +16,7 @@ from flsim.secure_aggregation.secure_aggregator import (
 )
 from flsim.servers.sync_secagg_servers import SyncSecAggServerConfig
 from flsim.utils import test_utils as utils
+from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.test_utils import (
     create_model_with_value,
     model_parameters_equal_to_value,
@@ -246,11 +247,14 @@ class TestSecureAggregator:
         variable gets updated correctly
         """
         model = self._create_model(70.0)
+        # freeze one of the two linear layers
+        for p in model.fc2.parameters():
+            p.requires_grad = False
         config = FixedPointConfig(num_bytes=1, scaling_factor=10)
         # hence minValue = -128, maxValue = 127
         secure_aggregator = SecureAggregator(utility_config_flatter(model, config))
 
-        for name, _ in model.named_parameters():
+        for name, _ in FLModelParamUtils.get_trainable_named_parameters(model):
             assertEqual(secure_aggregator.converters[name].get_convert_overflow(), 0)
 
         secure_aggregator.params_to_fixedpoint(model)
@@ -260,13 +264,11 @@ class TestSecureAggregator:
             secure_aggregator.converters["fc1.weight"].get_convert_overflow(), 10
         )
         assertEqual(secure_aggregator.converters["fc1.bias"].get_convert_overflow(), 5)
-        assertEqual(
-            secure_aggregator.converters["fc2.weight"].get_convert_overflow(), 5
-        )
-        assertEqual(secure_aggregator.converters["fc2.bias"].get_convert_overflow(), 1)
+        assertTrue("fc2.weight" not in secure_aggregator.converters.keys())
+        assertTrue("fc2.bias" not in secure_aggregator.converters.keys())
 
         # test reset conversion overflow
-        for name, _ in model.named_parameters():
+        for name, _ in FLModelParamUtils.get_trainable_named_parameters(model):
             secure_aggregator.converters[name].get_convert_overflow(reset=True)
             assertEqual(secure_aggregator.converters[name].get_convert_overflow(), 0)
 
@@ -373,10 +375,20 @@ class TestSecureAggregator:
         fixedpoint = FixedPointConfig(
             num_bytes=num_bytes, scaling_factor=scaling_factor
         )
-        server = self._create_server(
-            SampleNet(create_model_with_value(global_param)), fixedpoint=fixedpoint
-        )
+
+        server_model = create_model_with_value(global_param)
+        # freeze one of the two linear layers
+        for p in server_model.fc2.parameters():  # pyre-ignore[16]
+            p.requires_grad = False
+        server = self._create_server(SampleNet(server_model), fixedpoint=fixedpoint)
         clients = [create_model_with_value(client_param) for _ in range(num_clients)]
+
+        clients = []
+        for _ in range(num_clients):
+            client_model = create_model_with_value(client_param)
+            for p in client_model.fc2.parameters():  # pyre-ignore[16]
+                p.requires_grad = False
+            clients.append(client_model)
 
         server.init_round()
         # model : --[fc1=(2,5)]--[fc2=(5,1)]--
