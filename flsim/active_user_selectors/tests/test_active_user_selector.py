@@ -11,10 +11,6 @@ from collections import Counter
 import torch
 from flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorUtils,
-    HighLossActiveUserSelector,
-    HighLossActiveUserSelectorConfig,
-    NumberOfSamplesActiveUserSelector,
-    NumberOfSamplesActiveUserSelectorConfig,
     RandomRoundRobinActiveUserSelector,
     RandomRoundRobinActiveUserSelectorConfig,
     SequentialActiveUserSelector,
@@ -181,75 +177,6 @@ class TestActiveUserSelector:
         assertEqual(len(user_indices), users_per_round)
         assertEqual(len(user_indices_set), users_per_round)
         assertTrue(user_indices_set.issubset(available_user_set))
-
-    def test_number_of_samples_user_selector(self) -> None:
-        selector = instantiate(NumberOfSamplesActiveUserSelectorConfig())
-        assertIsInstance(selector, NumberOfSamplesActiveUserSelector)
-
-        shard_size = 5
-        local_batch_size = 4
-        dummy_dataset = DummyAlphabetDataset(num_rows=6)
-        dummy_model = DummyAlphabetFLModel()
-        data_provider, _ = DummyAlphabetDataset.create_data_provider_and_loader(
-            dummy_dataset, shard_size, local_batch_size, dummy_model
-        )
-
-        selections = [
-            selector.get_user_indices(users_per_round=1, data_provider=data_provider)[0]
-            for _ in range(1000)
-        ]
-        counts = Counter(selections)
-        assertTrue(counts[0] > counts[1])
-
-    def test_high_loss_user_selector(self) -> None:
-        selector = instantiate(HighLossActiveUserSelectorConfig())
-        assertIsInstance(selector, HighLossActiveUserSelector)
-
-        selector = instantiate(
-            HighLossActiveUserSelectorConfig(softmax_temperature=0.01)
-        )
-
-        shard_size = 10
-        local_batch_size = 4
-        dummy_dataset = DummyAlphabetDataset(num_rows=11)
-
-        dummy_model = DummyAlphabetFLModel()
-        data_provider, _ = DummyAlphabetDataset.create_data_provider_and_loader(
-            dummy_dataset, shard_size, local_batch_size, dummy_model
-        )
-
-        selections = [
-            selector.get_user_indices(
-                num_total_users=2,
-                users_per_round=1,
-                data_provider=data_provider,
-                global_model=dummy_model,
-                epoch=0,
-            )[0]
-            for i in range(1000)
-        ]
-        counts = Counter(selections)
-        assertTrue(counts[0] > counts[1])
-
-        selector = instantiate(
-            HighLossActiveUserSelectorConfig(
-                softmax_temperature=0.01, epochs_before_active=1
-            )
-        )
-
-        selections = [
-            selector.get_user_indices(
-                num_total_users=2,
-                users_per_round=1,
-                data_provider=data_provider,
-                global_model=dummy_model,
-                epoch=0,
-            )[0]
-            for i in range(1000)
-        ]
-        counts = Counter(selections)
-        assertTrue(counts[0] > 400)
-        assertTrue(counts[0] < 600)
 
 
 class TestActiveUserSelectorUtils:

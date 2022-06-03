@@ -11,11 +11,10 @@ import abc
 import copy
 import math
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import torch
-from flsim.data.data_provider import IFLDataProvider, IFLUserData
-from flsim.interfaces.model import IFLModel
+from flsim.data.data_provider import IFLDataProvider
 from flsim.utils.config_utils import fullclassname, init_self_cfg
 from omegaconf import MISSING
 
@@ -287,179 +286,6 @@ class RandomRoundRobinActiveUserSelector(ActiveUserSelector):
         return user_indices
 
 
-class NumberOfSamplesActiveUserSelector(ActiveUserSelector):
-    """Active User Selector which chooses users with probability weights determined
-    by the number of training points on the client. Clients with more samples are
-    given higher probability of being selected. Assumes that number of samples
-    on each client is known by the server and updated constantly.
-    """
-
-    def __init__(self, **kwargs):
-        init_self_cfg(
-            self,
-            component_class=__class__,
-            config_class=NumberOfSamplesActiveUserSelectorConfig,
-            **kwargs,
-        )
-
-        super().__init__(**kwargs)
-
-    @classmethod
-    def _set_defaults_in_cfg(cls, cfg):
-        pass
-
-    def get_user_indices(self, **kwargs) -> List[int]:
-        required_inputs = ["users_per_round", "data_provider"]
-        users_per_round, data_provider = self.unpack_required_inputs(
-            required_inputs, kwargs
-        )
-
-        user_utility = ActiveUserSelectorUtils.samples_per_user(data_provider)
-        # pyre-fixme[16]: `NumberOfSamplesActiveUserSelector` has no attribute `cfg`.
-        user_utility = torch.pow(user_utility, self.cfg.exponent)
-        probs = ActiveUserSelectorUtils.convert_to_probability(
-            user_utility=torch.log(user_utility),
-            fraction_with_zero_prob=self.cfg.fraction_with_zero_prob,
-            softmax_temperature=1,
-        )
-        selected_indices = ActiveUserSelectorUtils.select_users(
-            users_per_round=users_per_round,
-            probs=probs,
-            fraction_uniformly_random=self.cfg.fraction_uniformly_random,
-            rng=self.rng,
-        )
-
-        return selected_indices
-
-
-class HighLossActiveUserSelector(ActiveUserSelector):
-    """Active User Selector which chooses users with probability weights determined
-    by the loss the model suffers on the user's data. Since this is a function of
-    both the data on the client and the model, user loss values are not updated
-    for every user before a selection round. Instead the class will keep a record
-    of the loss and only update the value for a user when they are used for training
-    since in this case the model is being transmitted to the user anyway.
-
-    If this staleness become a significant problem, try using ideas from
-    non-stationary UCB: https://arxiv.org/pdf/0805.3415.pdf.
-    """
-
-    def __init__(self, **kwargs):
-        init_self_cfg(
-            self,
-            component_class=__class__,
-            config_class=HighLossActiveUserSelectorConfig,
-            **kwargs,
-        )
-
-        super().__init__(**kwargs)
-
-        self.user_losses: torch.Tensor = torch.tensor([], dtype=torch.float)
-        self.user_sample_counts: torch.Tensor = torch.tensor([], dtype=torch.float)
-
-    @classmethod
-    def _set_defaults_in_cfg(cls, cfg):
-        pass
-
-    def _get_initial_losses_and_counts(
-        self,
-        num_total_users: int,
-        data_provider: IFLDataProvider,
-        global_model: IFLModel,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        user_losses = torch.zeros(num_total_users, dtype=torch.float)
-        user_sample_counts = torch.zeros(num_total_users, dtype=torch.float)
-        for i in range(num_total_users):
-            (
-                user_losses[i],
-                user_sample_counts[i],
-            ) = self._get_user_loss_and_sample_count(
-                data_provider.get_train_user(i), global_model
-            )
-        return user_losses, user_sample_counts
-
-    def _non_active_sampling(
-        self, num_total_users: int, users_per_round: int
-    ) -> List[int]:
-        selected_indices = torch.multinomial(
-            torch.ones(num_total_users, dtype=torch.float),
-            users_per_round,
-            replacement=False,
-            generator=self.rng,
-        ).tolist()
-        return selected_indices
-
-    @staticmethod
-    def _get_user_loss_and_sample_count(
-        user_data: IFLUserData, model: IFLModel
-    ) -> Tuple[float, int]:
-        loss = 0
-        num_samples = 0
-        for batch in user_data.train_data():
-            metrics = model.get_eval_metrics(batch)
-            loss += metrics.loss.item() * metrics.num_examples
-            num_samples += metrics.num_examples
-        return loss, num_samples
-
-    def get_user_indices(self, **kwargs) -> List[int]:
-        required_inputs = [
-            "num_total_users",
-            "users_per_round",
-            "data_provider",
-            "global_model",
-            "epoch",
-        ]
-        (
-            num_total_users,
-            users_per_round,
-            data_provider,
-            global_model,
-            epoch,
-        ) = self.unpack_required_inputs(required_inputs, kwargs)
-
-        # pyre-fixme[16]: `HighLossActiveUserSelector` has no attribute `cfg`.
-        if epoch < self.cfg.epochs_before_active:
-            selected_indices = self._non_active_sampling(
-                num_total_users, users_per_round
-            )
-            return selected_indices
-
-        if self.user_losses.nelement() == 0:
-            (
-                self.user_losses,
-                self.user_sample_counts,
-            ) = self._get_initial_losses_and_counts(
-                num_total_users, data_provider, global_model
-            )
-
-        user_utility = ActiveUserSelectorUtils.normalize_by_sample_count(
-            user_utility=self.user_losses,
-            user_sample_counts=self.user_sample_counts,
-            averaging_exponent=self.cfg.count_normalization_exponent,
-        )
-        probs = ActiveUserSelectorUtils.convert_to_probability(
-            user_utility=user_utility,
-            fraction_with_zero_prob=self.cfg.fraction_with_zero_prob,
-            softmax_temperature=self.cfg.softmax_temperature,
-        )
-        selected_indices = ActiveUserSelectorUtils.select_users(
-            users_per_round=users_per_round,
-            probs=probs,
-            fraction_uniformly_random=self.cfg.fraction_uniformly_random,
-            rng=self.rng,
-        )
-
-        for i in selected_indices:
-            (
-                self.user_losses[i],
-                self.user_sample_counts[i],
-            ) = self._get_user_loss_and_sample_count(
-                data_provider.get_train_user(i), global_model
-            )
-
-        return selected_indices
-
-
 @dataclass
 class ActiveUserSelectorConfig:
     _target_: str = MISSING
@@ -481,21 +307,3 @@ class SequentialActiveUserSelectorConfig(ActiveUserSelectorConfig):
 @dataclass
 class RandomRoundRobinActiveUserSelectorConfig(ActiveUserSelectorConfig):
     _target_: str = fullclassname(RandomRoundRobinActiveUserSelector)
-
-
-@dataclass
-class NumberOfSamplesActiveUserSelectorConfig(ActiveUserSelectorConfig):
-    _target_: str = fullclassname(NumberOfSamplesActiveUserSelector)
-    exponent: float = 1.0
-    fraction_uniformly_random: float = 0.0
-    fraction_with_zero_prob: float = 0.0
-
-
-@dataclass
-class HighLossActiveUserSelectorConfig(ActiveUserSelectorConfig):
-    _target_: str = fullclassname(HighLossActiveUserSelector)
-    count_normalization_exponent: float = 0.0
-    epochs_before_active: int = 0
-    fraction_uniformly_random: float = 0.0
-    fraction_with_zero_prob: float = 0.0
-    softmax_temperature: float = 1.0
