@@ -24,7 +24,6 @@ from flsim.optimizers.async_aggregators import (
 from flsim.optimizers.server_optimizers import (
     FedAdamOptimizerConfig,
     FedAvgWithLROptimizerConfig,
-    OptimizerType,
 )
 from flsim.servers.sync_servers import SyncServerConfig
 from flsim.trainers.async_trainer import AsyncTrainerConfig
@@ -45,6 +44,7 @@ from flsim.utils.tests.helpers.test_async_trainer_utils import (
 from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
 from flsim.utils.tests.helpers.test_sync_trainer_utils import create_sync_trainer
 from flsim.utils.tests.helpers.test_utils import FLTestUtils
+from hydra.utils import instantiate
 
 
 class TrainerType(Enum):
@@ -127,7 +127,7 @@ class FedBuffTestUtils:
                     model=global_model.fl_get_module(),
                 )
             elif isinstance(server_config, SyncServerConfig):
-                optimizer = OptimizerType.create_optimizer(
+                optimizer = instantiate(
                     model=global_model.fl_get_module(),
                     config=server_config.server_optimizer,
                 )

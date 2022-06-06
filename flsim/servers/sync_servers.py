@@ -21,7 +21,6 @@ from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.server_optimizers import (
     FedAvgOptimizerConfig,
-    OptimizerType,
     ServerOptimizerConfig,
 )
 from flsim.servers.aggregator import AggregationType, Aggregator
@@ -111,8 +110,8 @@ class SyncServer(ISyncServer):
             config_class=SyncServerConfig,
             **kwargs,
         )
-        self._optimizer = OptimizerType.create_optimizer(
-            # pyre-fixme[16]: `SyncServer` has no attribute `cfg`.
+        self._optimizer = instantiate(
+            # pyre-ignore[16]
             config=self.cfg.server_optimizer,
             model=global_model.fl_get_module(),
         )

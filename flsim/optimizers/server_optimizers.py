@@ -12,7 +12,10 @@ This interface is similar to torch.optim.Optimizer.
 
   Typical usage example:
 
-  optimizer = OptimizerType.create_optimizer(model=model, config=config)
+  optimizer =        self._optimizer = instantiate(
+            config=self.cfg.server_optimizer,
+            model=global_model.fl_get_module(),
+        )
   optimizer.step()
 """
 
@@ -188,7 +191,7 @@ class FedLAMBOptimizer(IServerOptimizer, LAMB):
         init_self_cfg(
             self,
             component_class=__class__,
-            config_class=FedLARSOptimizerConfig,
+            config_class=FedLAMBOptimizerConfig,
             **kwargs,
         )
 
@@ -256,65 +259,3 @@ class FedLAMBOptimizerConfig(ServerOptimizerConfig):
     beta1: float = 0.9
     beta2: float = 0.999
     eps: float = 1e-8
-
-
-class OptimizerType(Enum):
-    fed_avg: str = FedAvgOptimizerConfig._target_
-    fed_avg_with_lr: str = FedAvgWithLROptimizerConfig._target_
-    fed_adam: str = FedAdamOptimizerConfig._target_
-    fed_lamb: str = FedLAMBOptimizerConfig._target_
-    fed_lars: str = FedLARSOptimizerConfig._target_
-
-    @staticmethod
-    def create_optimizer(
-        model: nn.Module, config: ServerOptimizerConfig
-    ) -> IServerOptimizer:
-        if is_target(config, FedAvgWithLROptimizerConfig):
-            return torch.optim.SGD(
-                model.parameters(),
-                # pyre-ignore[16] Undefined attribute
-                lr=config.lr,
-                # pyre-ignore[16] Undefined attribute
-                momentum=config.momentum,
-            )
-        elif is_target(config, FedAdamOptimizerConfig):
-            return torch.optim.Adam(
-                model.parameters(),
-                lr=config.lr,
-                # pyre-ignore[16] Undefined attribute
-                weight_decay=config.weight_decay,
-                # pyre-ignore[16] Undefined attribute
-                betas=(config.beta1, config.beta2),
-                # pyre-ignore[16] Undefined attribute
-                eps=config.eps,
-            )
-        elif is_target(config, FedLARSOptimizerConfig):
-            # pyre-ignore[7]
-            return LARS(
-                model.parameters(),
-                lr=config.lr,
-                # pyre-ignore[16] Undefined attribute
-                beta=config.beta,
-                weight_decay=config.weight_decay,
-            )
-
-        elif is_target(config, FedLAMBOptimizerConfig):
-            # pyre-ignore[7]
-            return LAMB(
-                model.parameters(),
-                lr=config.lr,
-                beta1=config.beta1,
-                beta2=config.beta2,
-                weight_decay=config.weight_decay,
-                eps=config.eps,
-            )
-        elif is_target(config, FedAvgOptimizerConfig):
-            return torch.optim.SGD(
-                model.parameters(),
-                lr=1.0,
-                momentum=0,
-            )
-        else:
-            raise ValueError(
-                f"Optimizer type {config._target_} not found. Please update OptimizerType.create_optimizer"
-            )

@@ -23,7 +23,6 @@ from flsim.optimizers.server_optimizers import (
     FedAvgWithLROptimizerConfig,
     FedLAMBOptimizerConfig,
     FedLARSOptimizerConfig,
-    OptimizerType,
 )
 from flsim.servers.aggregator import AggregationType
 from flsim.servers.sync_servers import SyncServerConfig
@@ -95,7 +94,7 @@ class TestSyncServer:
             global_model=server_model,
         )
 
-        optimizer = OptimizerType.create_optimizer(optim_model, opt_config)
+        optimizer = instantiate(config=opt_config, model=optim_model)
         client_updates = self._create_client_updates(
             num_clients, aggregation_type=agg_type
         )
