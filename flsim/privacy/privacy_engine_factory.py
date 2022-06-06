@@ -11,12 +11,10 @@ from flsim.privacy.privacy_engine import (
     GaussianPrivacyEngine,
     IPrivacyEngine,
     PrivacySetting,
-    TreePrivacyEngine,
 )
 
 
 class NoiseType(Enum):
-    TREE_NOISE = "tree"
     GAUSSIAN = "guassian"
 
 
@@ -29,15 +27,9 @@ class PrivacyEngineFactory:
         num_total_users: int,
         noise_type: NoiseType,
     ) -> IPrivacyEngine:
-        if noise_type == NoiseType.TREE_NOISE:
-            return TreePrivacyEngine(
-                privacy_setting=privacy_setting,
-                users_per_round=users_per_round,
-                num_total_users=num_total_users,
-            )
-        else:
-            return GaussianPrivacyEngine(
-                privacy_setting=privacy_setting,
-                users_per_round=users_per_round,
-                num_total_users=num_total_users,
-            )
+        assert noise_type == NoiseType.GAUSSIAN
+        return GaussianPrivacyEngine(
+            privacy_setting=privacy_setting,
+            users_per_round=users_per_round,
+            num_total_users=num_total_users,
+        )

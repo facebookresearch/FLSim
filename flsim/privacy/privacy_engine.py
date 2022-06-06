@@ -9,15 +9,11 @@
 This file contains the noise generation function and the required
 DP parameters that an entity such as an FL server uses for user-level DP.
 """
-
 import logging
-import math
 import os
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 
-import numpy as np
 import torch
 from flsim.common.logger import Logger
 from flsim.privacy.common import PrivacyBudget, PrivacySetting
@@ -172,142 +168,3 @@ class GaussianPrivacyEngine(IPrivacyEngine):
                 "the set of alpha orders."
             )
         return PrivacyBudget(eps, opt_alpha, target_delta)
-
-
-@dataclass
-class TreeNode:
-    start: int
-    end: int
-    height: int
-    efficient: bool
-
-    @property
-    def weight(self):
-        return (1 / (2 - math.pow(2, -self.height))) ** 0.5 if self.efficient else 1.0
-
-
-class TreePrivacyEngine(IPrivacyEngine):
-    """
-    DP-FTRL privacy engine where noise is the cummulated noise from
-    a private binary tree
-    """
-
-    logger: logging.Logger = Logger.get_logger(__name__)
-
-    def __init__(
-        self,
-        privacy_setting: PrivacySetting,
-        users_per_round: int,
-        num_total_users: int,
-        restart_rounds: int = 100,
-        efficient_tree: bool = True,
-    ) -> None:
-        super().__init__(privacy_setting, users_per_round, num_total_users)
-        self.num_leaf = min(num_total_users, restart_rounds * users_per_round)
-        self.restart_rounds = restart_rounds
-        self.num_tree: int = 1
-        self.ref_model = None
-        self.device = None
-
-        self.tree = TreePrivacyEngine.build_tree(self.num_leaf, efficient_tree)
-
-    @classmethod
-    def build_tree(cls, num_leaf: int, efficient_tree: bool = True) -> List[TreeNode]:
-        tree = [TreeNode(-1, -1, -1, True)] * (2 * num_leaf)
-        # store leaf nodes at back of array
-        for i, j in enumerate(range(num_leaf, num_leaf * 2)):
-            tree[j] = TreeNode(start=i, end=i, height=0, efficient=efficient_tree)
-
-        # fill in prefix sum internal nodes
-        for i in range(num_leaf - 1, 0, -1):
-            left = tree[i * 2]
-            right = tree[i * 2 + 1]
-            height = int(math.log2(abs(right.end - left.start) + 1))
-            tree[i] = TreeNode(
-                start=left.start, end=right.end, height=height, efficient=efficient_tree
-            )
-        return tree
-
-    @classmethod
-    def compute_rdp(cls, alphas, epoch, steps, sigma):
-        alphas = np.array(alphas)
-        return alphas * epoch * np.ceil(np.log2(steps + 1e-6)) / (2 * sigma**2)
-
-    def get_privacy_spent(self, target_delta: Optional[float] = None) -> PrivacyBudget:
-        target_delta = (
-            self.setting.target_delta if target_delta is None else target_delta
-        )
-
-        rdp = TreePrivacyEngine.compute_rdp(
-            alphas=self.setting.alphas,
-            epoch=self.num_tree,
-            steps=self.num_leaf,
-            sigma=self.setting.noise_multiplier,
-        )
-        eps, opt_alpha = privacy_analysis.get_privacy_spent(
-            orders=self.setting.alphas, rdp=rdp, delta=target_delta
-        )
-
-        if opt_alpha == max(self.setting.alphas) or opt_alpha == min(
-            self.setting.alphas
-        ):
-            self.logger.info(
-                "The privacy estimate is likely to be improved by expanding "
-                "the set of alpha orders."
-            )
-        return PrivacyBudget(eps, opt_alpha, self.setting.target_delta)
-
-    def attach(self, global_model: nn.Module, **kwargs) -> None:
-        """
-        Reset the tree by incrementing num_tree and reset steps to 0
-        these will be used to do privacy calculations
-        """
-        self.device = next(global_model.parameters()).device
-        self.num_tree += 1
-        self.steps = 0
-
-    def add_noise(self, model_diff: nn.Module, sensitivity: float) -> None:
-        """
-        Adds noise to cummulated noise to model diff
-        """
-        with torch.no_grad():
-            for parameter in model_diff.parameters():
-                noise = self.range_sum(
-                    left=0,
-                    right=self.users_per_round - 1,
-                    size=parameter.shape,
-                    sensitivity=sensitivity,
-                )
-                parameter.copy_(parameter + noise)
-
-            self.steps += 1
-
-    def range_sum(
-        self, left: int, right: int, size: torch.Size, sensitivity: float
-    ) -> torch.Tensor:
-        left += self.num_leaf
-        right += self.num_leaf
-        sum_ = torch.zeros(size)
-        while left <= right:
-            noise_std = self.setting.noise_multiplier * sensitivity
-
-            if left % 2 == 1:
-                sum_ += self._generate_noise(size, noise_std) * self.tree[left].weight
-
-                left += 1
-
-            if right % 2 == 0:
-                sum_ += self._generate_noise(size, noise_std) * self.tree[right].weight
-                right -= 1
-
-            left = left // 2
-            right = right // 2
-        return sum_
-
-    def _generate_noise(self, size: torch.Size, noise_std: float):
-        return torch.normal(
-            mean=0,
-            std=noise_std,
-            size=size,
-            device=self.device,
-        )

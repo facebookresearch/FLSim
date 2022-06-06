@@ -5,18 +5,9 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import math
-from unittest.mock import MagicMock
-
-import numpy as np
-import pytest
-import torch
-import torch.nn as nn
 from flsim.common.pytest_helper import (
-    assertAlmostEqual,
     assertEqual,
     assertFalse,
-    assertLessEqual,
     assertNotEqual,
     assertRaises,
     assertTrue,
@@ -25,9 +16,7 @@ from flsim.privacy.common import PrivacySetting
 from flsim.privacy.privacy_engine import (
     GaussianPrivacyEngine,
     PrivacyEngineNotAttachedException,
-    TreePrivacyEngine,
 )
-from flsim.privacy.privacy_engine_factory import NoiseType, PrivacyEngineFactory
 from flsim.utils import test_utils as utils
 from flsim.utils.fl.common import FLModelParamUtils
 from opacus.accountants.analysis import rdp as privacy_analysis
@@ -202,156 +191,3 @@ class TestGaussianPrivacyEngine:
         except PrivacyEngineNotAttachedException:
             raised_exception = True
         assertFalse(raised_exception)
-
-
-class TestTreePrivacyEngine:
-    def _create_delta(self, dim, value=0.0):
-        delta = nn.Linear(dim, 1)
-        delta.bias.data.fill_(value)
-        delta.weight.data.fill_(value)
-        return delta, FLModelParamUtils.clone(delta)
-
-    def _count_bits(self, n: int):
-        """
-        Returns the number of
-        1s in the binary representations of i
-        """
-        count = 0
-        while n:
-            n &= n - 1
-            count += 1
-        return count
-
-    @pytest.mark.parametrize("num_leaf, max_height", [(4, 2), (8, 3), (16, 4)])
-    def test_build_tree(self, num_leaf, max_height):
-        """
-        Test that build tree logic is correct.
-        For any binary tree with n leaves, the tree's height
-        will be log2(n) tall
-        """
-        tree = TreePrivacyEngine.build_tree(num_leaf)
-        for node in tree:
-            assertLessEqual(node.height, math.ceil(math.log2(num_leaf)))
-
-    def test_basic_tree_node_sensitivity(self):
-        """
-        This is a small test. If we set the noise in each node as 1,
-        we should be seeing the returned noise as the number of
-        1s in the binary representations of ith step
-        """
-
-        def generate_noise(*args):
-            return 1
-
-        num_steps = 32
-        tree = TreePrivacyEngine(
-            PrivacySetting(noise_multiplier=1.0, noise_seed=0),
-            users_per_round=1,
-            num_total_users=num_steps,
-            efficient_tree=False,
-        )
-        tree._generate_noise = MagicMock(side_effect=generate_noise)
-        for i in range(num_steps):
-            cumsum = tree.range_sum(0, i, size=torch.Size([1]), sensitivity=1.0)
-            bits = float(self._count_bits(i + 1))
-            assertEqual(cumsum, bits)
-
-    @pytest.mark.parametrize(
-        "upr, n_users, noise_multiplier, exp_var",
-        [
-            (4, 4, 1, 0.57),
-            (7, 7, 1, 2.23),
-            (8, 8, 1, 0.53),
-            (8, 8, 2, 2.13),
-            (8, 8, 0.5, 0.13),
-        ],
-    )
-    def test_tree_noise_sum_expected(self, upr, n_users, noise_multiplier, exp_var):
-        def test_one_trial():
-            delta, _ = self._create_delta(dim=1000, value=0)
-
-            setting = PrivacySetting(
-                noise_multiplier=noise_multiplier,
-                noise_seed=0,
-            )
-            privacy_engine = PrivacyEngineFactory.create(
-                setting,
-                users_per_round=upr,
-                num_total_users=n_users,
-                noise_type=NoiseType.TREE_NOISE,
-            )
-
-            privacy_engine.add_noise(delta, sensitivity=1.0)
-            noised_delta = torch.flatten(
-                torch.stack(
-                    [p for name, p in delta.named_parameters() if "weight" in name]
-                )
-            )
-            return torch.var(noised_delta).item()
-
-        num_trials = 5
-
-        assertAlmostEqual(
-            np.mean([test_one_trial() for _ in range(num_trials)]), exp_var, delta=0.15
-        )
-
-    @pytest.mark.parametrize(
-        "steps, upr, n_users, sigma, exp_var",
-        [
-            (4, 4, 4, 1, 0.57),
-            (7, 7, 7, 1, 2.23),
-            (8, 8, 8, 1, 0.53),
-            (8, 8, 8, 2, 2.13),
-            (8, 8, 8, 0.5, 0.13),
-        ],
-    )
-    def test_range_sum_noise_expected(self, steps, upr, n_users, sigma, exp_var):
-        def test_one_trial():
-            setting = PrivacySetting(
-                noise_multiplier=sigma,
-                noise_seed=2,
-            )
-            privacy_engine = PrivacyEngineFactory.create(
-                setting,
-                users_per_round=upr,
-                num_total_users=n_users,
-                noise_type=NoiseType.TREE_NOISE,
-            )
-            for i in range(steps):
-                sum_ = privacy_engine.range_sum(0, i, torch.Size((1000,)), 1.0)
-            return torch.var(sum_)
-
-        num_trials = 5
-
-        assertAlmostEqual(
-            np.mean([test_one_trial() for _ in range(num_trials)]),
-            exp_var,
-            delta=0.15,
-        )
-
-    @pytest.mark.parametrize(
-        "n_users, upr, sigma, epsilon",
-        [
-            (1600, 100, 4.03, 4.19),
-            (1600, 100, 6.21, 2.60),
-            (1600, 100, 8.83, 1.77),
-        ],
-    )
-    def test_privacy_analysis_epsilon(self, n_users, upr, sigma, epsilon):
-        delta, _ = self._create_delta(dim=1000, value=0)
-        setting = PrivacySetting(
-            noise_multiplier=sigma,
-            noise_seed=1,
-            alphas=np.arange(1.01, 100, 0.01).tolist(),
-            target_delta=1e-6,
-        )
-        privacy_engine = PrivacyEngineFactory.create(
-            setting,
-            users_per_round=upr,
-            num_total_users=n_users,
-            noise_type=NoiseType.TREE_NOISE,
-        )
-        for _ in range(n_users // upr):
-            privacy_engine.add_noise(delta, sensitivity=1.0)
-        budget = privacy_engine.get_privacy_spent()
-        assertAlmostEqual(budget.epsilon, epsilon, delta=0.5)
