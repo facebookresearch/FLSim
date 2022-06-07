@@ -64,7 +64,7 @@ class Metric:
         The usage is simple, metrics need to be passed as named arguments
         to the function. The class will throw if the metrics are not
         any of the valid types: int, float, tensor of size 1, or a
-        dictionary of such types with string keys. This latter case is considerd
+        dictionary of such types with string keys. This latter case is considered
         a metric with sub metrics.
 
         Example:
@@ -128,7 +128,7 @@ class IFLMetricsReporter(abc.ABC):
     training aggregates all the data by calling aggregate() method, which gets
     a MetricsReporter of an user who just completed one’s own epoch. Then, after
     all users’ local epochs are completed, the global MetricsReporter completes
-    its global aggreation and report its metrics to given channels for that global
+    its global aggregation and report its metrics to given channels for that global
     epoch.
     Note: 1 global epoch consists of several rounds. In each round, we train
     a subset of users and each user goes through a number of local epochs, where
@@ -168,7 +168,7 @@ class IFLMetricsReporter(abc.ABC):
         """
         pass
 
-    # TODO: is this needed? Do we ever call this externally?
+    # TODO: Is this needed? Do we ever call this externally?
     @abc.abstractmethod
     def reset(self):
         """Clean up all aggregations so far."""
