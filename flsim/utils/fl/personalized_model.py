@@ -35,7 +35,7 @@ class FLModelWithPrivateModules(abc.ABC):
 
     @classmethod
     def get_user_private_parameters(cls) -> Iterable[torch.Tensor]:
-        """Return emulated mapping that maps each user to her private params."""
+        """Return emulated mapping that maps each user to their private params."""
         for module in cls.user_private_module_dict.values():
             for param in module.parameters():
                 yield param

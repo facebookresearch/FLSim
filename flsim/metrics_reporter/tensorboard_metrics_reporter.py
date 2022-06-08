@@ -177,7 +177,7 @@ class FLMetricsReporter(IFLMetricsReporter, abc.ABC):
         object that represents evaluation metrics based on scores and total
         loss. Most of the case, one would just pick one of the scores or
         total loss as the evaluation metrics to pick the better model, but
-        this interface also allows s/he to make evaluation metrics more
+        this interface also allows one to make evaluation metrics more
         complex and use it in conjunction with compare_metrics() function
         to determine which metrics is the better one.
         """
