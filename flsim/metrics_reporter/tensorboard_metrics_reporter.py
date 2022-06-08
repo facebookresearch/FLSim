@@ -173,12 +173,13 @@ class FLMetricsReporter(IFLMetricsReporter, abc.ABC):
     def create_eval_metrics(
         self, scores: Dict[str, Any], total_loss: float, **kwargs
     ) -> Any:
-        """One should provide concrete implementation of how to construct
-        object that represents evaluation metrics based on scores and total
-        loss. Most of the case, one would just pick one of the scores or
-        total loss as the evaluation metrics to pick the better model, but
+        """One should provide a concrete implementation of how to construct
+        an object that represents evaluation metrics based on scores and
+        total loss. Usually, one would just pick one of the scores or
+        total loss as the evaluation metric to pick the better model, but
         this interface also allows one to make evaluation metrics more
-        complex and use it in conjunction with compare_metrics() function
-        to determine which metrics is the better one.
+        complex and use them in conjunction with the compare_metrics()
+        function to determine which metrics and corresponding model are
+        better.
         """
         pass
