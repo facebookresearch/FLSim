@@ -103,7 +103,7 @@ class TestAsyncAggregator:
         1. Create global_model, some_param=1
         2. Copy global_model into local_model
         3. Simulate local training by local_model changing some_param to a (some_param=a, delta=a-1)
-        4. Simulate global model updata by other user, some_param being set to b (some_param=b)
+        4. Simulate global model update by another user, some_param being set to b (some_param=b)
         5. Call AsyncOptimizer.step(). global_model.some_param should be b + (a-1) (some_param == b + a -1)
         """
 
@@ -134,7 +134,7 @@ class TestAsyncAggregator:
         1. Create global_model, some_param=1
         2. Copy global_model into local_model
         3. Simulate local training by local_model changing some_param to a (some_param=a)
-        4. Simulate global model updata by other user, some_param being set to b (some_param=b)
+        4. Simulate global model update by another user, some_param being set to b (some_param=b)
         5. Call AsyncOptimizer.step(weight=1). global_model.some_param should be
             w*a + (1-w)*b (some_param == w*a + (1-w)*b)
         """

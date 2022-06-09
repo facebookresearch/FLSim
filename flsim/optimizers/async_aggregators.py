@@ -366,7 +366,7 @@ class FedBuffAggregator(AsyncAggregator):
 
     def zero_grad(self):
         r"""
-        Zero'd out the grads if it's the first update or if
+        Zeroes out the grads if it's the first update or if
         reaching buffer_size otherwise no-op
         """
         if self.num_clients_reported == 0 or self.should_update_global_model():
@@ -425,7 +425,7 @@ class FedBuffAggregator(AsyncAggregator):
 
     def _collect_client_update(self, update: IFLModel, weight: float) -> None:
         """
-        Collects update from one client and aggregtes it internally.
+        Collects update from one client and aggregates it internally.
         reduced model = reduced model + update * weight
         """
         self.reducer.collect_update(delta=update, weight=weight)

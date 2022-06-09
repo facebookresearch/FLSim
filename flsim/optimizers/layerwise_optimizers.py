@@ -19,7 +19,7 @@ class LARS(Optimizer):
             parameter groups
         lr (float, optional): learning rate (default: 1e-3)
         beta (float, optional): coefficient used for computing
-            running averages of gradient. (default: 0.9)
+            running averages of gradients. (default: 0.9)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
     """
 

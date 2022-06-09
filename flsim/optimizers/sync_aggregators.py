@@ -89,9 +89,9 @@ class SyncAggregator(abc.ABC):
 
     def init_round(self, reducer: Optional[IFLRoundReducer] = None):
         """
-        Just like an optimizer that requires zero_grad to be called
-        beginning of each step, FL aggregator requires this function
-        to be called beginning of each FL round.
+        Just like an optimizer that requires zero_grad to be called at
+        the beginning of each step, FL aggregator requires this function
+        to be called at the beginning of each FL round.
         """
         if reducer is not None and reducer is not self.reducer:
             self.logger.warning("Changing the round reducer!")

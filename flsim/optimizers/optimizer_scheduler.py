@@ -22,7 +22,7 @@ from torch.optim.optimizer import Optimizer
 
 class OptimizerScheduler(abc.ABC):
     """
-    base class for local LR scheduler, enable the laerning rate
+    Base class for local LR scheduler, enable the learning rate
     of local optimizers for individual users during local training
     """
 
@@ -53,8 +53,8 @@ class OptimizerScheduler(abc.ABC):
         epoch: Optional[int] = None,
     ):
         """
-        interface for updating learning rate. Some learning rate scheduling methods
-        rely produces multiple trial forward passes internally, e.g, line search
+        Interface for updating learning rate. Some learning rate scheduling methods
+        rely on producing multiple trial forward passes internally, e.g, line search
         methods, hence model is required in the interface.
         """
         pass
@@ -100,7 +100,7 @@ class ConstantLRScheduler(OptimizerScheduler):
 
 class LRBatchSizeNormalizer(OptimizerScheduler):
     """
-    normalized the LR by number of examples in the batch
+    Normalize the LR by number of examples in the batch
     """
 
     def __init__(
@@ -145,7 +145,7 @@ class LRBatchSizeNormalizer(OptimizerScheduler):
 class ArmijoLineSearch(OptimizerScheduler):
     """
     Classical Armijo line-search for step-size selection in optimization.
-    Recent work suggests that it might also be used in stochastic over-parametrized
+    Recent work suggests that it might also be used in stochastic over-parameterized
     setting, cf.
     "Painless Stochastic Gradient: Interpolation, Line-Search, and Convergence Rates"
     """
@@ -230,7 +230,7 @@ class ArmijoLineSearch(OptimizerScheduler):
             # reduce lr
             self._shrink_lr()
 
-        # recover model state before the line search scatching, do the actual
+        # recover model state before the line search started, do the actual
         # optimizer.step() outside of the scheduler
         FLModelParamUtils.load_state_dict(
             model.fl_get_module(), state_dict, only_federated_params=False
