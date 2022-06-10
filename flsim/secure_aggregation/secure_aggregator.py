@@ -359,8 +359,9 @@ class SecureAggregator:
 
     def calc_avg_overflow_percentage(
         self,
-        num_users: int,
+        users_per_round: int,
         model: nn.Module,
+        report_rounds: int,
     ) -> Tuple[float, float]:
         """
         Calcualtes the percentage of average overflow over all model layers,
@@ -368,8 +369,11 @@ class SecureAggregator:
         overflow counters to make them ready for the next round.
 
         Args:
-            num_users: the total number of users in the system
+            users_per_round: the total number of users in one round
             model: the global model
+            report_rounds: the number of rounds during which the average
+                overflow is calculated (rounds elapsed between this reporting
+                and the previous one)
 
         Notes:
             The assumption here is that the model is always the same acorss
@@ -381,9 +385,11 @@ class SecureAggregator:
         convert_overflow_perc = sum(
             converter.get_convert_overflow(reset=True) * 100
             for converter in self.converters.values()
-        ) / (num_params * num_users)
+        ) / (num_params * users_per_round * report_rounds)
         aggregate_overflow_perc = (
-            self.get_aggregate_overflow(reset=True) * 100 / (num_params * num_users)
+            self.get_aggregate_overflow(reset=True)
+            * 100
+            / (num_params * users_per_round * report_rounds)
         )
         return convert_overflow_perc, aggregate_overflow_perc
 

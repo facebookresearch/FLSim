@@ -39,6 +39,8 @@ from flsim.optimizers.server_optimizers import (
     FedAdamOptimizerConfig,
     FedAvgWithLROptimizerConfig,
 )
+from flsim.secure_aggregation.secure_aggregator import FixedPointConfig
+from flsim.servers.sync_secagg_servers import SyncSecAggServerConfig
 from flsim.servers.sync_servers import SyncServerConfig
 from flsim.trainers.async_trainer import AsyncTrainer, AsyncTrainerConfig
 from flsim.trainers.sync_trainer import SyncTrainer, SyncTrainerConfig
@@ -1041,6 +1043,80 @@ class TestTrainer:
         assertEqual(
             count_word(metrics_reporter.stdout_results, "Per_Client_Eval"),
             2,
+            metrics_reporter.stdout_results,
+        )
+
+    def test_average_overflow_metric_reporting(self) -> None:
+        """
+        Tests that average overflow metric reporting occurs correctly.
+        """
+        torch.manual_seed(1)
+        # create dummy FL model on alphabet
+        global_model = DummyAlphabetFLModel()
+        # dummy alphabet dataset
+        num_rows = 30
+        num_users = 16
+        dummy_dataset = DummyAlphabetDataset(num_rows)
+        shard_size = int(len(dummy_dataset) / num_users)
+        local_batch_size = 1
+        (
+            data_provider,
+            data_loader,
+        ) = DummyAlphabetDataset.create_data_provider_and_loader(
+            dummy_dataset, shard_size, local_batch_size, global_model
+        )
+        users_per_round = 2  # we will have 8 rounds per epoch
+        epochs = 6
+        train_metrics_reported_per_epoch = 4
+
+        sync_trainer = SyncTrainer(
+            model=global_model,
+            cuda_enabled=False,
+            **OmegaConf.structured(
+                SyncTrainerConfig(
+                    epochs=epochs,
+                    do_eval=True,
+                    users_per_round=users_per_round,
+                    always_keep_trained_model=False,
+                    train_metrics_reported_per_epoch=train_metrics_reported_per_epoch,
+                    eval_epoch_frequency=1,
+                    report_train_metrics=True,
+                    report_train_metrics_after_aggregation=True,
+                    client=ClientConfig(
+                        epochs=1,
+                        optimizer=LocalOptimizerSGDConfig(lr=1.0, momentum=0.0),
+                        max_clip_norm_normalized=None,
+                    ),
+                    server=SyncSecAggServerConfig(
+                        server_optimizer=FedAvgWithLROptimizerConfig(
+                            lr=1.0, momentum=0.0
+                        ),
+                        active_user_selector=SequentialActiveUserSelectorConfig(),
+                        fixedpoint=FixedPointConfig(num_bytes=2, scaling_factor=1000),
+                    ),
+                    report_client_metrics=False,
+                    report_client_metrics_after_epoch=False,
+                )
+            ),
+        )
+        metrics_reporter = MetricsReporterWithMockedChannels()
+
+        assertEqual(sync_trainer._last_report_round_after_aggregation, 0)
+        model, _ = sync_trainer.train(
+            data_provider,
+            metrics_reporter=metrics_reporter,
+            num_total_users=data_provider.num_train_users(),
+            distributed_world_size=1,
+        )
+
+        def count_word(result, word):
+            return str(result).count(word)
+
+        # If train_metrics_reported_per_epoch = 4 and number of epochs = 6
+        # train eval metrics (including overflow) should be reported 4*6 = 24 times
+        assertEqual(
+            count_word(metrics_reporter.stdout_results, "overflow per round"),
+            24,
             metrics_reporter.stdout_results,
         )
 

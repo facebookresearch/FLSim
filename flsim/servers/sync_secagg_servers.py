@@ -127,11 +127,12 @@ class SyncSecAggServer(ISyncServer):
 
     def calc_avg_overflow_percentage(
         self,
-        num_users: int,
+        users_per_round: int,
         model: IFLModel,
+        report_rounds: int,
     ) -> Tuple[float, float]:
         return self._secure_aggregator.calc_avg_overflow_percentage(
-            num_users, model.fl_get_module()
+            users_per_round, model.fl_get_module(), report_rounds
         )
 
 

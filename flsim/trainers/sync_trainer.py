@@ -66,6 +66,7 @@ class SyncTrainer(FLTrainer):
             channel=self.channel,
         )
         self.clients = {}
+        self._last_report_round_after_aggregation = 0
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
@@ -464,6 +465,7 @@ class SyncTrainer(FLTrainer):
         clients: Iterable[Client],
         model: IFLModel,
         users_per_round: int,
+        report_rounds: int,
         metrics_reporter: Optional[IFLMetricsReporter],
     ) -> List[Metric]:
         """Calculates overflow metrics."""
@@ -475,7 +477,7 @@ class SyncTrainer(FLTrainer):
                 convert_overflow_perc,
                 aggregate_overflow_perc,
             ) = self.server.calc_avg_overflow_percentage(  # pyre-fixme
-                users_per_round, model
+                users_per_round, model, report_rounds
             )
             overflow_metrics: List[Metric] = Metric.from_args(
                 convert_overflow_percentage=convert_overflow_perc,
@@ -522,6 +524,10 @@ class SyncTrainer(FLTrainer):
             and self.cfg.report_train_metrics_after_aggregation
             and timeline.tick(1.0 / self.cfg.train_metrics_reported_per_epoch)
         ):
+            current_round = timeline.global_round_num()
+            report_rounds = current_round - self._last_report_round_after_aggregation
+            self._last_report_round_after_aggregation = current_round
+
             with torch.no_grad():
                 model.fl_get_module().eval()
                 for client in clients:
@@ -535,7 +541,7 @@ class SyncTrainer(FLTrainer):
                 clients, model, metrics_reporter
             )
             overflow_metrics = self._calc_overflow_metrics(
-                clients, model, users_per_round, metrics_reporter
+                clients, model, users_per_round, report_rounds, metrics_reporter
             )
 
             metrics_reporter.report_metrics(
