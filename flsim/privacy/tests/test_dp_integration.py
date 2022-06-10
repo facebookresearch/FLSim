@@ -150,7 +150,7 @@ class TestDifferentialPrivacyIntegration:
         dp_config: Optional[Dict[str, Any]] = None,
         noise_func_seed: Optional[int] = None,
         data_size: int = 26,
-        **kwargs
+        **kwargs,
     ):
         """
         Trains an FL model, with or without DP
