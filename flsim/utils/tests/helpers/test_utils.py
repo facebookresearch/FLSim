@@ -45,7 +45,7 @@ class FLTestUtils:
     @classmethod
     def random_grad(cls, model: nn.Module):
         for param in model.parameters():
-            param.grad = torch.rand_like(param)  # pyre-ignore
+            param.grad = torch.rand_like(param)
 
     @classmethod
     def compare_gradient_reconstruction(
@@ -158,7 +158,7 @@ class FLTestUtils:
                         metrics_reporter.add_batch_metrics(batch_metrics)
 
                     batch_metrics.loss.backward()
-                    optimizer.step()  # pyre-ignore
+                    optimizer.step()
         return global_model, metrics_reporter
 
     @classmethod
@@ -185,4 +185,4 @@ class FLTestUtils:
         batch_metrics = model.fl_forward(training_batch)
         loss = batch_metrics.loss
         loss.backward()
-        optimizer.step()  # pyre-ignore
+        optimizer.step()

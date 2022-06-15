@@ -92,10 +92,7 @@ class GaussianPrivacyEngine(IPrivacyEngine):
             else self.noise_seed
         )
         torch.cuda.manual_seed_all(noise_seed)  # safe to call even if no gpu.
-        self.random_number_generator = torch.Generator(  # pyre-ignore
-            device=self.device
-        )
-        # pyre-fixme[16]: `Generator` has no attribute `manual_seed`.
+        self.random_number_generator = torch.Generator(device=self.device)
         self.random_number_generator.manual_seed(noise_seed)
         self.logger.debug("User privacy engine attached.")
 

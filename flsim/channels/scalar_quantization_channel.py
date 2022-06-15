@@ -81,9 +81,7 @@ class ScalarQuantizationChannel(IdentityChannel):
                     message_size_bytes += ScalarQuantizationChannel.BYTES_PER_FP64
                     message_size_bytes += ScalarQuantizationChannel.BYTES_PER_FP32
                 else:
-                    # pyre-ignore[16]: `torch.Tensor` has no attribute `q_per_channel_scales`
                     n_scales = param.q_per_channel_scales().numel()
-                    # pyre-ignore[16]: `torch.Tensor` has no attribute `q_per_channel_zero_points`
                     n_zero_points = param.q_per_channel_zero_points().numel()
                     message_size_bytes += (
                         ScalarQuantizationChannel.BYTES_PER_FP64 * n_scales
@@ -169,7 +167,6 @@ class ScalarQuantizationChannel(IdentityChannel):
         new_state_dict = OrderedDict()
         for name, param in message.model_state_dict.items():
             if param.ndim > 1:
-                # pyre-ignore[16]: `torch.Tensor` has no attribute `dequantize`
                 new_state_dict[name] = param.data.dequantize()
             else:
                 new_state_dict[name] = param.data

@@ -98,7 +98,6 @@ class DPClient(Client):
             # pyre-fixme[16]: `DPClient` has no attribute `cfg`.
             if self.cfg.privacy_setting.noise_seed is not None:
                 generator = torch.Generator()
-                # pyre-fixme[16]
                 generator.manual_seed(self.cfg.privacy_setting.noise_seed)
             else:
                 generator = None

@@ -49,6 +49,7 @@ class ActiveUserSelectorUtils:
         user_sample_counts: torch.Tensor,
         averaging_exponent: float,
     ) -> torch.Tensor:
+        # pyre-fixme[58]: `/` is not supported for operand types `int` and `Tensor`.
         sample_averaging_weights = 1 / torch.pow(user_sample_counts, averaging_exponent)
         user_utility = sample_averaging_weights * user_utility
         return user_utility

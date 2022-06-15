@@ -243,9 +243,7 @@ class TestFLModelParamUtils:
     def test_set_gradient(self) -> None:
         model = LinearRegression()
         reconstructed_gradient = LinearRegression()
-        # pyre-fixme[41]: `data` cannot be reassigned. It is a read-only property.
         reconstructed_gradient.a.data = torch.FloatTensor([0.5])
-        # pyre-fixme[41]: `data` cannot be reassigned. It is a read-only property.
         reconstructed_gradient.b.data = torch.FloatTensor([1.0])
         FLModelParamUtils.set_gradient(
             model=model, reference_gradient=reconstructed_gradient
@@ -266,12 +264,10 @@ class TestFLModelParamUtils:
                 return self.a + self.c * x
 
         model_1, model_2 = LinearRegression(), LinearRegression()
-        # pyre-fixme[41]: `data` cannot be reassigned. It is a read-only property.
         model_1.a.data, model_1.b.data = (
             torch.FloatTensor([a_val]),
             torch.FloatTensor([b_val]),
         )
-        # pyre-fixme[41]: `data` cannot be reassigned. It is a read-only property.
         model_2.a.data, model_2.b.data = (
             torch.FloatTensor([a_val]),
             torch.FloatTensor([b_val]),
@@ -281,12 +277,10 @@ class TestFLModelParamUtils:
         assertEqual(FLModelParamUtils.get_mismatched_param([model_1, model_2]), "")
 
         # 2) only param 'a' is different => return 'a'
-        # pyre-fixme[41]: `data` cannot be reassigned. It is a read-only property.
         model_2.a.data = torch.FloatTensor([b_val])
         assertEqual(FLModelParamUtils.get_mismatched_param([model_1, model_2]), "a")
 
         # 3) only param 'b' is different => return 'b'
-        # pyre-fixme[41]: `data` cannot be reassigned. It is a read-only property.
         model_2.a.data, model_2.b.data = (
             torch.FloatTensor([a_val]),
             torch.FloatTensor([a_val]),
@@ -295,7 +289,6 @@ class TestFLModelParamUtils:
 
         # 4) both param 'a' and 'b' are different
         # => return the first mismatched param, which is 'a'
-        # pyre-fixme[41]: `data` cannot be reassigned. It is a read-only property.
         model_2.a.data = torch.FloatTensor([b_val])
         assertEqual(FLModelParamUtils.get_mismatched_param([model_1, model_2]), "a")
 

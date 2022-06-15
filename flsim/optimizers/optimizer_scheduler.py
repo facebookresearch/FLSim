@@ -212,7 +212,6 @@ class ArmijoLineSearch(OptimizerScheduler):
             assert (
                 len(proposed_lr) == 1
             ), "Armijo line-search only works with single param_group"
-            # pyre-ignore[20]
             self.optimizer.step()
             # DO NOT compute backprop after forward here, only the forward is
             # required for step-size selection, use existent gradient direction

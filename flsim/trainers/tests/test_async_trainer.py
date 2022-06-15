@@ -897,11 +897,9 @@ class TestAsyncTrainer:
                 # ConstantGradientFLModel has a property that its bias term = #of times optimizer.step() is called
                 assertTrue(
                     np.isclose(
-                        # pyre-fixme[29]: `Union[BoundMethod[typing.Callable(torch.Te...
                         fl_model.fl_get_module().bias.detach().item(),
                         num_optimizer_steps,
                     ),
-                    # pyre-fixme[29]: `Union[BoundMethod[typing.Callable(torch.Tensor...
                     f"Expected: {num_optimizer_steps}, Found: {fl_model.fl_get_module().bias.detach().item()}",
                 )
 

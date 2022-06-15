@@ -279,8 +279,6 @@ class FLModelParamUtils:
     ) -> None:
         for param_group in optimizer.param_groups:
             param_group["lr"] = base_lr * lr_normalizer
-        # pyre-ignore[20] Call `Optimizer.step` expects argument `closure`
-        # but closure is optional in torch.optim.Optimizer
         optimizer.step()
 
     @classmethod
