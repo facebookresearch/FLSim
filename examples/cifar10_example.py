@@ -57,7 +57,6 @@ def build_data_provider(local_batch_size, examples_per_user, drop_last: bool = F
     fl_data_loader = DataLoader(
         train_dataset, test_dataset, test_dataset, sharder, local_batch_size, drop_last
     )
-    # pyre-fixme[45]: Cannot instantiate abstract class `DataProvider`.
     data_provider = DataProvider(fl_data_loader)
     print(f"Clients in total: {data_provider.num_train_users()}")
     return data_provider

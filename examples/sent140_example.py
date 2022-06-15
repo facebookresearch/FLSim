@@ -178,7 +178,6 @@ def build_data_provider(data_config, drop_last: bool = False):
         drop_last=drop_last,
     )
 
-    # pyre-fixme[45]: Cannot instantiate abstract class `DataProvider`.
     data_provider = DataProvider(dataloader)
     return data_provider, train_dataset.num_letters
 

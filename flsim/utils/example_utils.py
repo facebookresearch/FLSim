@@ -185,34 +185,34 @@ class LEAFDataLoader(IFLDataLoader):
 class DataProvider(IFLDataProvider):
     def __init__(self, data_loader):
         self.data_loader = data_loader
-        self.train_users = self._create_fl_users(data_loader.fl_train_set())
-        self.eval_users = self._create_fl_users(data_loader.fl_eval_set())
-        self.test_users = self._create_fl_users(data_loader.fl_test_set())
+        self._train_users = self._create_fl_users(data_loader.fl_train_set())
+        self._eval_users = self._create_fl_users(data_loader.fl_eval_set())
+        self._test_users = self._create_fl_users(data_loader.fl_test_set())
 
-    def user_ids(self) -> List[int]:
-        return list(self.train_users.keys())
+    def train_user_ids(self) -> List[int]:
+        return list(self._train_users.keys())
 
-    def num_users(self) -> int:
-        return len(self.train_users)
+    def num_train_users(self) -> int:
+        return len(self._train_users)
 
     def get_train_user(self, user_index: int) -> IFLUserData:
-        if user_index in self.train_users:
-            return self.train_users[user_index]
+        if user_index in self._train_users:
+            return self._train_users[user_index]
         else:
             raise IndexError(
-                f"Index {user_index} is out of bound for list with len {self.num_users()}"
+                f"Index {user_index} is out of bound for list with len {self.num_train_users()}"
             )
 
-    def train_data(self) -> Iterable[IFLUserData]:
-        for user_data in self.train_users.values():
+    def train_users(self) -> Iterable[IFLUserData]:
+        for user_data in self._train_users.values():
             yield user_data
 
-    def eval_data(self) -> Iterable[IFLUserData]:
-        for user_data in self.eval_users.values():
+    def eval_users(self) -> Iterable[IFLUserData]:
+        for user_data in self._eval_users.values():
             yield user_data
 
-    def test_data(self) -> Iterable[IFLUserData]:
-        for user_data in self.test_users.values():
+    def test_users(self) -> Iterable[IFLUserData]:
+        for user_data in self._test_users.values():
             yield user_data
 
     def _create_fl_users(self, iterator: Iterator) -> Dict[int, IFLUserData]:
@@ -258,7 +258,6 @@ def build_data_provider(
     )
 
     # 4. Wrap the data loader with a data provider.
-    # pyre-fixme[45]: Cannot instantiate abstract class `DataProvider`.
     data_provider = DataProvider(fl_data_loader)
     print(f"Clients in total: {data_provider.num_train_users()}")
     return data_provider
