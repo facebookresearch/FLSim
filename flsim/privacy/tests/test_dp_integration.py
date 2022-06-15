@@ -317,7 +317,7 @@ class TestDifferentialPrivacyIntegration:
 
     def test_frameworks_one_client_sample_dp_off(self) -> None:
         """
-        Tests if Pytorch-DP and FL simulator, generate the same resutls, when
+        Tests if Pytorch-DP and FL simulator generate the same results when
         sample-level DP is off. Essentially, tests equivalence of the following
         scenarios, when there is 1 user:
 
@@ -325,7 +325,7 @@ class TestDifferentialPrivacyIntegration:
         2. Using Pytorch DP, when sample-level DP is off
 
         Note:
-            For this test, user-level DP is off, since it is not relavant to Pytorch-DP's
+            For this test, user-level DP is off, since it is not relevant to Pytorch-DP's
             provided functionality, which is sample-level DP.
         """
         lr = 1e-2
@@ -346,7 +346,7 @@ class TestDifferentialPrivacyIntegration:
 
     def test_frameworks_one_client_clipping_only(self) -> None:
         """
-        Tests if Pytorch-DP and FL simulator, generate the same resutls, when there
+        Tests if Pytorch-DP and FL simulator generate the same results when there
         is only 1 user and when sample-level DP is on (with noising off).
         Essentially, tests equivalence of the following scenarios:
 
@@ -355,7 +355,7 @@ class TestDifferentialPrivacyIntegration:
         (DP parameters are the same for the 2 scenarios.)
 
         Note:
-            For this test, user-level DP is off, since it is not relavant to Pytorch-DP's
+            For this test, user-level DP is off, since it is not relevant to Pytorch-DP's
             provided functionality, which is sample-level DP.
         """
         lr = 0.25
@@ -392,7 +392,6 @@ class TestDifferentialPrivacyIntegration:
         """
         Tests if user-level DP is equivalent to sample-level DP, when we
         have one user, and that user has one example (one epoch)
-
         """
         lr = 1.0
         momentum = 0.0
@@ -594,17 +593,17 @@ class TestDifferentialPrivacyIntegration:
             train_metrics_reported_per_epoch=10,
             eval_epoch_frequency=0.1,
         )
-        # we have 26 users, 4 users per round, that makes 7 rounds per epcoh
+        # we have 26 users, 4 users per round, that makes 7 rounds per epoch
         # we are reporting train, aggregation, and eval metrics all
         # at 10 rounds per epoch, so we should get a total of 21 reports
 
         def count_word(result, word):
             return str(result).count(word)
 
-        # check for existance of sample_dp and user_dp in reports.
-        # they are logged only in Aggrefation and we aggregated 7 times.
+        # Check for existence of sample_dp and user_dp in reports.
+        # They are logged only in Aggregation and we aggregated 7 times.
 
-        # print to std our prints sample_dp wich is a dict of four values once
+        # print to stdout: prints sample_dp, which is a dict of four values once
         # hence we should get 7 occurrences.
         assertEqual(
             count_word(metrics_reporter.stdout_results, "sample level dp"),

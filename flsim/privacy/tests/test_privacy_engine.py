@@ -69,7 +69,7 @@ class TestGaussianPrivacyEngine:
         """
         Tests that the epsilon is greater than 1 in normal settings.
         Also, when we do not add any noise, the privacy loss should
-        be infinity.
+        be infinite.
         """
 
         privacy_engine = self._init_privacy_engine()
@@ -102,7 +102,7 @@ class TestGaussianPrivacyEngine:
             users_per_round=num_users_per_round,
         )
         model_diff = utils.TwoFC()
-        for _ in range(steps):  # adding noise will increse the steps
+        for _ in range(steps):  # adding noise will increase the steps
             privacy_engine.add_noise(model_diff, 1.0)
 
         privacy_budget = privacy_engine.get_privacy_spent()

@@ -15,7 +15,7 @@ from flsim.privacy.privacy_engine import (
 
 
 class NoiseType(Enum):
-    GAUSSIAN = "guassian"
+    GAUSSIAN = "gaussian"
 
 
 class PrivacyEngineFactory:

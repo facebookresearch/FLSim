@@ -55,7 +55,7 @@ class UserUpdateClipper:
 
     def _calc_clip_factor(self, max_norm: float, per_user_norm: float):
         """
-        Calculates the clip factor that will be used to clip the user updatas
+        Calculates the clip factor that will be used to clip the user updates
         """
         if max_norm < 0 or per_user_norm < 0:
             raise ValueError("Error: max_norm and per_user_norm must be both positive.")
