@@ -7,7 +7,7 @@
 
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any, Optional, OrderedDict
+from typing import Any, Dict, Optional, OrderedDict
 
 import torch.nn as nn
 from flsim.interfaces.model import IFLModel
@@ -43,6 +43,13 @@ class Message:
     )
     # count sketch
     count_sketch: Optional[Any] = field(default=None)
+
+    # MIME Specific Information below:
+    # Store servers global optimizer state
+    server_opt_state: Optional[Dict] = field(default=None)
+
+    # Stores average gradient of the global_model over all client training datasets
+    mime_control_variate: Optional[nn.Module] = field(default=None)
 
     def populate_state_dict(self, **kwargs):
         """
