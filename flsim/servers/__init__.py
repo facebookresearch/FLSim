@@ -9,6 +9,7 @@ from hydra.core.config_store import ConfigStore  #  @manual
 
 from .sync_dp_servers import SyncDPSGDServerConfig
 from .sync_mime_servers import SyncMimeServerConfig
+from .sync_mimelite_servers import SyncMimeLiteServerConfig
 from .sync_secagg_servers import SyncSecAggServerConfig
 from .sync_servers import SyncServerConfig
 
@@ -33,5 +34,11 @@ ConfigStore.instance().store(
 ConfigStore.instance().store(
     name="base_sync_mime_server",
     node=SyncMimeServerConfig,
+    group="server",
+)
+
+ConfigStore.instance().store(
+    name="base_sync_mimelite_server",
+    node=SyncMimeLiteServerConfig,
     group="server",
 )

@@ -10,6 +10,7 @@ from hydra.core.config_store import ConfigStore
 from .base_client import ClientConfig
 from .dp_client import DPClientConfig
 from .sync_mime_client import MimeClientConfig
+from .sync_mimelite_client import MimeLiteClientConfig
 
 
 ConfigStore.instance().store(
@@ -27,5 +28,11 @@ ConfigStore.instance().store(
 ConfigStore.instance().store(
     name="base_mime_client",
     node=MimeClientConfig,
+    group="client",
+)
+
+ConfigStore.instance().store(
+    name="base_mimelite_client",
+    node=MimeLiteClientConfig,
     group="client",
 )
