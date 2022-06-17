@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Iterable, List, Optional
 
 from flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorConfig,
@@ -17,6 +17,7 @@ from flsim.active_user_selectors.simple_user_selector import (
 )
 from flsim.channels.base_channel import IdentityChannel, IFLChannel
 from flsim.channels.message import Message
+from flsim.clients.base_client import Client
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.server_optimizers import (
@@ -88,6 +89,22 @@ class ISyncServer(abc.ABC):
         """
         pass
 
+    def broadcast_message_to_clients(self, clients: Iterable[Client]) -> Message:
+        """
+        Create a message common for every client during generate_local_update.
+        Message must include the global_model as it is the only way to send it to each client.
+        A reference to the clients in the current round is always passed by sync_trainer.
+
+        Args:
+            clients Iterable[Client]: [description]. The list of clients.
+            Need by SyncMimeServer
+
+        Returns:
+            Message: The message common for all clients. Pass the global model here.
+            Trainer should pass this message while calling generate_local_update for each client
+        """
+        return Message(model=self.global_model)
+
     @property
     def global_model(self) -> IFLModel:
         """
@@ -132,7 +149,7 @@ class SyncServer(ISyncServer):
             cfg.server_optimizer = FedAvgOptimizerConfig()
 
     @property
-    def global_model(self):
+    def global_model(self) -> IFLModel:
         return self._global_model
 
     def select_clients_for_training(

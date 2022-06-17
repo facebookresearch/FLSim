@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 import pytest
 import torch
 import torch.nn as nn
+from flsim.channels.message import Message
 from flsim.clients.base_client import Client, ClientConfig
 from flsim.clients.dp_client import DPClient, DPClientConfig
 from flsim.common.pytest_helper import (
@@ -144,10 +145,10 @@ class TestBaseClient(ClientTestBase):
         client = self._get_client(store_models_and_optimizers=True)
         model0 = utils.SampleNet(utils.TwoFC())
         model1 = utils.SampleNet(utils.TwoFC())
-        delta1, weight1 = client.generate_local_update(model0)
+        delta1, weight1 = client.generate_local_update(Message(model0))
         delta1 = FLModelParamUtils.clone(delta1)
 
-        delta2, weight2 = client.generate_local_update(model1)
+        delta2, weight2 = client.generate_local_update(Message(model1))
         assertEqual(client.times_selected, 2)
         # model1 should be the first model stored
         assertAlmostEqual(weight1, client.weights[0])
@@ -215,7 +216,7 @@ class TestBaseClient(ClientTestBase):
 
         try:
             # should work
-            delta, weight = clnt.generate_local_update(model)
+            delta, weight = clnt.generate_local_update(Message(model))
         except BaseException as e:
             assertTrue(False, e)
         # pyre-fixme[61]: `weight` is undefined, or not always defined.
@@ -258,10 +259,10 @@ class TestBaseClient(ClientTestBase):
 
         init_model = utils.SampleNet(utils.TwoFC())
         delta, weight = client.generate_local_update(
-            FLModelParamUtils.clone(init_model)
+            Message(FLModelParamUtils.clone(init_model))
         )
         prox_delta, weight = prox_client.generate_local_update(
-            FLModelParamUtils.clone(init_model)
+            Message(FLModelParamUtils.clone(init_model))
         )
         mismatched = utils.verify_models_equivalent_after_training(
             prox_delta, delta, init_model
@@ -289,9 +290,11 @@ class TestBaseClient(ClientTestBase):
             ),
         )
 
-        delta, _ = client.generate_local_update(FLModelParamUtils.clone(init_model))
+        delta, _ = client.generate_local_update(
+            Message(FLModelParamUtils.clone(init_model))
+        )
         prox_delta, _ = prox_client.generate_local_update(
-            FLModelParamUtils.clone(init_model)
+            Message(FLModelParamUtils.clone(init_model))
         )
 
         mismatched = utils.verify_models_equivalent_after_training(
@@ -321,9 +324,11 @@ class TestBaseClient(ClientTestBase):
             ),
         )
 
-        delta, _ = client.generate_local_update(FLModelParamUtils.clone(init_model))
+        delta, _ = client.generate_local_update(
+            Message(FLModelParamUtils.clone(init_model))
+        )
         prox_delta, _ = prox_client.generate_local_update(
-            FLModelParamUtils.clone(init_model)
+            Message(FLModelParamUtils.clone(init_model))
         )
 
         mismatched = utils.verify_models_equivalent_after_training(
@@ -528,7 +533,7 @@ class TestDPClient(ClientTestBase):
     def test_storage(self) -> None:
         client = self._get_dp_client(store_models_and_optimizers=True)
         model0 = utils.SampleNet(utils.TwoFC())
-        delta, weight1 = client.generate_local_update(model0)
+        delta, weight1 = client.generate_local_update(Message(model0))
 
         assertEqual(client.times_selected, 1)
         # test existence of privacy_engine
@@ -542,14 +547,14 @@ class TestDPClient(ClientTestBase):
         private_model = FLModelParamUtils.clone(model)
 
         clnt = self._get_client(data)
-        delta, weight = clnt.generate_local_update(model)
+        delta, weight = clnt.generate_local_update(Message(model))
         # set noise to 0 and clipping to a large number
         private_clnt = self._get_dp_client(
             data, noise_multiplier=0, clipping_value=1000
         )
 
         private_delta, private_weight = private_clnt.generate_local_update(
-            private_model
+            Message(private_model)
         )
         mismatched = utils.verify_models_equivalent_after_training(model, private_model)
         mismatched_delta = utils.verify_models_equivalent_after_training(
@@ -565,7 +570,7 @@ class TestDPClient(ClientTestBase):
         private_model = FLModelParamUtils.clone(model)
 
         clnt = self._get_client(data)
-        delta, weight = clnt.generate_local_update(model)
+        delta, weight = clnt.generate_local_update(Message(model))
         private_clnt = self._get_dp_client(
             data,
             noise_multiplier=0,
@@ -574,7 +579,7 @@ class TestDPClient(ClientTestBase):
         )
 
         private_delta, private_weight = private_clnt.generate_local_update(
-            private_model
+            Message(private_model)
         )
         mismatched = utils.verify_models_equivalent_after_training(delta, private_delta)
         assertAlmostEqual(weight, private_weight)
@@ -586,7 +591,7 @@ class TestDPClient(ClientTestBase):
         private_model = FLModelParamUtils.clone(model)
 
         clnt = self._get_client(data)
-        delta, weight = clnt.generate_local_update(model)
+        delta, weight = clnt.generate_local_update(Message(model))
         private_clnt = self._get_dp_client(
             data,
             noise_multiplier=1,
@@ -594,7 +599,7 @@ class TestDPClient(ClientTestBase):
             clipping_value=0.01,
         )
         private_delta, private_weight = private_clnt.generate_local_update(
-            private_model
+            Message(private_model)
         )
         mismatched_delta = utils.verify_models_equivalent_after_training(
             delta, private_delta
@@ -612,7 +617,7 @@ class TestDPClient(ClientTestBase):
         # pyre-fixme[6]: Expected `int` for 2nd param but got `float`.
         # pyre-fixme[6]: Expected `int` for 3rd param but got `float`.
         clnt = self._get_dp_client(data, noise_multiplier, clipping_value, True)
-        model, weight = clnt.generate_local_update(model)
+        model, weight = clnt.generate_local_update(Message(model))
 
         alphas = clnt.accountant.DEFAULT_ALPHAS
         delta = 1e-5

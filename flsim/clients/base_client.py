@@ -124,11 +124,14 @@ class Client:
         return [self._tracked[s]["weight"] for s in range(self.times_selected)]
 
     def generate_local_update(
-        self, model: IFLModel, metrics_reporter: Optional[IFLMetricsReporter] = None
+        self, message: Message, metrics_reporter: Optional[IFLMetricsReporter] = None
     ) -> Tuple[IFLModel, float]:
         r"""
         wrapper around all functions called on a client for generating an
         updated local model.
+
+        Args:
+        message: Must include the global model. Can contain metadata if passed by the server.
 
         Note:
         -----
@@ -136,6 +139,8 @@ class Client:
         report_metrics will be called on the reporter, o.w. reports will be
         accumulated in memory.
         """
+        model = message.model
+
         updated_model, weight, optimizer = self.copy_and_train_model(
             model, metrics_reporter=metrics_reporter
         )

@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 import torch.distributed as dist
 import torch.multiprocessing as mp
+from flsim.channels.message import Message
 from flsim.clients.base_client import Client, ClientConfig
 from flsim.common.pytest_helper import (
     assertAlmostEqual,
@@ -141,7 +142,8 @@ class TestRoundReducerBase:
     def _fake_client(self, global_value, client_value, weight):
         clnt = Client(dataset=None, **OmegaConf.structured(ClientConfig()))
 
-        def fill(model, *args):
+        def fill(message, *args):
+            model = message.model
             model.fl_get_module().fill_all(global_value - client_value)
             return model, weight
 
@@ -218,7 +220,9 @@ class TestRoundReducer(TestRoundReducerBase):
         ref_model = utils.SampleNet(utils.TwoFC())
         rr = self.get_round_reducer(ref_model)
         for clnt in clients:
-            model, weight = clnt.generate_local_update(utils.SampleNet(utils.TwoFC()))
+            model, weight = clnt.generate_local_update(
+                Message(utils.SampleNet(utils.TwoFC()))
+            )
             rr.collect_update(model, weight)
         expected_sum_weights = sum(weights)
         expected_param_values = sum(
@@ -328,7 +332,9 @@ class TestDPRoundReducer(TestRoundReducerBase):
             total_number_of_users=num_clients,
         )
         for client in clients:
-            delta, weight = client.generate_local_update(utils.SampleNet(utils.TwoFC()))
+            delta, weight = client.generate_local_update(
+                Message(utils.SampleNet(utils.TwoFC()))
+            )
             dp_rr.collect_update(delta, weight)
             """
             delta = global (all 5.0) - local (all 3.0) = all 2.0
@@ -368,7 +374,9 @@ class TestDPRoundReducer(TestRoundReducerBase):
             total_number_of_users=num_clients,
         )
         for client in clients:
-            delta, weight = client.generate_local_update(utils.SampleNet(utils.TwoFC()))
+            delta, weight = client.generate_local_update(
+                Message(utils.SampleNet(utils.TwoFC()))
+            )
 
             dp_rr.collect_update(delta, weight)
             """
@@ -414,7 +422,9 @@ class TestDPRoundReducer(TestRoundReducerBase):
             total_number_of_users=num_clients,
         )
         for client in clients:
-            delta, weight = client.generate_local_update(utils.SampleNet(utils.TwoFC()))
+            delta, weight = client.generate_local_update(
+                Message(utils.SampleNet(utils.TwoFC()))
+            )
             dp_rr.collect_update(delta, weight)
             """
             update = global (all 5.0) - local (all 3.0) = all 2.0
@@ -461,7 +471,9 @@ class TestDPRoundReducer(TestRoundReducerBase):
             total_number_of_users=num_clients,
         )
         for client in clients:
-            delta, weight = client.generate_local_update(utils.SampleNet(utils.TwoFC()))
+            delta, weight = client.generate_local_update(
+                Message(utils.SampleNet(utils.TwoFC()))
+            )
             client.compute_delta(ref_model, delta, delta)
             dp_rr.collect_update(delta, weight)
             """
@@ -596,7 +608,7 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
         weights = []
         for client in clients:
             delta, model_weight = client.generate_local_update(
-                utils.SampleNet(utils.TwoFC())
+                Message(utils.SampleNet(utils.TwoFC()))
             )
             staleness = np.random.randint(1, settings.max_staleness)
             weight = async_weight.weight(num_examples=model_weight, staleness=staleness)

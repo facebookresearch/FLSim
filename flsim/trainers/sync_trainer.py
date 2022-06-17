@@ -107,8 +107,8 @@ class SyncTrainer(FLTrainer):
                 cuda_manager=self._cuda_state_manager,
             )
         else:
-            client = Client(
-                **OmegaConf.structured(self.cfg.client),
+            client = instantiate(
+                self.cfg.client,
                 dataset=datasets.get_train_user(dataset_id),
                 name=f"client_{dataset_id}",
                 timeout_simulator=self._timeout_simulator,
@@ -369,9 +369,12 @@ class SyncTrainer(FLTrainer):
         self.server.init_round()
         self.logger.info(f"Round initialization took {time() - t} s.")
 
+        server_state_message = self.server.broadcast_message_to_clients(clients)
+
         def update(client):
             client_delta, weight = client.generate_local_update(
-                self.global_model(), metrics_reporter
+                server_state_message,
+                metrics_reporter,
             )
             self.server.receive_update_from_client(Message(client_delta, weight))
 
