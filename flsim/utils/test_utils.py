@@ -333,12 +333,110 @@ def verify_models_equivalent_after_training(
         return ""
 
 
+def verify_gradients_equal(
+    model1: Union[nn.Module, IFLModel],
+    model2: Union[nn.Module, IFLModel],
+) -> str:
+    """This function accepts either nn.Module or IFLModel and checks that
+    all parameters have the same gradient.
+
+    NOTE: This function only checks gradient values and not parameters.
+
+    Return value: str. "" if gradients are the same.
+    else, error message with the SAD (sum of absolute difference between
+        mismatched model gradients)
+    """
+    model1 = model1.fl_get_module() if isinstance(model1, IFLModel) else model1
+    model2 = model2.fl_get_module() if isinstance(model2, IFLModel) else model2
+
+    for (name1, p1), (name2, p2) in zip(
+        model1.named_parameters(), model2.named_parameters()
+    ):
+        if name1 != name2:
+            return f"Model 1, Model 2 mismatch. Parameter name: {name1} and {name2} respectively"
+        if (p1.grad is None) ^ (p2.grad is None):
+            # One grad exists and the other does not, so they are definitely not equal
+            return (
+                f"Model 1, Model 2 mismatch. Parameter gradient: {name1}."
+                f" Model 1: {p1.grad is not None}, Model 2: {p2.grad is not None}"
+            )
+        if (p1.grad is not None) and (p2.grad is not None):
+            if not torch.allclose(p1.grad.float(), p2.grad.float()):
+                summed_abs_diff = (p1.grad - p2.grad).abs().sum()
+                return (
+                    f"Model 1, Model 2 mismatch. Parameter gradient: {name1}"
+                    f"Summed Absolute Gradient Difference={summed_abs_diff}"
+                )
+    return ""
+
+
+def verify_optimizer_state_dict_equal(state_dict1, state_dict2, prefix="") -> str:
+    """Given two optimizer states optim.state_dict()["state"]
+    Verify whether the keys and values match up.
+
+    Return value: str. "" if both state dicts are equal
+    else, error message with the SAD (sum of absolute state)
+    """
+    for (name1, val1), (name2, val2) in zip(state_dict1.items(), state_dict2.items()):
+        if name1 != name2:
+            return (
+                f"Optimizer 1, Optimizer 2 state dict mismatch. Key."
+                f" Optimizer 1: {prefix + name1}. Optimizer 2: {prefix + name2}"
+            )
+        if type(val1) != type(val2):
+            return (
+                f"Optimizer 1, Optimizer 2 state dict mismatch. Key {prefix + name1}. Type."
+                f" Optimizer 1: {type(val1)}. Optimizer 2: {type(val2)}"
+            )
+        if isinstance(val1, dict):
+            # Nested dictionary
+            msg = verify_optimizer_state_dict_equal(
+                val1, val2, prefix=prefix + str(name1)
+            )
+            if msg != "":
+                return msg
+        elif isinstance(val1, torch.Tensor):
+            if not torch.allclose(val1.float(), val2.float()):
+                summed_abs_diff = (val1 - val2).abs().sum()
+                return (
+                    f"Optimizer 1, Optimizer 2 mismatch. Key: {prefix + name1}"
+                    f"Summed Absolute State Difference={summed_abs_diff}"
+                )
+        elif val1 != val2:
+            return (
+                f"Optimizer 1, Optimizer 2 mismatch. Key: {prefix + name1}"
+                f"Optimizer 1: {val1}. Optimizer 2: {val2}"
+            )
+    return ""
+
+
 def model_parameters_equal_to_value(model, value) -> str:
     if isinstance(model, IFLModel):
         model = model.fl_get_module()
     for n, p in model.named_parameters():
         if not torch.allclose(p.float(), torch.tensor(value)):
             summed_absolute_difference = (p - torch.tensor(value)).abs().sum()
+            return (
+                n
+                + f"{p} did not match with {value}: Summed Absolute Difference={summed_absolute_difference}"
+            )
+    return ""
+
+
+def model_gradients_equal_to_value(model, value) -> str:
+    """Given a model, verify that all gradients are equal to provided value.
+
+    Return value: str. "" if all gradient tensors match given value
+    else, error message with the SAD (sum of absolute difference) for the first
+    mismatched gradient and value
+    """
+    if isinstance(model, IFLModel):
+        model = model.fl_get_module()
+    for n, p in model.named_parameters():
+        if (p.grad is not None) and (
+            not torch.allclose(p.grad.float(), torch.tensor(value))
+        ):
+            summed_absolute_difference = (p.grad - torch.tensor(value)).abs().sum()
             return (
                 n
                 + f"{p} did not match with {value}: Summed Absolute Difference={summed_absolute_difference}"

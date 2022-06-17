@@ -13,8 +13,10 @@ import torch.nn as nn
 from flsim.channels.message import Message
 from flsim.clients.base_client import Client, ClientConfig
 from flsim.clients.dp_client import DPClient, DPClientConfig
+from flsim.clients.sync_mime_client import MimeClient, MimeClientConfig
 from flsim.common.pytest_helper import (
     assertAlmostEqual,
+    assertEmpty,
     assertEqual,
     assertFalse,
     assertIsInstance,
@@ -28,6 +30,7 @@ from flsim.common.timeout_simulator import (
     NeverTimeOutSimulatorConfig,
 )
 from flsim.data.data_provider import IFLUserData
+from flsim.interfaces.model import IFLModel
 from flsim.optimizers.local_optimizers import (
     LocalOptimizerFedProxConfig,
     LocalOptimizerSGD,
@@ -109,6 +112,23 @@ class ClientTestBase:
             **OmegaConf.structured(config), dataset=(data or self._fake_data())
         )
 
+    def _get_mime_client(
+        self,
+        data=None,
+        store_models_and_optimizers: bool = False,
+        timeout_simulator=None,
+    ):
+        data = data or self._fake_data()
+        config = MimeClientConfig(
+            store_models_and_optimizers=store_models_and_optimizers,
+            lr_scheduler=ConstantLRSchedulerConfig(),
+        )
+        return MimeClient(
+            **OmegaConf.structured(config),
+            dataset=data,
+            timeout_simulator=timeout_simulator,
+        )
+
     def _train(self, data: IFLUserData, model, optim) -> None:
         # basically re-write training logic
         model.fl_get_module().train()
@@ -138,6 +158,49 @@ class ClientTestBase:
         model.fl_get_module().train()
         client.eval(model=model)
         assert model.fl_get_module().training
+
+    def _reload_server_state(self, client):
+        model = utils.SampleNet(utils.TwoFC())
+        base_optim = torch.optim.Adam(model.fl_get_module().parameters())
+
+        # create a state in the optimizer by performing backprop
+        for batch in client.dataset.train_data():
+            base_optim.zero_grad()
+            model.fl_forward(batch).loss.backward()
+            base_optim.step()
+
+        # check if the optimizer state is loaded
+        client.server_opt_state = base_optim.state_dict()["state"]
+        optim = torch.optim.Adam(model.fl_get_module().parameters())
+        client._reload_server_state(optim)
+        error_msg = utils.verify_optimizer_state_dict_equal(
+            optim.state_dict()["state"], base_optim.state_dict()["state"]
+        )
+        assertEmpty(error_msg)
+
+        # check if passing empty optimizer state works
+        # used for the first round, at the start of training
+        # since server has no optimizer state
+        client.server_opt_state = {}
+        optim = torch.optim.Adam(model.fl_get_module().parameters())
+        client._reload_server_state(optim)
+        assertEqual(optim.state_dict()["state"], {})
+
+    def _full_dataset_gradient(self, client, module: IFLModel):
+        """Calculate expected average gradient over entire training dataset"""
+        grads = FLModelParamUtils.clone(module.fl_get_module())
+        grads.zero_grad()
+        num_examples = 0
+        for batch in client.dataset.train_data():
+            module.fl_get_module().zero_grad()
+            batch_metrics = module.fl_forward(batch)
+            batch_metrics.loss.backward()
+            FLModelParamUtils.add_gradients(grads, module.fl_get_module(), grads)
+            num_examples += batch_metrics.num_examples
+        FLModelParamUtils.multiply_gradient_by_weight(
+            model=grads, weight=1.0 / num_examples, model_to_save=grads
+        )
+        return grads, num_examples
 
 
 class TestBaseClient(ClientTestBase):
@@ -480,6 +543,17 @@ class TestBaseClient(ClientTestBase):
         client = self._get_client()
         self._run_client_eval_test(client)
 
+    def test_full_dataset_gradient(self):
+        """Test whether average gradient over the training dataset works correctly"""
+        data = self._fake_data(num_batches=5, batch_size=10)
+        clnt = self._get_client(data)
+        model = utils.SampleNet(utils.TwoFC())
+
+        grads, num_examples = clnt.full_dataset_gradient(model)
+        expected_grads, expected_num_examples = self._full_dataset_gradient(clnt, model)
+        error_msg = utils.verify_gradients_equal(grads, expected_grads)
+        assertEmpty(error_msg)
+
 
 class TestDPClient(ClientTestBase):
     def test_privacy_engine_properly_initialized(self) -> None:
@@ -633,3 +707,121 @@ class TestDPClient(ClientTestBase):
     def test_dp_client_eval(self) -> None:
         dp_client = self._get_dp_client()
         self._run_client_eval_test(dp_client)
+
+
+class TestMimeClient(ClientTestBase):
+    def _batch_train_mime(
+        self,
+        batch: IFLUserData,
+        model,
+        optim,
+        server_model: IFLModel,
+        server_opt_state,
+        mime_control_variate: nn.Module,
+    ) -> None:
+        # basically re-write training logic
+        # overall_grad = batch_grad - server_model_grad + mime_control_variate
+        model.fl_get_module().train()
+        server_model.fl_get_module().train()
+
+        optim.zero_grad()
+        server_model.fl_get_module().zero_grad()
+
+        _batch = model.fl_create_training_batch(batch)
+        loss = model.fl_forward(_batch).loss
+        server_loss = server_model.fl_forward(_batch).loss
+
+        loss.backward()
+        server_loss.backward()
+
+        FLModelParamUtils.subtract_gradients(
+            model.fl_get_module(),
+            server_model.fl_get_module(),
+            model.fl_get_module(),
+        )
+        FLModelParamUtils.add_gradients(
+            model.fl_get_module(), mime_control_variate, model.fl_get_module()
+        )
+
+        state_dict = optim.state_dict()
+        state_dict["state"] = server_opt_state
+        optim.load_state_dict(state_dict)
+
+        optim.step()
+
+    def test_reload_server_state(self):
+        """Test whether server optimizer state is loading correctly in MIMEClient"""
+        data = self._fake_data(num_batches=1, batch_size=10)
+        clnt = self._get_mime_client(data)
+        self._reload_server_state(clnt)
+
+    def test_mime_train(self) -> None:
+        """Check multiple rounds of training on a MIME Client works correctly"""
+        data = self._fake_data(num_batches=5, batch_size=10)
+        clnt = self._get_mime_client(data)
+        server_model = utils.SampleNet(utils.TwoFC())
+        model, optim, optim_sch = clnt.prepare_for_training(
+            FLModelParamUtils.clone(server_model)
+        )
+        model2, optim2, _ = clnt.prepare_for_training(FLModelParamUtils.clone(model))
+        server_opt_state = {}
+
+        try:
+            # Run two rounds
+            for _ in range(2):
+                # load mime_control_variate as the average gradient
+                mime_control_variate, _ = clnt.full_dataset_gradient(server_model)
+                # set other parameters needed to train a batch
+                clnt.ref_model = FLModelParamUtils.clone(server_model)
+                clnt.mime_control_variate = mime_control_variate
+                clnt.server_opt_state = server_opt_state
+
+                # Verify models are trained correctly at the end of each batch training
+                for batch in clnt.dataset.train_data():
+                    self._batch_train_mime(
+                        batch,
+                        model,
+                        optim,
+                        server_model,
+                        server_opt_state,
+                        mime_control_variate,
+                    )
+                    clnt._batch_train(model2, optim2, batch, 0, None, optim_sch)
+                    mismatched = utils.verify_models_equivalent_after_training(
+                        model2, model
+                    )
+                    assertEmpty(mismatched)
+                server_opt_state = optim2.state_dict()["state"]
+        except BaseException as e:
+            assertTrue(False, e)
+
+    def test_mime_generate_local_update(self):
+        """The only change from base_client is to load mime_control_variate and
+        server_opt_state in client, thus verifying the same
+        """
+        data = self._fake_data(num_batches=5, batch_size=10)
+        clnt = self._get_mime_client(data)
+
+        model = utils.SampleNet(utils.TwoFC())
+        mime_control_variate, _ = clnt.full_dataset_gradient(model)
+        server_opt_state = {}
+
+        # Return value previously tested with base_client
+        _ = clnt.generate_local_update(
+            message=Message(
+                model=model,
+                mime_control_variate=mime_control_variate,
+                server_opt_state=server_opt_state,
+            )
+        )
+
+        error_msg = utils.verify_models_equivalent_after_training(clnt.ref_model, model)
+        assertEmpty(error_msg)
+        error_msg = utils.verify_gradients_equal(
+            clnt.mime_control_variate, mime_control_variate
+        )
+        assertEmpty(error_msg)
+        error_msg = utils.verify_optimizer_state_dict_equal(
+            clnt.server_opt_state, server_opt_state
+        )
+        assertEmpty(error_msg)

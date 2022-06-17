@@ -381,6 +381,32 @@ class Client:
 
         return num_examples
 
+    def full_dataset_gradient(self, module: IFLModel):
+        """
+        Perform a pass over the entire training dataset and return the average gradient.
+        Currently only called from SyncMimeServer
+
+        Args:
+        module (IFLModel): Model over which to return gradients
+
+        Returns:
+        grads (nn.Module): Module with the gradients contained in the parameters (access via .grad)
+        num_examples (int): Number of training examples in the dataset
+        """
+        grads = FLModelParamUtils.clone(module.fl_get_module())
+        grads.zero_grad()
+        num_examples = 0
+        for batch in self.dataset.train_data():
+            module.fl_get_module().zero_grad()
+            batch_metrics = module.fl_forward(batch)
+            batch_metrics.loss.backward()
+            FLModelParamUtils.add_gradients(grads, module.fl_get_module(), grads)
+            num_examples += batch_metrics.num_examples
+        FLModelParamUtils.multiply_gradient_by_weight(
+            model=grads, weight=1.0 / num_examples, model_to_save=grads
+        )
+        return grads, num_examples
+
 
 @dataclass
 class ClientConfig:
