@@ -251,6 +251,77 @@ class TestFLModelParamUtils:
         assertEqual(model.a.grad, reconstructed_gradient.a)
         assertEqual(model.b.grad, reconstructed_gradient.b)
 
+    def test_gradient_linear_combine(self) -> None:
+        """Test linear combination for gradients"""
+        # Test whether function works if model to be saved is one of the two models
+        # and if model to be saved is a completely new model
+        for save_idx in range(3):
+            for null_idx in range(4):
+                models = [LinearRegression(), LinearRegression(), LinearRegression()]
+                for m_idx in range(3):
+                    if m_idx != null_idx:
+                        models[m_idx].a.grad = torch.FloatTensor([0.5])
+                        models[m_idx].b.grad = torch.FloatTensor([1.0])
+                expected_grad_a = torch.FloatTensor([0])
+                expected_grad_b = torch.FloatTensor([0])
+                if models[0].a.grad is not None:
+                    # pyre-fixme[58]: `*` is not supported for operand types `int` and `typing.Optional[torch._tensor.Tensor]`.
+                    expected_grad_a += 3 * models[0].a.grad
+                    # pyre-fixme[58]: `*` is not supported for operand types `int` and `typing.Optional[torch._tensor.Tensor]`.
+                    expected_grad_b += 3 * models[0].b.grad
+                if models[1].a.grad is not None:
+                    # pyre-fixme[58]: `*` is not supported for operand types `int` and `typing.Optional[torch._tensor.Tensor]`.
+                    expected_grad_a += 5 * models[1].a.grad
+                    # pyre-fixme[58]: `*` is not supported for operand types `int` and `typing.Optional[torch._tensor.Tensor]`.
+                    expected_grad_b += 5 * models[1].b.grad
+                FLModelParamUtils.linear_combine_gradient(
+                    models[0], 3, models[1], 5, models[save_idx]
+                )
+                assertEqual(models[save_idx].a.grad, expected_grad_a)
+                assertEqual(models[save_idx].b.grad, expected_grad_b)
+        models = [LinearRegression(), LinearRegression(), LinearRegression()]
+        FLModelParamUtils.linear_combine_gradient(models[0], 3, models[1], 5, models[2])
+        assert models[2].a.grad is None
+        assert models[2].b.grad is None
+
+    def test_add_gradients(self):
+        """Test adding the gradients of two models"""
+        models = [LinearRegression(), LinearRegression(), LinearRegression()]
+        models[0].a.grad = torch.FloatTensor([1.0])
+        FLModelParamUtils.add_gradients(models[0], models[1], models[2])
+        assertEqual(models[2].a.grad, models[0].a.grad)
+        assert models[2].b.grad is None
+        models[1].a.grad = torch.FloatTensor([0.5])
+        FLModelParamUtils.add_gradients(models[0], models[1], models[2])
+        assertEqual(models[2].a.grad, torch.FloatTensor([1.5]))
+
+    def test_subtract_gradients(self):
+        """Test subtracting the gradients of a model with the gradients of another model"""
+        models = [LinearRegression(), LinearRegression(), LinearRegression()]
+        models[1].a.grad = torch.FloatTensor([1.0])
+        FLModelParamUtils.subtract_gradients(models[0], models[1], models[2])
+        assertEqual(models[2].a.grad, torch.FloatTensor([-1.0]))
+
+    def test_copy_gradients(self):
+        """Test copying the gradients of a model"""
+        model = LinearRegression()
+        model_copy = LinearRegression()
+        model_copy.a.data.fill_(1.0)
+        model.a.grad = torch.FloatTensor([0.5])
+        FLModelParamUtils.copy_gradients(model, model_copy)
+        assertEqual(model.a.grad, model_copy.a.grad)
+        assertEqual(model_copy.a.data, torch.FloatTensor([1.0]))
+
+    def test_multiply_gradients(self):
+        """Test multiplying gradients of a model with a given weight"""
+        model = LinearRegression()
+        model2 = LinearRegression()
+        model.a.grad = torch.FloatTensor([0.5])
+        FLModelParamUtils.multiply_gradient_by_weight(model, 2, model2)
+        assertEqual(model2.a.grad, torch.FloatTensor([1.0]))
+        FLModelParamUtils.multiply_gradient_by_weight(model, 2, model)
+        assertEqual(model.a.grad, torch.FloatTensor([1.0]))
+
     def test_get_mismatched_param(self) -> None:
         a_val, b_val = 0.5, 1.0
 

@@ -6,10 +6,12 @@
 # LICENSE file in the root directory of this source tree.
 
 import copy
+import logging
 import math
 from typing import List, Optional, Union
 
 import torch
+from flsim.common.logger import Logger
 from flsim.interfaces.model import IFLModel
 from flsim.utils.fl.personalized_model import FLModelWithPrivateModules
 from torch import nn
@@ -17,6 +19,9 @@ from torch.optim.optimizer import Optimizer
 
 
 class FLModelParamUtils:
+    logger: logging.Logger = Logger.get_logger(__name__)
+    logger.setLevel(logging.WARNING)
+
     @classmethod
     def get_state_dict(cls, model: nn.Module, only_federated_params: bool):
         if only_federated_params and isinstance(model, FLModelWithPrivateModules):
@@ -193,6 +198,116 @@ class FLModelParamUtils:
         # Use parameters() since state_dict() may include non-learnable params.
         for m, ref in zip(model.parameters(), reference_gradient.parameters()):
             m.grad = ref.detach().clone().type(m.type())
+
+    @classmethod
+    def linear_combine_gradient(
+        cls,
+        model1: nn.Module,
+        wt1: float,
+        model2: nn.Module,
+        wt2: float,
+        model_to_save: nn.Module,
+    ):
+        """Sets model_to_save.grad = model1.grad * wt1 + model2.grad * wt2"""
+        for save_p, model1_p, model2_p in zip(
+            model_to_save.parameters(), model1.parameters(), model2.parameters()
+        ):
+            if save_p.requires_grad:
+                grad = None
+                if model1_p.grad is not None:
+                    grad = wt1 * model1_p.grad.detach().clone().type(save_p.type())
+                if model2_p.grad is not None:
+                    if grad is not None:
+                        grad += wt2 * model2_p.grad.detach().clone().type(save_p.type())
+                    else:
+                        grad = wt2 * model2_p.grad.detach().clone().type(save_p.type())
+                if grad is None:
+                    cls.logger.warning(
+                        "Parameter with requires_grad=True has gradient set to None"
+                    )
+                save_p.grad = grad
+
+    @classmethod
+    def multiply_gradient_by_weight(
+        cls, model: nn.Module, weight: float, model_to_save: nn.Module
+    ):
+        """Sets model_to_save.grad = model.grad * weight"""
+        for save_p, model_p in zip(model_to_save.parameters(), model.parameters()):
+            if save_p.requires_grad:
+                grad = None
+                if model_p.grad is not None:
+                    grad = weight * model_p.grad.detach().clone().type(save_p.type())
+                if grad is None:
+                    cls.logger.warning(
+                        "Parameter with requires_grad=True has gradient set to None"
+                    )
+                save_p.grad = grad
+
+    @classmethod
+    def add_gradients(
+        cls, model1: nn.Module, model2: nn.Module, model_to_save: nn.Module
+    ):
+        """Sets model_to_save.grad = model1.grad + model2.grad"""
+        for save_p, model1_p, model2_p in zip(
+            model_to_save.parameters(), model1.parameters(), model2.parameters()
+        ):
+            if save_p.requires_grad:
+                grad = None
+                if model1_p.grad is not None:
+                    grad = model1_p.grad.detach().clone().type(save_p.type())
+                if model2_p.grad is not None:
+                    if grad is not None:
+                        grad += model2_p.grad.detach().clone().type(save_p.type())
+                    else:
+                        grad = model2_p.grad.detach().clone().type(save_p.type())
+                if grad is None:
+                    cls.logger.warning(
+                        "Parameter with requires_grad=True has gradient set to None"
+                    )
+                save_p.grad = grad
+
+    @classmethod
+    def subtract_gradients(
+        cls, minuend: nn.Module, subtrahend: nn.Module, difference: nn.Module
+    ):
+        """Sets difference.grad = minuend.grad - subtrahend.grad"""
+        for difference_p, minuend_p, subtrahend_p in zip(
+            difference.parameters(), minuend.parameters(), subtrahend.parameters()
+        ):
+            if difference_p.requires_grad:
+                grad = None
+                if minuend_p.grad is not None:
+                    grad = minuend_p.grad.detach().clone().type(difference_p.type())
+                if subtrahend_p.grad is not None:
+                    if grad is not None:
+                        grad -= (
+                            subtrahend_p.grad.detach().clone().type(difference_p.type())
+                        )
+                    else:
+                        grad = (
+                            -subtrahend_p.grad.detach()
+                            .clone()
+                            .type(difference_p.type())
+                        )
+                if grad is None:
+                    cls.logger.warning(
+                        "Parameter with requires_grad=True has gradient set to None"
+                    )
+                difference_p.grad = grad
+
+    @classmethod
+    def copy_gradients(cls, model: nn.Module, model_to_copy: nn.Module):
+        """Sets model_to_copy.grad = model.grad"""
+        for copy_p, model_p in zip(model_to_copy.parameters(), model.parameters()):
+            if copy_p.requires_grad:
+                grad = None
+                if model_p.grad is not None:
+                    grad = model_p.grad.detach().clone().type(copy_p.type())
+                if grad is None:
+                    cls.logger.warning(
+                        "Parameter with requires_grad=True has gradient set to None"
+                    )
+                copy_p.grad = grad
 
     @classmethod
     def reconstruct_gradient(
