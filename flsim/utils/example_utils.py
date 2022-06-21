@@ -5,7 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# Cifar-10 dataset specific utils for use in the tutorials
+# utils for use in the examples and tutorials
 
 import random
 from typing import Any, Dict, Generator, Iterable, Iterator, List, Optional, Tuple
@@ -185,9 +185,15 @@ class LEAFDataLoader(IFLDataLoader):
 class DataProvider(IFLDataProvider):
     def __init__(self, data_loader):
         self.data_loader = data_loader
-        self._train_users = self._create_fl_users(data_loader.fl_train_set())
-        self._eval_users = self._create_fl_users(data_loader.fl_eval_set())
-        self._test_users = self._create_fl_users(data_loader.fl_test_set())
+        self._train_users = self._create_fl_users(
+            data_loader.fl_train_set(), eval_split=0.0
+        )
+        self._eval_users = self._create_fl_users(
+            data_loader.fl_eval_set(), eval_split=1.0
+        )
+        self._test_users = self._create_fl_users(
+            data_loader.fl_test_set(), eval_split=1.0
+        )
 
     def train_user_ids(self) -> List[int]:
         return list(self._train_users.keys())
@@ -215,7 +221,9 @@ class DataProvider(IFLDataProvider):
         for user_data in self._test_users.values():
             yield user_data
 
-    def _create_fl_users(self, iterator: Iterator) -> Dict[int, IFLUserData]:
+    def _create_fl_users(
+        self, iterator: Iterator, eval_split: float = 0.0
+    ) -> Dict[int, IFLUserData]:
         return {
             user_index: UserData(user_data)
             for user_index, user_data in tqdm(
@@ -411,47 +419,3 @@ class MetricsReporter(FLMetricsReporter):
     ) -> Any:
         accuracy = scores[self.ACCURACY]
         return {self.ACCURACY: accuracy}
-
-
-class LEAFDataProvider(IFLDataProvider):
-    def __init__(self, data_loader):
-        self.data_loader = data_loader
-        self._train_users = self._create_fl_users(data_loader.fl_train_set())
-        self._eval_users = self._create_fl_users(data_loader.fl_eval_set())
-        self._test_users = self._create_fl_users(data_loader.fl_test_set())
-
-    def train_user_ids(self) -> List[int]:
-        return list(self._train_users.keys())
-
-    def num_train_users(self) -> int:
-        return len(self._train_users)
-
-    def get_train_user(self, user_index: int) -> IFLUserData:
-        if user_index in self._train_users:
-            return self._train_users[user_index]
-        else:
-            raise IndexError(
-                f"Index {user_index} is out of bound for list with len {self.num_train_users()}"
-            )
-
-    def train_users(self) -> Iterable[IFLUserData]:
-        for user_data in self._train_users.values():
-            yield user_data
-
-    def eval_users(self) -> Iterable[IFLUserData]:
-        for user_data in self._eval_users.values():
-            yield user_data
-
-    def test_users(self) -> Iterable[IFLUserData]:
-        for user_data in self._test_users.values():
-            yield user_data
-
-    def _create_fl_users(
-        self, iterator: Iterator, eval_split
-    ) -> Dict[int, IFLUserData]:
-        return {
-            user_index: UserData(user_data)
-            for user_index, user_data in tqdm(
-                enumerate(iterator), desc="Creating FL User", unit="user"
-            )
-        }
