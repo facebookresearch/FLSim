@@ -92,42 +92,68 @@ class DataLoader(IFLDataLoader):
 
 
 class UserData(IFLUserData):
-    def __init__(self, user_data: Dict[str, Generator], eval_split=0.0):
-        self._user_batches = []
-        self._num_batches = 0
-        self._num_examples = 0
-        for features, labels in zip(user_data["features"], user_data["labels"]):
-            self._num_batches += 1
-            self._num_examples += UserData.get_num_examples(labels)
-            self._user_batches.append(UserData.fl_training_batch(features, labels))
+    def __init__(self, user_data: Dict[str, Generator], eval_split: float = 0.0):
+        self._train_batches = []
+        self._num_train_batches = 0
+        self._num_train_examples = 0
 
-    def train_data(self) -> Iterator[Dict[str, torch.Tensor]]:
-        """
-        Iterator to return a user batch data
-        """
-        for batch in self._user_batches:
-            yield batch
+        self._eval_batches = []
+        self._num_eval_batches = 0
+        self._num_eval_examples = 0
 
-    def eval_data(self):
-        return []
+        self._eval_split = eval_split
+
+        user_features = list(user_data["features"])
+        user_labels = list(user_data["labels"])
+        total = sum(len(batch) for batch in user_labels)
+
+        for features, labels in zip(user_features, user_labels):
+            if self._num_eval_examples < int(total * self._eval_split):
+                self._num_eval_batches += 1
+                self._num_eval_examples += UserData.get_num_examples(labels)
+                self._eval_batches.append(UserData.fl_training_batch(features, labels))
+            else:
+                self._num_train_batches += 1
+                self._num_train_examples += UserData.get_num_examples(labels)
+                self._train_batches.append(UserData.fl_training_batch(features, labels))
 
     def num_train_examples(self) -> int:
         """
-        Returns the number of examples
+        Returns the number of train examples
         """
-        return self._num_examples
-
-    def num_train_batches(self) -> int:
-        """
-        Returns the number of batches
-        """
-        return self._num_batches
-
-    def num_eval_batches(self):
-        return 0
+        return self._num_train_examples
 
     def num_eval_examples(self):
-        return 0
+        """
+        Returns the number of eval examples
+        """
+        return self._num_eval_examples
+
+    def num_train_batches(self):
+        """
+        Returns the number of train batches
+        """
+        return self._num_train_batches
+
+    def num_eval_batches(self):
+        """
+        Returns the number of eval batches
+        """
+        return self._num_eval_batches
+
+    def train_data(self) -> Iterator[Dict[str, torch.Tensor]]:
+        """
+        Iterator to return a user batch data for training
+        """
+        for batch in self._train_batches:
+            yield batch
+
+    def eval_data(self):
+        """
+        Iterator to return a user batch data for evaluation
+        """
+        for batch in self._eval_batches:
+            yield batch
 
     @staticmethod
     def get_num_examples(batch: List) -> int:
@@ -225,7 +251,7 @@ class DataProvider(IFLDataProvider):
         self, iterator: Iterator, eval_split: float = 0.0
     ) -> Dict[int, IFLUserData]:
         return {
-            user_index: UserData(user_data)
+            user_index: UserData(user_data, eval_split=eval_split)
             for user_index, user_data in tqdm(
                 enumerate(iterator), desc="Creating FL User", unit="user"
             )
