@@ -92,7 +92,7 @@ def main(
     )
 
     trainer.test(
-        data_iter=data_provider.test_users(),
+        data_provider=data_provider,
         metrics_reporter=MetricsReporter([Channel.STDOUT]),
     )
 
