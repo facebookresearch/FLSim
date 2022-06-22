@@ -59,7 +59,7 @@ class SyncTrainer(FLTrainer):
         )
 
         super().__init__(model=model, cuda_enabled=cuda_enabled, **kwargs)
-        self.server: ISyncServer = instantiate(
+        self.server = instantiate(
             # pyre-ignore[16]
             self.cfg.server,
             global_model=model,
@@ -479,7 +479,7 @@ class SyncTrainer(FLTrainer):
         """Calculates privacy metrics if algorithm is differentially private."""
         metrics = []
         if self.is_user_level_dp:
-            user_eps = self.server.privacy_budget.epsilon  # pyre-fixme
+            user_eps = self.server.privacy_budget.epsilon
             metrics.append(Metric("user level dp (eps)", user_eps))
         if self.is_sample_level_dp:
             # calculate sample level dp privacy loss statistics.
@@ -516,7 +516,7 @@ class SyncTrainer(FLTrainer):
             (
                 convert_overflow_perc,
                 aggregate_overflow_perc,
-            ) = self.server.calc_avg_overflow_percentage(  # pyre-fixme
+            ) = self.server.calc_avg_overflow_percentage(
                 users_per_round, model, report_rounds
             )
             overflow_metrics: List[Metric] = Metric.from_args(

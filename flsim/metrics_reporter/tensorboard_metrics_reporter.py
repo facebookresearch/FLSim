@@ -35,7 +35,7 @@ class FLMetricsReporter(IFLMetricsReporter, abc.ABC):
         self.predictions_list = []
         self.targets_list = []
         self.model_inputs_list = []
-        self.latest_scores: Dict[str, Any] = {}
+        self.latest_scores = {}
         self.best_eval_metrics = None
 
     def set_summary_writer(self, log_dir: Optional[str]):

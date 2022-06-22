@@ -50,7 +50,7 @@ from omegaconf import OmegaConf
 
 
 class Client:
-    logger: logging.Logger = Logger.get_logger(__name__)
+    logger = Logger.get_logger(__name__)
 
     def __init__(
         self,

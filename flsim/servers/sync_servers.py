@@ -130,8 +130,8 @@ class SyncServer(ISyncServer):
             config=self.cfg.server_optimizer,
             model=global_model.fl_get_module(),
         )
-        self._global_model: IFLModel = global_model
-        self._aggregator: Aggregator = Aggregator(
+        self._global_model = global_model
+        self._aggregator = Aggregator(
             module=global_model.fl_get_module(),
             aggregation_type=self.cfg.aggregation_type,
             only_federated_params=self.cfg.only_federated_params,

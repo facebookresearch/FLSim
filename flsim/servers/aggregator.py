@@ -44,7 +44,7 @@ class Aggregator:
             only_federated_params: If True, only update the federated parameters.
         """
         # Buffer to store partially completed aggregation of some of the model deltas
-        self._buffer_module: nn.Module = FLModelParamUtils.clone(module)
+        self._buffer_module = FLModelParamUtils.clone(module)
         self.device = next(self._buffer_module.parameters()).device
 
         # Sum of aggregation weights applied to each model delta
