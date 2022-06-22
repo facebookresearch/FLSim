@@ -33,8 +33,7 @@ from omegaconf import OmegaConf
 
 class ISyncServer(abc.ABC):
     """
-    Interface for Sync servers, all sync server should
-    implement this interface.
+    Interface for Sync servers, all sync server should implement this interface.
     Responsibilities:
         Wrapper for aggregator and optimizer.
         Collects client updates and sends to aggregator.
@@ -43,23 +42,22 @@ class ISyncServer(abc.ABC):
 
     @abc.abstractmethod
     def init_round(self):
-        """
-        Clears the buffer and zero out grad in optimizer
+        """Clears the buffer and zero out grad in optimizer.
+        This function is called before each training round.
         """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def receive_update_from_client(self, message: Message):
-        """
-        Receives new update from client
+        """Receives new updates from each client and aggregates result.
+        This includes calculating weights of each client update and summing them to get
+        a final update for the global model.
         """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def step(self):
-        """
-        Update the global model
-        """
+        """Apply the update the global model."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -73,16 +71,16 @@ class ISyncServer(abc.ABC):
         """
         Selects clients to participate in a round of training.
 
-        The selection scheme depends on the underlying selector. This
-        can include: random, sequential, high loss etc.
+        The selection scheme depends on the underlying selector. This can include:
+        random, sequential, high loss etc.
 
         Args:
             num_total_users ([int]): Number of total users (population size).
-            users_per_round ([int]]): Number of users per round.
-            data_provider (Optional[IFLDataProvider], optional): This is useful when the selection scheme
-            is high loss. Defaults to None.
-            epoch (Optional[int], optional): [description]. This is useful when the selection scheme
-            is high loss. Defaults to None.
+            users_per_round ([int]): Number of users per round.
+            data_provider (Optional[IFLDataProvider], optional): This is useful when the
+                selection scheme is high loss. Defaults to None.
+            epoch (Optional[int], optional): This is useful when the selection scheme is
+                high loss. Defaults to None.
 
         Returns:
             List[int]: A list of client indices
@@ -96,12 +94,12 @@ class ISyncServer(abc.ABC):
         A reference to the clients in the current round is always passed by sync_trainer.
 
         Args:
-            clients Iterable[Client]: [description]. The list of clients.
+            clients Iterable[Client]: The list of clients.
             Need by SyncMimeServer
 
         Returns:
             Message: The message common for all clients. Pass the global model here.
-            Trainer should pass this message while calling generate_local_update for each client
+            Trainer should pass this message while calling generate_local_update for each client.
         """
         return Message(model=self.global_model)
 
@@ -143,6 +141,7 @@ class SyncServer(ISyncServer):
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
+        """Set default user selector and server optimizer."""
         if OmegaConf.is_missing(cfg.active_user_selector, "_target_"):
             cfg.active_user_selector = UniformlyRandomActiveUserSelectorConfig()
         if OmegaConf.is_missing(cfg.server_optimizer, "_target_"):

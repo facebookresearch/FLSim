@@ -75,6 +75,9 @@ class FLTrainer(abc.ABC):
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
+        """Set default config if missing.
+        Sub-classes may further set default for other components.
+        """
         if OmegaConf.is_missing(cfg.timeout_simulator, "_target_"):
             cfg.timeout_simulator = NeverTimeOutSimulatorConfig()
         if OmegaConf.is_missing(cfg.client, "_target_"):
@@ -114,7 +117,9 @@ class FLTrainer(abc.ABC):
         best_metric,
         best_model_state,
     ):
+
         # pyre-fixme[16]: `FLTrainer` has no attribute `cfg`.
+        # Skip evaluation
         if not self.cfg.do_eval:
             return best_metric, best_model_state
         if not timeline.tick(self.cfg.eval_epoch_frequency):
@@ -122,7 +127,7 @@ class FLTrainer(abc.ABC):
 
         personalized_metrics = {}
         if self.cfg.personalized:
-            # personalized eval on eval users
+            # Personalized eval on eval users (i.e. finetune for each eval user first)
             # TODO: Fix metrics reporting in order to report personalized metrics
             personalized_metrics = self._evaluate_personalized_eval_users(  # noqa
                 timeline=timeline,
@@ -131,7 +136,7 @@ class FLTrainer(abc.ABC):
                 metrics_reporter=metrics_reporter,
             )
 
-        # evaluate global model on eval users
+        # Evaluate global model on eval users
         eval_metric, eval_metric_better_than_prev = self._evaluate(
             timeline=timeline,
             data_provider=data_provider,
@@ -139,9 +144,9 @@ class FLTrainer(abc.ABC):
             metrics_reporter=metrics_reporter,
         )
 
-        # 1) keep the best model so far if metrics_reporter.compare_metrics is specified
-        # 2) if self.always_keep_trained_model is set as true, ignore the metrics and
-        #    keep the trained model for each epoch
+        # 1) Keep the best model so far if metrics_reporter.compare_metrics is specified.
+        # 2) If self.always_keep_trained_model is True, ignore the metrics and keep the
+        #    trained model for each epoch.
         if self.cfg.always_keep_trained_model or eval_metric_better_than_prev:
             best_metric = eval_metric
             model_state = self.global_model().fl_get_module().state_dict()
@@ -159,6 +164,15 @@ class FLTrainer(abc.ABC):
         metrics_reporter: Optional[IFLMetricsReporter] = None,
         extra_metrics: Optional[List[Metric]] = None,
     ) -> None:
+        """Reports train metrics (e.g. loss and accuracy) after one round.
+        Args:
+            model: Model to calculate train metrics. Can either be global or client-side
+                model.
+            timeline: Timeline object that keeps track of current point of time, such as
+                current round and epoch.
+            metrics_reporter: Metrics reporter object. If none, do not report metrics.
+            extra_metrics: Miscellaneous metrics in addition to train loss and scores.
+        """
         if (
             # pyre-fixme[16]: `FLTrainer` has no attribute `cfg`.
             self.cfg.report_train_metrics
@@ -179,6 +193,10 @@ class FLTrainer(abc.ABC):
     def _calc_post_epoch_communication_metrics(
         self, timeline: Timeline, metrics_reporter: Optional[IFLMetricsReporter]
     ):
+        """Calculates communication metrics after an epoch ends, such as amount of data
+        communicated bewteen server and client.
+        TODO: This should really be called `post_round` instead of `post_epoch`.
+        """
 
         if (
             metrics_reporter is not None
@@ -213,8 +231,9 @@ class FLTrainer(abc.ABC):
         global_model: IFLModel,  # a global model
         metrics_reporter: IFLMetricsReporter,
     ) -> Any:
-        """Finetunes global model for each eval user on their train data
-        and then evaluates performance on local eval data
+        """Perform personalized evaluation on evaluation users.
+        Specifically, finetune global model for each eval user on their training data
+        first and then evaluate performance on eval users' local eval data.
         """
         print(
             f"{timeline}: \t Evaluate global model w/ finetune on validation data of eval users"

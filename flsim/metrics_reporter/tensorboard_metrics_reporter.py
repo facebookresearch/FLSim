@@ -21,9 +21,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 class FLMetricsReporter(IFLMetricsReporter, abc.ABC):
-    """
-    This is a MetricsReporter with Tensorboard support.
-    """
+    """MetricsReporter with Tensorboard support."""
 
     def __init__(self, channels: List[Channel], log_dir: Optional[str] = None):
         self.channels = channels
@@ -101,6 +99,8 @@ class FLMetricsReporter(IFLMetricsReporter, abc.ABC):
                     timeline.global_round_num(),
                 )
 
+            # Score is usually a more interpretable metric than loss and higher is better
+            # For classification tasks, accuracy is a typical score
             scores = self.compute_scores()
             self.latest_scores = scores
 
@@ -115,10 +115,13 @@ class FLMetricsReporter(IFLMetricsReporter, abc.ABC):
                         score,
                         timeline.global_round_num(),
                     )
+
+            # Construct evaluation metric object
             eval_metrics = self.create_eval_metrics(
                 scores, mean_loss, timeline=timeline, stage=stage
             )
-        # handle misc reporting values
+
+        # Miscellaneous metrics beyond loss and score
         metrics = extra_metrics or []
         for metric in metrics:
             value = Metric.to_dict(metric.value) if metric.is_compund else metric.value

@@ -88,6 +88,9 @@ class Client:
         self.ref_model = None
         self.num_samples = 0
         self.times_selected = 0
+        # Tracks client state history
+        # Key: i-th time the client is selected for training
+        # Value: client state (i.e. model delta, client weight, optimizer used)
         self._tracked = {}
         self.last_updated_model = None
         self.logger.setLevel(logging.INFO)
@@ -107,10 +110,7 @@ class Client:
 
     @property
     def model_deltas(self) -> List[IFLModel]:
-        """
-        return the stored deltas for all rounds that
-        this user was selected.
-        """
+        """Return the stored deltas for all rounds that this user was selected."""
         return [self._tracked[s]["delta"] for s in range(self.times_selected)]
 
     @property
@@ -126,18 +126,15 @@ class Client:
     def generate_local_update(
         self, message: Message, metrics_reporter: Optional[IFLMetricsReporter] = None
     ) -> Tuple[IFLModel, float]:
-        r"""
-        wrapper around all functions called on a client for generating an
-        updated local model.
+        """Wrapper around all functions called on a client for generating an updated
+        local model.
 
         Args:
-        message: Must include the global model. Can contain metadata if passed by the server.
+            message: Message object. Must include the global model with optional metadata.
 
-        Note:
-        -----
-        Only pass a ``metrics_reporter`` if reporting is needed, i.e.
-        report_metrics will be called on the reporter, o.w. reports will be
-        accumulated in memory.
+        NOTE:
+            Only pass a `metrics_reporter` if reporting is needed, i.e. report_metrics
+            will be called on the reporter; else reports will be accumulated in memory.
         """
         model = message.model
 
@@ -163,16 +160,17 @@ class Client:
         optimizer_scheduler: Optional[OptimizerScheduler] = None,
         metrics_reporter: Optional[IFLMetricsReporter] = None,
     ) -> Tuple[IFLModel, float, torch.optim.Optimizer]:
-        """Copy the model then use that model to train on the client's train split
+        """Copy the source model to client-side model and use it to train on the
+        client's train split.
 
-        Note: Optional optimizer and optimizer_scheduler are there for easier testing
+        NOTE: Optional optimizer and optimizer_scheduler are there for easier testing
 
         Returns:
-            Tuple[IFLModel, float, torch.optim.Optimizer]: The trained model, the client's weight, the optimizer used
+            (trained model, client's weight, optimizer used)
         """
-        # 1. pass through channel, set initial state
+        # 1. Pass source model through channel and use it to set client-side model state
         updated_model = self.receive_through_channel(model)
-        # 2. set up model and optimizer in the client
+        # 2. Set up model and default optimizer in the client
         updated_model, default_optim, default_scheduler = self.prepare_for_training(
             updated_model
         )
@@ -181,7 +179,7 @@ class Client:
             default_scheduler if optimizer_scheduler is None else optimizer_scheduler
         )
 
-        # 3. kick off training on client
+        # 3. Kick off training on client
         updated_model, weight = self.train(
             updated_model,
             optim,
@@ -194,9 +192,7 @@ class Client:
     def compute_delta(
         self, before: IFLModel, after: IFLModel, model_to_save: IFLModel
     ) -> IFLModel:
-        """
-        Computes the delta between the before training and after training model
-        """
+        """Computes the delta of the model before and after training."""
         FLModelParamUtils.subtract_model(
             minuend=before.fl_get_module(),
             subtrahend=after.fl_get_module(),
@@ -205,16 +201,14 @@ class Client:
         return model_to_save
 
     def receive_through_channel(self, model: IFLModel) -> IFLModel:
+        """Receives a reference to a state (referred to as model state_dict) over the
+        channel. Any channel effect is applied as part of this function.
         """
-        Receives a reference to a state (referred to as model state_dict)
-        over the channel. Any channel effect is applied as part of this
-        receive function.
-        """
-        # keep a reference to global model
+        # Keep a reference to global model
         self.ref_model = model
 
-        # need to clone the model because it's a reference to the global model
-        # modifying model will modify the global model
+        # Need to clone the model because it's a reference to the global model; else
+        # modifying model will modify the global model.
         message = self.channel.server_to_client(
             Message(model=FLModelParamUtils.clone(model))
         )
@@ -224,16 +218,16 @@ class Client:
     def prepare_for_training(
         self, model: IFLModel
     ) -> Tuple[IFLModel, torch.optim.Optimizer, OptimizerScheduler]:
+        """Prepare for training by:
+        1. Instantiating a model on a correct compute device
+        2. Creating an optimizer
         """
-        1- instantiate a model with the given initial state
-        2- create an optimizer
-        """
-        # inform cuda_state_manager that we're about to train a model
-        # it may move model to GPU
+        # Inform cuda_state_manager that we're about to train a model; it may involve
+        # moving the model to GPU.
         self.cuda_state_manager.before_train_or_eval(model)
-        # put model in train mode
+        # Put model in train mode
         model.fl_get_module().train()
-        # create optimizer
+        # Create optimizer
         # pyre-fixme[16]: `Client` has no attribute `cfg`.
         optimizer = instantiate(self.cfg.optimizer, model=model.fl_get_module())
         optimizer_scheduler = instantiate(self.cfg.lr_scheduler, optimizer=optimizer)
@@ -258,11 +252,21 @@ class Client:
         metrics_reporter: Optional[IFLMetricsReporter] = None,
         epochs: Optional[int] = None,
     ) -> Tuple[IFLModel, float]:
+        """Trains the client-side model for a number of epochs.
+        Returns:
+            (trained model, weight for this client)
+            Currently, weight for this client is the number of samples it trained on.
+            This might be a bad strategy because it favors users with more data, and
+            there might be privacy implications.
+        """
+        # Total number of training samples
         total_samples = 0
-        # NOTE currently weight = total_sampls, this might be a bad strategy
-        # plus there are privacy implications that must be taken into account.
-        num_examples_processed = 0  # number of examples processed during training
-        # pyre-ignore[16]:
+
+        # Total number of sampled processed during training
+        # In general, this equals total_samples * epochs
+        num_examples_processed = 0
+
+        # pyre-ignore[16]: `Client` has no attribute `cfg`.
         epochs = epochs if epochs is not None else self.cfg.epochs
         if self.seed is not None:
             torch.manual_seed(self.seed)
@@ -271,9 +275,9 @@ class Client:
             if self.stop_training(num_examples_processed):
                 break
 
-            # if user has too many examples and times-out, we want to process
-            # different portion of the dataset each time
             dataset = list(self.dataset.train_data())
+            # If the user has too many examples and times-out, we want to process a
+            # different portion of the dataset each time, hence shuffle batch order.
             if self.cfg.shuffle_batch_order:
                 random.shuffle(dataset)
             for batch in dataset:
@@ -285,33 +289,46 @@ class Client:
                     metrics_reporter=metrics_reporter,
                     optimizer_scheduler=optimizer_scheduler,
                 )
+                # Optional post-processing after training on a batch
                 self.post_batch_train(epoch, model, sample_count, optimizer)
+                # Only add in epoch 0 because we want to get the training set size
                 total_samples += 0 if epoch else sample_count
                 num_examples_processed += sample_count
-                # stop training depending on time-out condition
+                # Stop training depending on time-out condition
                 if self.stop_training(num_examples_processed):
                     break
-        # tell cuda manager we're done with training
+
+        # Tell cuda manager we're done with training
         # cuda manager may move model out of GPU memory if needed
         self.cuda_state_manager.after_train_or_eval(model)
         self.logger.debug(
             f"Processed {num_examples_processed} of {self.dataset.num_train_examples()}"
         )
+
+        # Optional post-processing after the entire training is done
         self.post_train(model, total_samples, optimizer)
-        # if training stops early, used partial training weight
+
+        # If training stops early (i.e. `num_examples_processed < total_samples`), use
+        # `num_examples_processed` instead as weight.
         example_weight = min([num_examples_processed, total_samples])
+
         return model, float(example_weight)
 
     def post_train(self, model: IFLModel, total_samples: int, optimizer: Any):
+        """Post-processing after the entire training on multiple epochs is done."""
         pass
 
     def post_batch_train(
         self, epoch: int, model: IFLModel, sample_count: int, optimizer: Any
     ):
+        """Post-processing after training on one batch is done."""
         pass
 
     def track(self, delta: IFLModel, weight: float, optimizer: Any):
-        """Tracks metric when the client is selected multiple times"""
+        """Tracks the client state each time the client is selected.
+        Modifies `self_tracked`, where keys are the i-th time this client is selected
+        and values are the state of the client.
+        """
         # pyre-fixme[16]: `Client` has no attribute `cfg`.
         if self.cfg.store_models_and_optimizers:
             self._tracked[self.times_selected] = {
@@ -327,9 +344,7 @@ class Client:
         dataset: Optional[IFLUserData] = None,
         metrics_reporter: Optional[IFLMetricsReporter] = None,
     ):
-        """
-        Client evaluates the model based on its evaluation data split
-        """
+        """Evaluates client-side model with its evaluation data split."""
         data = dataset or self.dataset
         self.cuda_state_manager.before_train_or_eval(model)
         with torch.no_grad():
@@ -353,11 +368,11 @@ class Client:
         metrics_reporter,
         optimizer_scheduler,
     ) -> int:
-        """Trainer for NewDocModel based FL Tasks
-        Run a single iteration of minibatch-gradient descent on a single user.
+        """Trains the client-side model for one batch.
         Compatible with the new tasks in which the model is responsible for
         arranging its inputs, targets and context.
-        Return number of examples in the batch.
+        Returns:
+            Number of samples in the batch.
         """
         optimizer.zero_grad()
         batch_metrics = model.fl_forward(training_batch)
@@ -365,6 +380,7 @@ class Client:
 
         loss.backward()
         # pyre-fixme[16]: `Client` has no attribute `cfg`.
+        # Optional gradient clipping
         if self.cfg.max_clip_norm_normalized is not None:
             max_norm = self.cfg.max_clip_norm_normalized
             FLModelParamUtils.clip_gradients(
@@ -372,7 +388,7 @@ class Client:
             )
 
         num_examples = batch_metrics.num_examples
-        # adjust lr and take a step
+        # Adjust lr and take a gradient step
         optimizer_scheduler.step(batch_metrics, model, training_batch, epoch)
         optimizer.step()
 
@@ -382,29 +398,34 @@ class Client:
         return num_examples
 
     def full_dataset_gradient(self, module: IFLModel):
-        """
-        Perform a pass over the entire training dataset and return the average gradient.
-        Currently only called from SyncMimeServer
+        """Performs a pass over the entire training set and returns the average gradient.
+        Currently only called from SyncMimeServer.
 
         Args:
-        module (IFLModel): Model over which to return gradients
+            module (IFLModel): Model over which to return gradients
 
         Returns:
-        grads (nn.Module): Module with the gradients contained in the parameters (access via .grad)
-        num_examples (int): Number of training examples in the dataset
+            grads (nn.Module): Dummy module with the desired gradients contained in its
+                parameters (access via .grad).
+            num_examples (int): Number of training examples in the dataset.
         """
+        # `grads` is a dummy module for storing the average gradient.
+        # Its network weights are never used.
         grads = FLModelParamUtils.clone(module.fl_get_module())
         grads.zero_grad()
         num_examples = 0
+
         for batch in self.dataset.train_data():
             module.fl_get_module().zero_grad()
             batch_metrics = module.fl_forward(batch)
             batch_metrics.loss.backward()
             FLModelParamUtils.add_gradients(grads, module.fl_get_module(), grads)
             num_examples += batch_metrics.num_examples
+
         FLModelParamUtils.multiply_gradient_by_weight(
             model=grads, weight=1.0 / num_examples, model_to_save=grads
         )
+
         return grads, num_examples
 
 

@@ -66,7 +66,7 @@ class FLModelParamUtils:
         if len(models) <= 1:
             return ""
         dicts = [aModel.state_dict() for aModel in models]
-        # verify new models have all params same
+        # Verify new models have all params same
         rtol_atol = {}
         if rel_epsilon is not None:
             rtol_atol["rtol"] = rel_epsilon
@@ -74,11 +74,11 @@ class FLModelParamUtils:
             rtol_atol["atol"] = abs_epsilon
         for name, param in dicts[0].items():
             for adict in dicts[1:]:
-                # if a parameter name does not exist in a model, return early
+                # If a parameter name does not exist in a model, return early
                 if name not in adict.keys():
                     return name
                 param_here = adict[name]
-                # if epsilon is specified, do approx comparison
+                # If epsilon is specified, do approx comparison
                 if not torch.allclose(param.float(), param_here.float(), **rtol_atol):
                     return name
         return ""
@@ -123,8 +123,6 @@ class FLModelParamUtils:
             models: collection of models. These will be changed in-place
             model_to_save: update this model with the average
             weights: (optional) use weighted average
-        Returns:
-            none
         """
         assert weights is None or len(weights) == len(models), (
             "Weights should have the same length as models. len(wts):"
@@ -159,8 +157,6 @@ class FLModelParamUtils:
             from_model: a model
             to_models: collection of models. These will be changed in-place
             only_federated_params: copy only federated params.
-        Returns:
-            none
         """
         from_state_dict = cls.get_state_dict(from_model, only_federated_params)
         for m in to_models:
@@ -170,8 +166,7 @@ class FLModelParamUtils:
     def clone(
         cls, model: Union[nn.Module, IFLModel], dtype: Optional[torch.dtype] = None
     ):
-        """
-        Clones a pytorch module, and allows for a change of precision.
+        """Clones a pytorch module, and allows for a change of precision.
         TODO If needed we can also add device here.
         """
         new_model = copy.deepcopy(model)
@@ -404,9 +399,7 @@ class FLModelParamUtils:
         model_to_save: nn.Module,
         only_federated_params: bool = False,
     ):
-        """
-        Returns model_to_save = model * weight
-        """
+        """Returns model_to_save = model * weight."""
         FLModelParamUtils.linear_comb_models(
             model, weight, model, 0, model_to_save, only_federated_params
         )
@@ -419,9 +412,7 @@ class FLModelParamUtils:
         difference: nn.Module,
         only_federated_params: bool = False,
     ):
-        """
-        Returns difference = minuend - subtrahend
-        """
+        """Returns difference = minuend - subtrahend."""
         FLModelParamUtils.linear_comb_models(
             minuend, 1, subtrahend, -1, difference, only_federated_params
         )

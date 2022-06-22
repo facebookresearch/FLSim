@@ -65,37 +65,54 @@ class SyncTrainer(FLTrainer):
             global_model=model,
             channel=self.channel,
         )
+        # Dictionary that maps dataset_id to list of clients
         self.clients = {}
         self._last_report_round_after_aggregation = 0
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
+        """Set default configs if missing.
+        In addition to default configs set by base class, set default config for server.
+        """
         if OmegaConf.is_missing(cfg.server, "_target_"):
             cfg.server = SyncServerConfig(optimizer=FedAvgOptimizerConfig())
 
     def global_model(self) -> IFLModel:
-        """self.global_model() is owned by the server, not by SyncTrainer"""
+        """Returns global model.
+        NOTE: self.global_model() is owned by the server, not by SyncTrainer.
+        """
         return self.server.global_model
 
     @property
     def is_user_level_dp(self):
+        """Whether the server is differentially private wrt each user."""
         return is_target(self.cfg.server, SyncDPSGDServerConfig)
 
     @property
     def is_sample_level_dp(self):
+        """Whether the client is differentially private wrt each sample."""
         return is_target(self.cfg.client, DPClientConfig)
 
     @property
     def is_secure_aggregation_enabled(self):
+        """Whether secure aggregation is used."""
         return is_target(self.cfg.server, SyncSecAggServerConfig)
 
     def create_or_get_client_for_data(self, dataset_id: int, datasets: Any):
-        """Creates clients for a round. This function is called UPR * num_rounds
-        times per training run. Here, we use <code>OmegaConf.structured</code>
-        instead of <code>hydra.instantiate</code> to minimize the overhead of
-        hydra object creation.
+        """Creates training clients for a particular dataset.
+        This function is called <code>users_per_round * num_rounds</code> times per
+        training epoch. Here, we use <code>OmegaConf.structured</code> instead of
+        <code>hydra.instantiate</code> to minimize the overhead of hydra object creation.
+
+        Args:
+            dataset_id: Dataset ID to create training clients for.
+            datasets: Data provider object to output training clients.
+        Returns:
+            List of clients for `dataset_id`. In addition, also modify `self.clients`
+                dictionary by adding a key-value pair of (dataset ID, list of clients).
         """
         if self.is_sample_level_dp:
+            # Differentially private client (sample-level)
             client = DPClient(
                 # pyre-ignore[16]
                 **OmegaConf.structured(self.cfg.client),
@@ -144,6 +161,8 @@ class SyncTrainer(FLTrainer):
             metrics_reporter: computes and reports metrics of interest such as accuracy
                 or perplexity
             num_total_users: number of total users for training
+            distributed_world_size: world size for distributed training
+            rank: worker index for distributed training
 
         Returns:
             model, best_metric: the trained model together with the best metric
@@ -152,7 +171,7 @@ class SyncTrainer(FLTrainer):
             Depending on the chosen active user selector, we may not iterate over
             all users in a given epoch.
         """
-        # set up synchronization utilities for distributed training
+        # Set up synchronization utilities for distributed training
         FLDistributedUtils.setup_distributed_training(
             distributed_world_size, use_cuda=self.cuda_enabled
         )  # TODO do not call distributed utils here, this is upstream responsibility
@@ -166,7 +185,6 @@ class SyncTrainer(FLTrainer):
 
         best_metric = None
         best_model_state = self.global_model().fl_get_module().state_dict()
-        # last_best_epoch = 0
         users_per_round = min(self.cfg.users_per_round, num_total_users)
 
         self.data_provider = data_provider
@@ -177,7 +195,7 @@ class SyncTrainer(FLTrainer):
             f"users_per_round: {users_per_round}, "
             f"num_total_users: {num_total_users}"
         )
-        # torch.multinomial requires int instead of float, cast it as int
+        # torch.multinomial requires int instead of float; cast it as int
         users_per_round_on_worker = int(users_per_round / distributed_world_size)
         self._validate_users_per_round(users_per_round_on_worker, num_users_on_worker)
 
@@ -191,7 +209,7 @@ class SyncTrainer(FLTrainer):
                 f"from worker {rank}: model norm is {norm} after round {iter}",
             )
 
-        # main training loop
+        # Main training loop
         num_int_epochs = math.ceil(self.cfg.epochs)
         for epoch in tqdm(
             range(1, num_int_epochs + 1), desc="Epoch", unit="epoch", position=0
@@ -202,10 +220,13 @@ class SyncTrainer(FLTrainer):
                 unit="round",
                 position=0,
             ):
+                #### Initial setup ####
+                # Initialize point of time for logging
                 timeline = Timeline(
                     epoch=epoch, round=round, rounds_per_epoch=num_rounds_in_epoch
                 )
 
+                # Select clients for training this round
                 t = time()
                 clients = self._client_selection(
                     num_users_on_worker,
@@ -216,13 +237,16 @@ class SyncTrainer(FLTrainer):
                 )
                 self.logger.info(f"Client Selection took: {time() - t} s.")
 
+                # Select clients for calculating post-aggregation *training* metrics
                 agg_metric_clients = self._choose_clients_for_post_aggregation_metrics(
                     train_clients=clients,
                     num_total_users=num_users_on_worker,
                     users_per_round=users_per_round_on_worker,
                 )
 
-                # training on selected clients for the round
+                #### Training phase ####
+                # Training on selected clients for this round; also calculate training
+                # metrics on `agg_metric_clients`
                 self.logger.info(f"# clients/round on worker {rank}: {len(clients)}.")
                 self._train_one_round(
                     timeline=timeline,
@@ -244,8 +268,9 @@ class SyncTrainer(FLTrainer):
                         f"epoch:{epoch}, round:{round}",
                     )
 
-                # report training success rate and training time variance
+                #### Evaluation phase ####
                 if rank == 0:
+                    # Report training time
                     if (
                         self._timeout_simulator.sample_mean_per_user != 0
                         or self._timeout_simulator.sample_var_per_user != 0
@@ -257,6 +282,7 @@ class SyncTrainer(FLTrainer):
                             f"{self._timeout_simulator.sample_var_per_user}",
                         )
 
+                    # Report evaluation metric on evaluation clients
                     t = time()
                     (best_metric, best_model_state,) = self._maybe_run_evaluation(
                         timeline=timeline,
@@ -273,7 +299,9 @@ class SyncTrainer(FLTrainer):
                     break
 
             # pyre-fixme[61]: `timeline` may not be initialized here.
+            # Report evaluation metrics for client-side models
             self._report_post_epoch_client_metrics(timeline, metrics_reporter)
+
             if self.stop_fl_training(
                 epoch=epoch,
                 round=round,  # pyre-fixme[61]: `round` may not be initialized here.
@@ -300,7 +328,7 @@ class SyncTrainer(FLTrainer):
     def _drop_overselected_users(
         self, clents_triggered: List[Client], num_users_keep: int
     ) -> List[Client]:
-        """Sorts users by their training time, and only keeps num_users_keep users."""
+        """Keeps top `num_users_keep` users with least training times."""
         all_training_times = [c.get_total_training_time() for c in clents_triggered]
         all_training_times.sort()
         # only select first num_users_keep userids sort by their finish time
@@ -327,6 +355,7 @@ class SyncTrainer(FLTrainer):
         global_model: IFLModel,
         epoch: int,
     ) -> List[Client]:
+        """Select client for training each round."""
         # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
         num_users_overselected = math.ceil(users_per_round / self.cfg.dropout_rate)
         user_indices_overselected = self.server.select_clients_for_training(
@@ -358,41 +387,48 @@ class SyncTrainer(FLTrainer):
         """Trains the global model for one training round.
 
         Args:
-            timeline: information about the round, epoch, round number, ...
-            clients: clients for the round
-            agg_metric_clients: clients for evaluating the post-aggregation
-                training metrics
-            users_per_round: the number of participating users
-            metrics_reporter: the metric reporter to pass to other methods
+            timeline: Information about the round, epoch, round number, etc.
+            clients: Clients for this round.
+            agg_metric_clients: Clients for calculating the post-aggregation
+                training metrics.
+            users_per_round: Number of participating users.
+            metrics_reporter: Metric reporter to pass to other methods.
         """
         t = time()
         self.server.init_round()
         self.logger.info(f"Round initialization took {time() - t} s.")
 
+        # Receive message from server to clients, i.e. global model state
         server_state_message = self.server.broadcast_message_to_clients(clients)
 
         def update(client):
+            """Update client's model with the global model received from server message."""
             client_delta, weight = client.generate_local_update(
                 server_state_message,
                 metrics_reporter,
             )
             self.server.receive_update_from_client(Message(client_delta, weight))
 
+        # Update each client-side model
         t = time()
         for client in clients:
             update(client)
         self.logger.info(f"Collecting round's clients took {time() - t} s.")
 
+        # After all clients finish their updates, update the global model
         t = time()
         self.server.step()
         self.logger.info(f"Finalizing round took {time() - t} s.")
 
+        # Calculate and report metrics for this round
         t = time()
+        # Train metrics of global model (e.g. loss and accuracy)
         self._report_train_metrics(
             model=self.global_model(),
             timeline=timeline,
             metrics_reporter=metrics_reporter,
         )
+        # Evaluation metrics of global model on training data of `agg_metric_clients`
         self._evaluate_global_model_after_aggregation_on_train_clients(
             clients=agg_metric_clients,
             model=self.global_model(),
@@ -400,6 +436,7 @@ class SyncTrainer(FLTrainer):
             users_per_round=users_per_round,
             metrics_reporter=metrics_reporter,
         )
+        # Communication metrics (e.g. amount of data sent between client and server)
         self._calc_post_epoch_communication_metrics(
             timeline,
             metrics_reporter,
@@ -439,7 +476,7 @@ class SyncTrainer(FLTrainer):
         model: IFLModel,
         metrics_reporter: Optional[IFLMetricsReporter],
     ) -> List[Metric]:
-        """Calculates privacy metrics."""
+        """Calculates privacy metrics if algorithm is differentially private."""
         metrics = []
         if self.is_user_level_dp:
             user_eps = self.server.privacy_budget.epsilon  # pyre-fixme
@@ -471,7 +508,7 @@ class SyncTrainer(FLTrainer):
         report_rounds: int,
         metrics_reporter: Optional[IFLMetricsReporter],
     ) -> List[Metric]:
-        """Calculates overflow metrics."""
+        """Calculates overflow metrics when using secure aggregation."""
         metrics = []
         if self.is_secure_aggregation_enabled:
             for client in clients:
@@ -496,7 +533,11 @@ class SyncTrainer(FLTrainer):
         round_timeline: Timeline,
         metrics_reporter: IFLMetricsReporter,
     ) -> List[List[Metric]]:
-        """Calculates client-side metrics on the overall evaluation set."""
+        """Calculates client-side metrics on each client's evaluation data.
+        Returns:
+            List of client-side metrics for each client. Each client's metrics are a
+                list of `Metric`s.
+        """
         client_metrics = []
         if metrics_reporter is not None:
             for client, model in tqdm(client_models.items()):
@@ -520,6 +561,15 @@ class SyncTrainer(FLTrainer):
         users_per_round: int,
         metrics_reporter: Optional[IFLMetricsReporter] = None,
     ):
+        """Evaluate global model.
+        Args:
+            clients: List of clients. We evaluate on the training data of these clients.
+            model: Model to evaluate on.
+            timeline: Timeline object to keep track of current point of time.
+            users_per_round: Number of users. Used for calculating overflow metrics when
+                using secure aggregation.
+            metrics_reporter: Metric reporter object. If None, do not evaluate.
+        """
         if (
             metrics_reporter is not None
             # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
@@ -570,6 +620,9 @@ class SyncTrainer(FLTrainer):
         timeline: Timeline,
         metrics_reporter: Optional[IFLMetricsReporter],
     ):
+        """Report evaluation metrics of client-side models.
+        This function is called after each *trainer* epoch.
+        """
         if (
             metrics_reporter is not None
             # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
@@ -577,6 +630,7 @@ class SyncTrainer(FLTrainer):
             and self.cfg.report_client_metrics_after_epoch
             and (timeline.epoch % self.cfg.client_metrics_reported_per_epoch == 0)
         ):
+            # Calculate scores for each client-side model on that client's eval data
             client_models = {
                 client: client.last_updated_model for client in self.clients.values()
             }
