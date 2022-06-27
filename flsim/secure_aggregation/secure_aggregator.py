@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, Iterator, Tuple
+from typing import Dict, Iterator, Optional, Tuple
 
 import torch
 from flsim.common.logger import Logger
@@ -25,8 +25,8 @@ class FixedPointConverter:
     The main class that is responsible for conversion between
     fixed point and floating point.
     """
-
-    MAX_WIDTH_BYTES = 8  # code handles up to 7 bytes, due to division in overflow calc
+    MAX_WIDTH_BITS = 8 * 8  # 8 bytes
+    # code handles up to 7 bytes, due to division in overflow calc
 
     logger: logging.Logger = Logger.get_logger(__name__)
 
@@ -36,8 +36,8 @@ class FixedPointConverter:
             cfg: The config for FixedPointConverter
 
         Raises:
-            ValueError: if the ``num_bytes`` is not between 1 and 8, or if
-            ``config.scaling_factor`` is not greater than 0.
+            ValueError: if the ``num_bits`` greater than MAX_WIDTH_BITS,
+            or if ``config.scaling_factor`` is not greater than 0.
         """
         init_self_cfg(
             self,
@@ -45,16 +45,20 @@ class FixedPointConverter:
             config_class=FixedPointConfig,
             **kwargs,
         )
-
-        if self.cfg.num_bytes < 1 or self.cfg.num_bytes > self.MAX_WIDTH_BYTES:
+        num_bits = (
+            self.cfg.num_bits
+            if self.cfg.num_bits is not None
+            else (self.cfg.num_bytes * 8)
+        )
+        if num_bits < 1 or num_bits > self.MAX_WIDTH_BITS:
             error_msg = (
-                f"Width {self.cfg.num_bytes} is not supported. "
-                f"Please enter a width between 1 and {self.MAX_WIDTH_BYTES}."
+                f"Width num_bits={num_bits} is not supported. "
+                f"Please enter a width between 1 and {self.MAX_WIDTH_BITS}."
             )
             raise ValueError(error_msg)
         if self.cfg.scaling_factor <= 0:
             raise ValueError("scaling factor must be greater than 0.")
-        num_bits = self.cfg.num_bytes * 8
+
         self.max_value = 2 ** (num_bits - 1) - 1
         self.min_value = -(2 ** (num_bits - 1))
         self.scaling_factor = self.cfg.scaling_factor
@@ -70,7 +74,7 @@ class FixedPointConverter:
 
         During conversion, the floats are multiplied by ``scaling_factor``.
         Now if some of these numbers are outside the range that can be represented by
-        ``num_bytes`` bytes, they will be clamped to fit in the range.
+        ``num_bits`` bits, they will be clamped to fit in the range.
 
         Args:
             numbers: the tensor containing the floating point numbers to convert
@@ -95,7 +99,7 @@ class FixedPointConverter:
 
         Note that this method does not check if the fixed point numbers
         is withing the range of numbers that can be represented by
-        ``num_bytes`` bytes.
+        ``num_bits`` bytes.
 
         Args:
             numbers: the tensor containing the fixed point numbers to convert
@@ -325,7 +329,7 @@ class SecureAggregator:
         Notes:
             This is an example to show how this method adjusts the input model
             based on min and max values of fixedpoint. If we have one parameter,
-            and if num_bytes=1 (allowed range is -128 to +127), when in aggregation
+            and if num_bits=8 (allowed range is -128 to +127), when in aggregation
             we add delta=40 to model=90, the input model would be 130. This
             method adjusts 130 to 2 (i.e. 130%128) since 130 is outside the range.
             Currently we only keep track of overflows, hence underflows are not
@@ -340,7 +344,7 @@ class SecureAggregator:
             )
             overflow_matrix = torch.where(
                 overflow_matrix < 0,
-                torch.zeros(overflow_matrix.size()),
+                torch.zeros_like(overflow_matrix),
                 overflow_matrix,
             )  # zero out negative entries since we are only interested in overflows
             self._aggregate_overflows += int(torch.sum(overflow_matrix).item())
@@ -399,6 +403,8 @@ class FixedPointConfig:
     _target_: str = fullclassname(FixedPointConverter)
     _recursive_: bool = False
     # size in bytes of single fixed point number. 1 to 8 inclusive.
-    num_bytes: int = MISSING
+    num_bytes: int = 1  # legacy arg. Use num_bits instead
+    # size in bytes of single fixed point number. 1 to 64 inclusive.
+    num_bits: Optional[int] = None
     # multiplier to convert from floating to fixed point
     scaling_factor: int = MISSING

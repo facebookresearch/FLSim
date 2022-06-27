@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import math
+import random
 from dataclasses import dataclass
 from time import time
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -21,13 +22,9 @@ from flsim.common.timeline import Timeline
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.metrics_reporter import IFLMetricsReporter, Metric, TrainingStage
 from flsim.interfaces.model import IFLModel
-from flsim.servers.sync_dp_servers import SyncDPSGDServerConfig
-from flsim.servers.sync_secagg_servers import SyncSecAggServerConfig
-from flsim.servers.sync_servers import (
-    FedAvgOptimizerConfig,
-    ISyncServer,
-    SyncServerConfig,
-)
+from flsim.servers.sync_dp_servers import SyncDPSGDServer
+from flsim.servers.sync_secagg_servers import SyncSecAggServer
+from flsim.servers.sync_servers import FedAvgOptimizerConfig, SyncServerConfig
 from flsim.trainers.trainer_base import FLTrainer, FLTrainerConfig
 from flsim.utils.config_utils import fullclassname, init_self_cfg, is_target
 from flsim.utils.distributed.fl_distributed import FLDistributedUtils
@@ -86,7 +83,7 @@ class SyncTrainer(FLTrainer):
     @property
     def is_user_level_dp(self):
         """Whether the server is differentially private wrt each user."""
-        return is_target(self.cfg.server, SyncDPSGDServerConfig)
+        return isinstance(self.server, SyncDPSGDServer)
 
     @property
     def is_sample_level_dp(self):
@@ -96,7 +93,7 @@ class SyncTrainer(FLTrainer):
     @property
     def is_secure_aggregation_enabled(self):
         """Whether secure aggregation is used."""
-        return is_target(self.cfg.server, SyncSecAggServerConfig)
+        return isinstance(self.server, SyncSecAggServer)
 
     def create_or_get_client_for_data(self, dataset_id: int, datasets: Any):
         """Creates training clients for a particular dataset.
@@ -401,13 +398,18 @@ class SyncTrainer(FLTrainer):
         # Receive message from server to clients, i.e. global model state
         server_state_message = self.server.broadcast_message_to_clients(clients)
 
+        # hook before client updates
+        self.on_before_client_updates(global_round_num=timeline.global_round_num())
+
         def update(client):
             """Update client's model with the global model received from server message."""
             client_delta, weight = client.generate_local_update(
                 server_state_message,
                 metrics_reporter,
             )
-            self.server.receive_update_from_client(Message(client_delta, weight))
+            self.server.receive_update_from_client(
+                Message(client_delta, weight, qparams=self.server.global_qparams)
+            )
 
         # Update each client-side model
         t = time()
@@ -469,6 +471,31 @@ class SyncTrainer(FLTrainer):
             for i in agg_metric_client_idcs
         ]
         return agg_metric_clients
+
+    def on_before_client_updates(self, **kwargs):
+        # update global qparams once (if applicable)
+        if getattr(self.server, "global_qparams", None):
+            global_round_num = kwargs.get("global_round_num", 1)
+            self._init_global_qparams(global_round_num=global_round_num)
+
+    def _init_global_qparams(self, global_round_num: int) -> None:
+        # TODO make it work for distributed setup
+        if not getattr(self.channel, "use_shared_qparams", False):
+            return
+        if (global_round_num - 1) % self.channel.cfg.qparams_refresh_freq != 0:
+            return
+        # create mock client
+        num_users_on_worker = self.data_provider.num_train_users()
+        rand_client_idx = random.randint(0, num_users_on_worker - 1)
+        mock_client = self.create_or_get_client_for_data(
+            rand_client_idx, self.data_provider
+        )
+        # generate mock client delta
+        mock_client_delta, mock_client_weight = mock_client.generate_local_update(
+            self.global_model()
+        )
+        # update server qparams using mock delta
+        self.server.update_qparams(mock_client_delta.fl_get_module())
 
     def _calc_privacy_metrics(
         self,

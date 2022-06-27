@@ -10,13 +10,15 @@ from typing import List
 
 import numpy as np
 import pytest
+
 from flsim.active_user_selectors.simple_user_selector import (
     UniformlyRandomActiveUserSelectorConfig,
 )
 from flsim.channels.base_channel import IdentityChannel
 from flsim.channels.half_precision_channel import HalfPrecisionChannel
 from flsim.channels.message import Message
-from flsim.common.pytest_helper import assertEmpty, assertEqual
+from flsim.channels.scalar_quantization_channel import ScalarQuantizationChannel
+from flsim.common.pytest_helper import assertEmpty, assertEqual, assertTrue
 from flsim.optimizers.server_optimizers import (
     FedAdamOptimizerConfig,
     FedAvgOptimizerConfig,
@@ -25,7 +27,7 @@ from flsim.optimizers.server_optimizers import (
     FedLARSOptimizerConfig,
 )
 from flsim.servers.aggregator import AggregationType
-from flsim.servers.sync_servers import SyncServerConfig
+from flsim.servers.sync_servers import SyncServerConfig, SyncSQServerConfig
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.test_utils import (
     create_model_with_value,
@@ -305,3 +307,37 @@ class TestSyncServer:
         server.receive_update_from_client(Message(model=SampleNet(delta), weight=1.0))
         error_msg = verify_models_equivalent_after_training(delta, init)
         assertEmpty(error_msg, msg=error_msg)
+
+
+class TestSyncSQServer:
+    def test_sync_sq_server_instantiation(self) -> None:
+        "Test SyncSQServer instantiation"
+        _ = instantiate(
+            SyncSQServerConfig(),
+            global_model=SampleNet(create_model_with_value(0)),
+            channel=ScalarQuantizationChannel(),
+        )
+        # test failure with non SQ channel
+        with pytest.raises(Exception):
+            _ = instantiate(
+                SyncSQServerConfig(),
+                global_model=SampleNet(create_model_with_value(0)),
+                channel=IdentityChannel(),
+            )
+
+    def test_sync_sq_server_global_qparams_update(self) -> None:
+        sync_sq_server = instantiate(
+            SyncSQServerConfig(),
+            global_model=SampleNet(create_model_with_value(0)),
+            channel=ScalarQuantizationChannel(qscheme="symmetric"),
+        )
+        assertEmpty(
+            sync_sq_server.global_qparams,
+            msg="Global QParams of SyncSQServer should be empty on instatiation",
+        )
+        agg_model = create_model_with_value(1)
+        sync_sq_server.update_qparams(agg_model)
+        assertTrue(sync_sq_server.global_qparams.keys(), agg_model.state_dict().keys())
+        qparams = list(sync_sq_server.global_qparams.values())
+        assertTrue(all(zp == 0 for _, zp in qparams))
+        assertTrue(all(sf == qparams[0][0] for sf, _ in qparams))

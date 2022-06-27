@@ -9,14 +9,16 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass
-from typing import Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 
+import torch.nn as nn
 from flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorConfig,
     UniformlyRandomActiveUserSelectorConfig,
 )
 from flsim.channels.base_channel import IdentityChannel, IFLChannel
 from flsim.channels.message import Message
+from flsim.channels.scalar_quantization_channel import ScalarQuantizationChannel
 from flsim.clients.base_client import Client
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
@@ -29,6 +31,7 @@ from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
+from torch import Tensor
 
 
 class ISyncServer(abc.ABC):
@@ -110,6 +113,13 @@ class ISyncServer(abc.ABC):
         """
         raise NotImplementedError()
 
+    @property
+    def global_qparams(self) -> Optional[IFLModel]:
+        """
+        Returns the current global qparams
+        """
+        return None
+
 
 class SyncServer(ISyncServer):
     def __init__(
@@ -169,6 +179,7 @@ class SyncServer(ISyncServer):
     def init_round(self):
         self._aggregator.zero_weights()
         self._optimizer.zero_grad()
+        self._aggregated_model = None
 
     def receive_update_from_client(self, message: Message):
         message = self._channel.client_to_server(message)
@@ -189,6 +200,41 @@ class SyncServer(ISyncServer):
         self._optimizer.step()
 
 
+class SyncSQServer(SyncServer):
+    def __init__(
+        self,
+        *,
+        global_model: IFLModel,
+        channel: Optional[ScalarQuantizationChannel] = None,
+        **kwargs,
+    ):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=SyncSQServerConfig,
+            **kwargs,
+        )
+        super().__init__(global_model=global_model, channel=channel, **kwargs)
+        if not isinstance(self._channel, ScalarQuantizationChannel):
+            raise TypeError(
+                "SyncSQServer expects channel of type ScalarQuantizationChannel,",
+                f" {type(self._channel)} given.",
+            )
+        # set global qparams (need to be empty at the beginning of every round)
+        self._global_qparams: Dict[str, Tuple[Tensor, Tensor]] = {}
+
+    @property
+    def global_qparams(self):
+        return self._global_qparams
+
+    def update_qparams(self, aggregated_model: nn.Module):
+        observer, _ = self._channel.get_observers_and_quantizers()  # pyre-ignore [16]
+        for name, param in aggregated_model.state_dict().items():
+            observer.reset_min_max_vals()
+            _ = observer(param.data)
+            self._global_qparams[name] = observer.calculate_qparams()
+
+
 @dataclass
 class SyncServerConfig:
     _target_: str = fullclassname(SyncServer)
@@ -197,3 +243,8 @@ class SyncServerConfig:
     aggregation_type: AggregationType = AggregationType.WEIGHTED_AVERAGE
     server_optimizer: ServerOptimizerConfig = ServerOptimizerConfig()
     active_user_selector: ActiveUserSelectorConfig = ActiveUserSelectorConfig()
+
+
+@dataclass
+class SyncSQServerConfig(SyncServerConfig):
+    _target_: str = fullclassname(SyncSQServer)

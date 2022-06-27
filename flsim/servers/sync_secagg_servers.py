@@ -7,15 +7,18 @@
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
+import torch
 from flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorConfig,
     UniformlyRandomActiveUserSelectorConfig,
 )
 from flsim.channels.base_channel import IdentityChannel, IFLChannel
 from flsim.channels.message import Message
+from flsim.channels.scalar_quantization_channel import ScalarQuantizationChannel
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.server_optimizers import FedAvgOptimizerConfig
@@ -30,6 +33,7 @@ from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
+from torch import Tensor
 
 
 class SyncSecAggServer(ISyncServer):
@@ -136,6 +140,104 @@ class SyncSecAggServer(ISyncServer):
         )
 
 
+class SyncSecAggSQServer(SyncSecAggServer):
+    def __init__(
+        self,
+        *,
+        global_model: IFLModel,
+        channel: Optional[ScalarQuantizationChannel] = None,
+        **kwargs,
+    ):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=SyncSecAggSQServerConfig,
+            **kwargs,
+        )
+        # perform all the parental duties
+        super().__init__(global_model=global_model, channel=channel, **kwargs)
+        # ensure correct channel is used for SQ
+        if not isinstance(self._channel, ScalarQuantizationChannel):
+            raise TypeError(
+                "SyncSecAggSQServer expects channel of type ScalarQuantizationChannel,",
+                f" {type(self._channel)} given.",
+            )
+        # ensure correct qparam sharing is used for secagg
+        if not self._channel.use_shared_qparams:
+            raise ValueError(
+                "SyncSecAggSQServer expects qparams to be shared across all clients."
+                " Have you set sec_agg_mode to True in channel config?"
+            )
+        # set scaling factor for quantized params
+        for n, p in self.global_model.fl_get_module().named_parameters():
+            # non-bias parameters are assumed to be quantized when using SQ channel
+            if p.ndim > 1:
+                self._secure_aggregator.converters[n].scaling_factor = (
+                    # pyre-ignore [16]
+                    self.cfg.secagg_scaling_factor_for_quantized
+                )
+        # set global qparams (need to be empty at the beginning of every round)
+        self._global_qparams: Dict[str, Tuple[Tensor, Tensor]] = {}
+
+    @property
+    def global_qparams(self):
+        return self._global_qparams
+
+    def receive_update_from_client(self, message: Message):
+        message = self._channel.client_to_server(message)
+
+        self._aggregator.apply_weight_to_update(
+            delta=message.model.fl_get_module(), weight=message.weight
+        )
+        # params that are in int form are being converted to fixedpoint
+        self._secure_aggregator.params_to_fixedpoint(message.model.fl_get_module())
+        self._secure_aggregator.apply_noise_mask(
+            message.model.fl_get_module().named_parameters()
+        )
+        self._aggregator.add_update(
+            delta=message.model.fl_get_module(), weight=message.weight
+        )
+        self._secure_aggregator.update_aggr_overflow_and_model(
+            model=self._aggregator._buffer_module
+        )
+
+    def step(self):
+        aggregated_model = self._aggregator.aggregate()
+        self._secure_aggregator.apply_denoise_mask(aggregated_model.named_parameters())
+        self._secure_aggregator.params_to_float(aggregated_model)
+        # non bias parameters have to be dequantized.
+        self._dequantize(aggregated_model)
+
+        FLModelParamUtils.set_gradient(
+            model=self._global_model.fl_get_module(),
+            reference_gradient=aggregated_model,
+        )
+        self._optimizer.step()
+
+    def _dequantize(self, aggregated_model: torch.nn.Module):
+        model_state_dict = aggregated_model.state_dict()
+        new_state_dict = OrderedDict()
+        for name, param in model_state_dict.items():
+            if param.ndim > 1:
+                scale, zero_point = self._global_qparams[name]
+                int_param = param.data.to(dtype=torch.int8)
+                q_param = torch._make_per_tensor_quantized_tensor(
+                    int_param, scale.item(), int(zero_point.item())
+                )
+                deq_param = q_param.dequantize()
+                new_state_dict[name] = deq_param
+            else:
+                new_state_dict[name] = param.data
+        aggregated_model.load_state_dict(new_state_dict)
+
+    def update_qparams(self, aggregated_model: torch.nn.Module):
+        observer, _ = self._channel.get_observers_and_quantizers()  # pyre-ignore [16]
+        for name, param in aggregated_model.state_dict().items():
+            observer.reset_min_max_vals()
+            _ = observer(param.data)
+            self._global_qparams[name] = observer.calculate_qparams()
+
+
 @dataclass
 class SyncSecAggServerConfig(SyncServerConfig):
     """
@@ -146,3 +248,9 @@ class SyncSecAggServerConfig(SyncServerConfig):
     aggregation_type: AggregationType = AggregationType.WEIGHTED_AVERAGE
     fixedpoint: Optional[FixedPointConfig] = None
     active_user_selector: ActiveUserSelectorConfig = ActiveUserSelectorConfig()
+
+
+@dataclass
+class SyncSecAggSQServerConfig(SyncSecAggServerConfig):
+    _target_: str = fullclassname(SyncSecAggSQServer)
+    secagg_scaling_factor_for_quantized: float = 1.0
