@@ -39,7 +39,7 @@ class TestSyncMimeliteServers:
         )
         server.init_round()
         clients = self._create_fake_clients(num_clients)
-        server_state_message = server.create_client_broadcast_message(clients)
+        server_state_message = server.broadcast_message_to_clients(clients)
         assertIsInstance(server_state_message, Message)
         assertEqual(server_model, server_state_message.model)
         error_msg = verify_optimizer_state_dict_equal(

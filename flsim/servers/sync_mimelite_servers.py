@@ -21,7 +21,7 @@ class SyncMimeLiteServer(SyncServer):
     Ref: https://arxiv.org/pdf/2008.03606.pdf
     """
 
-    def create_client_broadcast_message(self, clients: Iterable[Client]) -> Message:
+    def broadcast_message_to_clients(self, clients: Iterable[Client]) -> Message:
         """
         Message has additional metadata apart from the model:
         Server Optimizer State: To be used during client training
