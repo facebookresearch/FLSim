@@ -15,7 +15,10 @@ from flsim.optimizers.async_aggregators import (
     FedAvgWithLRFedBuffAggregatorConfig,
     FedBuffAggregatorConfig,
 )
-from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
+from flsim.optimizers.local_optimizers import (
+    LocalOptimizerAdamConfig,
+    LocalOptimizerSGDConfig,
+)
 from flsim.optimizers.sync_aggregators import (
     FedAdamSyncAggregatorConfig,
     FedAvgSyncAggregatorConfig,
@@ -132,4 +135,36 @@ class TestOptimizerFactory:
         assertEqual(
             OptimizerTestUtil.get_value_from_optimizer(local_optimizer, "weight_decay"),
             config["weight_decay"],
+        )
+
+    def test_local_adam_creation(self) -> None:
+        config = {
+            "_target_": LocalOptimizerAdamConfig._target_,
+            "lr": 1.0,
+            "weight_decay": 0.1,
+            "beta1": 0.7,
+            "beta2": 0.79,
+            "eps": 1e-7,
+        }
+        # pyre-ignore[16]: for pytest fixture
+        local_optimizer = instantiate(config, model=self.model)
+        assertEqual(
+            OptimizerTestUtil.get_value_from_optimizer(local_optimizer, "lr"),
+            config["lr"],
+        )
+        assertEqual(
+            OptimizerTestUtil.get_value_from_optimizer(local_optimizer, "weight_decay"),
+            config["weight_decay"],
+        )
+        assertEqual(
+            OptimizerTestUtil.get_value_from_optimizer(local_optimizer, "betas")[0],
+            config["beta1"],
+        )
+        assertEqual(
+            OptimizerTestUtil.get_value_from_optimizer(local_optimizer, "betas")[1],
+            config["beta2"],
+        )
+        assertEqual(
+            OptimizerTestUtil.get_value_from_optimizer(local_optimizer, "eps"),
+            config["eps"],
         )

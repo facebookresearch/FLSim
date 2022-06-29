@@ -71,6 +71,28 @@ class LocalOptimizerSGD(LocalOptimizer, torch.optim.SGD):
         }
 
 
+class LocalOptimizerAdam(LocalOptimizer, torch.optim.Adam):
+    def __init__(self, *, model: Model, **kwargs) -> None:
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=LocalOptimizerAdamConfig,
+            **kwargs,
+        )
+
+        super().__init__(model=model, **kwargs)
+
+        torch.optim.Adam.__init__(
+            self,
+            params=self.model.parameters(),
+            # pyre-ignore[16] Undefined attribute
+            lr=self.cfg.lr,
+            weight_decay=self.cfg.weight_decay,
+            betas=(self.cfg.beta1, self.cfg.beta2),
+            eps=self.cfg.eps,
+        )
+
+
 class LocalOptimizerFedProx(LocalOptimizer, torch.optim.SGD):
     def __init__(
         self,
@@ -159,6 +181,16 @@ class LocalOptimizerConfig:
 @dataclass
 class LocalOptimizerSGDConfig(LocalOptimizerConfig):
     _target_: str = fullclassname(LocalOptimizerSGD)
+
+
+@dataclass
+class LocalOptimizerAdamConfig(LocalOptimizerConfig):
+    _target_: str = fullclassname(LocalOptimizerAdam)
+    lr: float = 0.001
+    weight_decay: float = 0.00001
+    beta1: float = 0.9
+    beta2: float = 0.999
+    eps: float = 1e-8
 
 
 @dataclass

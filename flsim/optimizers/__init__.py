@@ -14,7 +14,11 @@ from .async_aggregators import (
     FedAvgWithLRFedBuffAggregatorConfig,
     FedAvgWithLRWithMomentumAsyncAggregatorConfig,
 )
-from .local_optimizers import LocalOptimizerFedProxConfig, LocalOptimizerSGDConfig
+from .local_optimizers import (
+    LocalOptimizerAdamConfig,
+    LocalOptimizerFedProxConfig,
+    LocalOptimizerSGDConfig,
+)
 from .optimizer_scheduler import (
     ArmijoLineSearchSchedulerConfig,
     ConstantLRSchedulerConfig,
@@ -45,6 +49,12 @@ ConfigStore.instance().store(
 ConfigStore.instance().store(
     name="base_optimizer_fedprox",
     node=LocalOptimizerFedProxConfig,
+    group="optimizer",
+)
+
+ConfigStore.instance().store(
+    name="base_optimizer_adam",
+    node=LocalOptimizerAdamConfig,
     group="optimizer",
 )
 
