@@ -1,0 +1,40 @@
+{
+  "config": {
+    "trainer": {
+      "_base_": "base_sync_trainer",
+      "server": {
+        "_base_": "base_sync_server",
+        "server_optimizer": {
+          "_base_": "base_fed_avg_with_lr",
+          "lr": 0.07973798968019044,
+          "momentum": 0
+        },
+        "aggregation_type": "WEIGHTED_AVERAGE",
+        "active_user_selector": {
+          "_base_": "base_uniformly_random_active_user_selector"
+        }
+      },
+      "client": {
+        "epochs": 1,
+        "optimizer": {
+          "_base_": "base_optimizer_sgd",
+          "lr": 0.8991111469452855,
+          "momentum": 0
+        }
+      },
+      "users_per_round": 100,
+      "epochs": 30,
+      "train_metrics_reported_per_epoch": 100,
+      "always_keep_trained_model": false,
+      "eval_epoch_frequency": 0.2,
+      "do_eval": true,
+      "report_train_metrics_after_aggregation": true
+    },
+    "data": {
+      "local_batch_size": 32,
+      "drop_last": false
+    },
+    "distributed_world_size": 1,
+    "use_cuda_if_available": true
+  }
+}

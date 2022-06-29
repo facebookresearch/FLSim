@@ -13,10 +13,10 @@ provide the script get_data.sh for this purpose.
     Typical usage example:
 
     FedAvg
-    python3 sent140_tutorial.py --config-file configs/sent140_config.json
+    python3 sent140_example.py --config-file configs/sent140_config.json
 
     FedBuff + SGDM
-    python3 sent140_tutorial.py --config-file configs/sent140_fedbuff_config.json
+    python3 sent140_example.py --config-file configs/sent140_fedbuff_config.json
 """
 import itertools
 import json
@@ -222,7 +222,7 @@ def main_worker(
     )
 
 
-@hydra.main(config_path=None, config_name="sent140_tutorial")
+@hydra.main(config_path=None, config_name="sent140_config")
 def run(cfg: DictConfig) -> None:
     print(OmegaConf.to_yaml(cfg))
 
