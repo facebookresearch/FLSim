@@ -565,3 +565,9 @@ def create_model_with_value(value) -> nn.Module:
     model = TwoFC()
     model.fill_all(value)
     return model
+
+
+def linear_model(value) -> nn.Module:
+    model = Linear()
+    model.fill_all(value)
+    return model

@@ -30,7 +30,9 @@ from .server_optimizers import (
     FedAvgWithLROptimizerConfig,
     FedLAMBOptimizerConfig,
     FedLARSOptimizerConfig,
+    ServerFTRLOptimizerConfig,
 )
+
 from .sync_aggregators import (
     FedAdamSyncAggregatorConfig,
     FedAvgSyncAggregatorConfig,
@@ -176,5 +178,11 @@ ConfigStore.instance().store(
 ConfigStore.instance().store(
     name="base_fed_lamb",
     node=FedLAMBOptimizerConfig,
+    group="server_optimizer",
+)
+
+ConfigStore.instance().store(
+    name="base_ftrl_optimizer",
+    node=ServerFTRLOptimizerConfig,
     group="server_optimizer",
 )

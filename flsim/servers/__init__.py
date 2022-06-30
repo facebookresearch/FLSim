@@ -8,6 +8,7 @@
 from hydra.core.config_store import ConfigStore  #  @manual
 
 from .sync_dp_servers import SyncDPSGDServerConfig
+from .sync_ftrl_servers import SyncFTRLServerConfig
 from .sync_mime_servers import SyncMimeServerConfig
 from .sync_mimelite_servers import SyncMimeLiteServerConfig
 from .sync_secagg_servers import SyncSecAggServerConfig, SyncSecAggSQServerConfig
@@ -52,5 +53,11 @@ ConfigStore.instance().store(
 ConfigStore.instance().store(
     name="base_sync_secagg_sq_server",
     node=SyncSecAggSQServerConfig,
+    group="server",
+)
+
+ConfigStore.instance().store(
+    name="base_sync_ftrl_server",
+    node=SyncFTRLServerConfig,
     group="server",
 )

@@ -12,13 +12,20 @@ DP parameters that an entity such as an FL server uses for user-level DP.
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import Optional
+from dataclasses import dataclass
+from typing import Any, Optional
 
 import torch
 from flsim.common.logger import Logger
 from flsim.privacy.common import PrivacyBudget, PrivacySetting
 from opacus.accountants.analysis import rdp as privacy_analysis
 from torch import nn
+
+
+@dataclass
+class TreeNode:
+    height: int
+    value: Any
 
 
 class PrivacyEngineNotAttachedException(Exception):
@@ -165,3 +172,170 @@ class GaussianPrivacyEngine(IPrivacyEngine):
                 "the set of alpha orders."
             )
         return PrivacyBudget(eps, opt_alpha, target_delta)
+
+
+class CummuNoiseTorch:
+    @torch.no_grad()
+    def __init__(self, std, shapes, device, test_mode=False, seed=None):
+        """
+        :param std: standard deviation of the noise
+        :param shapes: shapes of the noise, which is basically shape of the gradients
+        :param device: device for pytorch tensor
+        :param test_mode: if in test mode, noise will be 1 in each node of the tree
+        """
+        seed = (
+            seed
+            if seed is not None
+            else int.from_bytes(os.urandom(8), byteorder="big", signed=True)
+        )
+        self.std = std
+        self.shapes = shapes
+        self.device = device
+        self.step = 0
+        self.binary = [0]
+        self.noise_sum = [torch.zeros(shape).to(self.device) for shape in shapes]
+        self.recorded = [[torch.zeros(shape).to(self.device) for shape in shapes]]
+        torch.cuda.manual_seed_all(seed)
+        self.generator = torch.Generator(device=self.device)
+        self.generator.manual_seed(seed)
+        self.test_mode = test_mode
+
+    @torch.no_grad()
+    def __call__(self):
+        """
+        :return: the noise to be added by DP-FTRL
+        """
+        self.step += 1
+        if self.std <= 0 and not self.test_mode:
+            return self.noise_sum
+
+        idx = 0
+        while idx < len(self.binary) and self.binary[idx] == 1:
+            self.binary[idx] = 0
+            for ns, re in zip(self.noise_sum, self.recorded[idx]):
+                ns -= re
+            idx += 1
+        if idx >= len(self.binary):
+            self.binary.append(0)
+            self.recorded.append(
+                [torch.zeros(shape).to(self.device) for shape in self.shapes]
+            )
+
+        for shape, ns, re in zip(self.shapes, self.noise_sum, self.recorded[idx]):
+            if not self.test_mode:
+                n = torch.normal(
+                    0, self.std, shape, generator=self.generator, device=self.device
+                )
+            else:
+                n = torch.ones(shape).to(self.device)
+            ns += n
+            re.copy_(n)
+
+        self.binary[idx] = 1
+        return self.noise_sum
+
+    @torch.no_grad()
+    def proceed_until(self, step_target):
+        """
+        Proceed until the step_target-th step. This is for the binary tree completion trick.
+        :return: the noise to be added by DP-FTRL
+        """
+        if self.step >= step_target:
+            raise ValueError(f"Already reached {step_target}.")
+        while self.step < step_target:
+            noise_sum = self.__call__()
+        return noise_sum
+
+
+class CummuNoiseEffTorch:
+    """
+    The tree aggregation protocol with the trick in Honaker, "Efficient Use of Differentially Private Binary Trees", 2015
+    """
+
+    @torch.no_grad()
+    def __init__(self, std, shapes, device, seed, test_mode=False):
+        """
+        :param std: standard deviation of the noise
+        :param shapes: shapes of the noise, which is basically shape of the gradients
+        :param device: device for pytorch tensor
+        """
+        seed = (
+            seed
+            if seed is not None
+            else int.from_bytes(os.urandom(8), byteorder="big", signed=True)
+        )
+        self.test_mode = test_mode
+
+        self.std = std
+        self.shapes = shapes
+        self.device = device
+        torch.cuda.manual_seed_all(seed)
+        self.generator = torch.Generator(device=self.device)
+        self.generator.manual_seed(seed)
+        self.step = 0
+        self.noise_sum = [torch.zeros(shape).to(self.device) for shape in shapes]
+        self.stack = []
+
+    @torch.no_grad()
+    def get_noise(self):
+        return [
+            torch.normal(
+                0, self.std, shape, generator=self.generator, device=self.device
+            )
+            for shape in self.shapes
+        ]
+
+    @torch.no_grad()
+    def push(self, elem):
+        for i in range(len(self.shapes)):
+            self.noise_sum[i] += elem.value[i] / (2.0 - 1 / 2**elem.height)
+        self.stack.append(elem)
+
+    @torch.no_grad()
+    def pop(self):
+        elem = self.stack.pop()
+        for i in range(len(self.shapes)):
+            self.noise_sum[i] -= elem.value[i] / (2.0 - 1 / 2**elem.height)
+
+    @torch.no_grad()
+    def __call__(self):
+        """
+        :return: the noise to be added by DP-FTRL
+        """
+        self.step += 1
+
+        # add new element to the stack
+        self.push(TreeNode(0, self.get_noise()))
+
+        # pop the stack
+        while len(self.stack) >= 2 and self.stack[-1].height == self.stack[-2].height:
+            # create new element
+            left_value, right_value = self.stack[-2].value, self.stack[-1].value
+            new_noise = self.get_noise()
+            new_elem = TreeNode(
+                self.stack[-1].height + 1,
+                [
+                    x + (y + z) / 2
+                    for x, y, z in zip(new_noise, left_value, right_value)
+                ],
+            )
+
+            # pop the stack, update sum
+            self.pop()
+            self.pop()
+
+            # append to the stack, update sum
+            self.push(new_elem)
+        return self.noise_sum
+
+    @torch.no_grad()
+    def proceed_until(self, step_target):
+        """
+        Proceed until the step_target-th step. This is for the binary tree completion trick.
+        :return: the noise to be added by DP-FTRL
+        """
+        if self.step >= step_target:
+            raise ValueError(f"Already reached {step_target}.")
+        while self.step < step_target:
+            noise_sum = self.__call__()
+        return noise_sum

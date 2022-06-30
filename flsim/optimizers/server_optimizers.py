@@ -28,7 +28,7 @@ from enum import Enum
 import torch
 import torch.nn as nn
 from flsim.optimizers.layerwise_optimizers import LAMB, LARS
-from flsim.utils.config_utils import fullclassname, init_self_cfg, is_target
+from flsim.utils.config_utils import fullclassname, init_self_cfg
 from omegaconf import MISSING
 
 
@@ -48,7 +48,7 @@ class IServerOptimizer(abc.ABC):
 
     @abc.abstractmethod
     @torch.no_grad()
-    def step(self, closure):
+    def step(self, closure, noise=None):
         r"""Performs a single optimization step (parameter update).
 
         Args:
@@ -215,6 +215,105 @@ class FedLAMBOptimizer(IServerOptimizer, LAMB):
         return LAMB.zero_grad(self, set_to_none)
 
 
+class ServerFTRLOptimizer(IServerOptimizer, torch.optim.Optimizer):
+    """
+    :param params: parameter groups
+    :param momentum: if non-zero, use DP-FTRLM
+    :param record_last_noise: whether to record the last noise. for the tree completion trick.
+    """
+
+    def __init__(self, *, model: nn.Module, record_last_noise: bool, **kwargs) -> None:
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=ServerFTRLOptimizerConfig,
+            **kwargs,
+        )
+
+        IServerOptimizer.__init__(self, model=model, **kwargs)
+        # pyre-ignore[28]
+        torch.optim.Optimizer.__init__(self, params=model.parameters(), defaults={})
+        # pyre-ignore[16]
+        self.momentum = self.cfg.momentum
+        self.lr = self.cfg.lr
+        self.record_last_noise = record_last_noise
+
+    def __setstate__(self, state):
+        super(ServerFTRLOptimizer, self).__setstate__(state)
+
+    def zero_grad(self, set_to_none: bool = False):
+        return torch.optim.Optimizer.zero_grad(self, set_to_none)
+
+    @torch.no_grad()
+    def step(self, noise, closure=None):
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
+
+        for group in self.param_groups:
+            for p, nz in zip(group["params"], noise):
+                if p.grad is None:
+                    continue
+                d_p = p.grad
+
+                param_state = self.state[p]
+
+                if len(param_state) == 0:
+                    param_state["grad_sum"] = torch.zeros_like(
+                        d_p, memory_format=torch.preserve_format
+                    )
+                    param_state["model_sum"] = p.detach().clone(
+                        memory_format=torch.preserve_format
+                    )  # just record the initial model
+                    param_state["momentum"] = torch.zeros_like(
+                        p, memory_format=torch.preserve_format
+                    )
+                    if self.record_last_noise:
+                        param_state["last_noise"] = torch.zeros_like(
+                            p, memory_format=torch.preserve_format
+                        )  # record the last noise needed, in order for restarting
+
+                gs, ms = param_state["grad_sum"], param_state["model_sum"]
+                if self.momentum == 0:
+                    gs.add_(d_p)
+                    p.copy_(ms + (-gs - nz) / self.lr)
+                else:
+                    gs.add_(d_p)
+                    param_state["momentum"].mul_(self.momentum).add_(gs + nz)
+                    p.copy_(ms - param_state["momentum"] / self.lr)
+                if self.record_last_noise:
+                    param_state["last_noise"].copy_(nz)
+        return loss
+
+    @torch.no_grad()
+    def restart(self, last_noise=None):
+        """
+        Restart the tree.
+        :param last_noise: the last noise to be added. If none, use the last noise recorded.
+        """
+        assert last_noise is not None or self.record_last_noise
+        for group in self.param_groups:
+            if last_noise is None:
+                for p in group["params"]:
+                    if p.grad is None:
+                        continue
+                    param_state = self.state[p]
+                    if len(param_state) == 0:
+                        continue
+                    param_state["grad_sum"].add_(
+                        param_state["last_noise"]
+                    )  # add the last piece of noise to the current gradient sum
+            else:
+                for p, nz in zip(group["params"], last_noise):
+                    if p.grad is None:
+                        continue
+                    param_state = self.state[p]
+                    if len(param_state) == 0:
+                        continue
+                    param_state["grad_sum"].add_(nz)
+
+
 @dataclass
 class ServerOptimizerConfig:
     _target_: str = MISSING
@@ -259,3 +358,10 @@ class FedLAMBOptimizerConfig(ServerOptimizerConfig):
     beta1: float = 0.9
     beta2: float = 0.999
     eps: float = 1e-8
+
+
+@dataclass
+class ServerFTRLOptimizerConfig(ServerOptimizerConfig):
+    _target_: str = fullclassname(ServerFTRLOptimizer)
+    lr: float = 0.001
+    momentum: float = 0.0
