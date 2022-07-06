@@ -88,15 +88,25 @@ def _flatten_dict(
     items = []
     for k, v in d.items():
         new_key = parent_key + sep + k if parent_key else k
-        # if value is not a dict and is mutable, extend the items and flatten again.
+        # if value is not supposed to be a dict but is mappable,
+        # then extend the items and flatten again.
         # > hacky way of preserving dict values by checking if key has _dict as suffix.
         if not new_key.endswith("_dict") and isinstance(v, abc.MutableMapping):
             items.extend(_flatten_dict(v, new_key, sep=sep).items())
-        else:
+        elif type(v) is list:
+            # handle config in lists (doesn't support nested lists yet)
+            for i in range(len(v)):
+                if isinstance(v[i], abc.MutableMapping) and "_base_" in v[i].keys():
+                    new_key_i = f"{new_key}.{i}"
+                    items.extend(_flatten_dict(v[i], new_key_i, sep=sep).items())
+                else:
+                    items.append((new_key, v))
+        elif type(v) is str and v.replace(".", "", 1).isdigit():
             # check if a number needs to be retained as a string
-            # the repalce with one dot is needed to handle floats
-            if type(v) is str and v.replace(".", "", 1).isdigit():
-                v = f'"{v}"'  # enclose it with quotes if so.
+            # the repalce with one dot and check is needed to handle floats
+            v = f'"{v}"'  # enclose it with quotes if so.:
+            items.append((new_key, v))
+        else:
             items.append((new_key, v))
     return dict(items)
 
@@ -164,6 +174,9 @@ def fl_json_to_dotlist(
             k = k.replace("._base_", "")
             # extract aggregator from trainer.aggregator
             config_group = k.split(".")[-1]
+            config_group = (
+                config_group if not config_group.isdigit() else k.split(".")[-2]
+            )
             # trainer.aggregator --> +aggregator@trainer.aggregator
             k = f"+{config_group}@{k}"
             # +aggregator@trainer.aggregator=base_fed_avg_with_lr_sync_aggregator

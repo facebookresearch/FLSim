@@ -47,12 +47,52 @@ class TestConfigUtils:
                     "a": {"b": 1},
                     "l": [1, 2, 3],
                     "ld": [{"a": 1, "b": {"bb": 2}, "c": [11, 22]}, {"z": "xyz"}],
+                    "ldc": [
+                        {
+                            "_base_": "parent_base",
+                            "x": 1,
+                            "child": {
+                                "_base_": "child_base",
+                                "yl": [2, 3],
+                                "yd": {"z": "4"},
+                                "yld": [{"z": "4"}],
+                                "yc": [{"_base_": "gc_base", "dummy": "one"}],
+                            },
+                        },
+                        {
+                            "_base_": "parent_base",
+                            "x": 11,
+                            "child": {
+                                "_base_": "child_base",
+                                "yl": [12, 13],
+                                "yd": {"z": "14"},
+                                "yld": [{"z": "14"}],
+                                "yc": [{"_base_": "gc_base", "dummy": "two"}],
+                            },
+                        },
+                    ],
                 }
             ),
             {
                 "a.b": 1,
                 "l": [1, 2, 3],
                 "ld": [{"a": 1, "b": {"bb": 2}, "c": [11, 22]}, {"z": "xyz"}],
+                "ldc.0._base_": "parent_base",
+                "ldc.0.x": 1,
+                "ldc.0.child._base_": "child_base",
+                "ldc.0.child.yl": [2, 3],
+                "ldc.0.child.yd.z": '"4"',
+                "ldc.0.child.yld": [{"z": "4"}],
+                "ldc.0.child.yc.0._base_": "gc_base",
+                "ldc.0.child.yc.0.dummy": "one",
+                "ldc.1._base_": "parent_base",
+                "ldc.1.x": 11,
+                "ldc.1.child._base_": "child_base",
+                "ldc.1.child.yl": [12, 13],
+                "ldc.1.child.yd.z": '"14"',
+                "ldc.1.child.yld": [{"z": "14"}],
+                "ldc.1.child.yc.0._base_": "gc_base",
+                "ldc.1.child.yc.0.dummy": "two",
             },
         )
 
@@ -226,19 +266,59 @@ class TestConfigUtils:
         # checks string floats
         assertEqual(fl_json_to_dotlist({"e": "5.5"}), ['++e="5.5"'])
 
-        # make sure json in list remains untouched
+        # check handling of list values
         assertEqual(
             fl_json_to_dotlist(
                 {
                     "a": {"b": 1},
                     "l": [1, 2, 3],
                     "ld": [{"a": 1, "b": {"bb": 2}, "c": [11, 22]}, {"z": "xyz"}],
+                    "ldc": [
+                        {
+                            "_base_": "parent_base",
+                            "x": 1,
+                            "child": {
+                                "_base_": "child_base",
+                                "yl": [2, 3],
+                                "yd": {"z": "4"},
+                                "yld": [{"z": "4"}],
+                                "yc": [{"_base_": "gc_base", "dummy": "one"}],
+                            },
+                        },
+                        {
+                            "_base_": "parent_base",
+                            "x": 11,
+                            "child": {
+                                "_base_": "child_base",
+                                "yl": [12, 13],
+                                "yd": {"z": "14"},
+                                "yld": [{"z": "14"}],
+                                "yc": [{"_base_": "gc_base", "dummy": "two"}],
+                            },
+                        },
+                    ],
                 }
             ),
             [
+                "+ldc@ldc.0=parent_base",
+                "+ldc@ldc.1=parent_base",
+                "+child@ldc.0.child=child_base",
+                "+child@ldc.1.child=child_base",
+                "+yc@ldc.0.child.yc.0=gc_base",
+                "+yc@ldc.1.child.yc.0=gc_base",
                 "++l=[1, 2, 3]",
                 "++ld=[{'a': 1, 'b': {'bb': 2}, 'c': [11, 22]}, {'z': 'xyz'}]",
                 "++a.b=1",
+                "++ldc.0.x=1",
+                "++ldc.1.x=11",
+                "++ldc.0.child.yl=[2, 3]",
+                "++ldc.0.child.yld=[{'z': '4'}]",
+                "++ldc.1.child.yl=[12, 13]",
+                "++ldc.1.child.yld=[{'z': '14'}]",
+                '++ldc.0.child.yd.z="4"',
+                '++ldc.1.child.yd.z="14"',
+                "++ldc.0.child.yc.0.dummy=one",
+                "++ldc.1.child.yc.0.dummy=two",
             ],
         )
 
