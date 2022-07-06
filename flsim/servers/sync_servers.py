@@ -179,7 +179,6 @@ class SyncServer(ISyncServer):
     def init_round(self):
         self._aggregator.zero_weights()
         self._optimizer.zero_grad()
-        self._aggregated_model = None
 
     def receive_update_from_client(self, message: Message):
         message = self._channel.client_to_server(message)
