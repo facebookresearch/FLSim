@@ -135,7 +135,7 @@ class WeightedDPRoundReducer(DPRoundReducer):
 
     def _unbiased_estimator(self) -> float:
         """
-        For weighted averaged reductions, the unbiased estimator calculates the true
+        For weighted average reductions, the unbiased estimator calculates the true
         weighted average of the models and the sensitivity of it will be:
             (clipping_value * max_weight) / (min_weight * users_per_round)
         """
@@ -182,7 +182,7 @@ class WeightedDPRoundReducerConfig(DPRoundReducerConfig):
     Allowing weights in dp should generally be avoided unless weights
     are in the same range. If weights are extremely different, one
     might as well throw updates from clients with smaller weights
-    away as they will be drawned in noise.
+    away as they will be drowned in noise.
     """
     _target_: str = fullclassname(WeightedDPRoundReducer)
     min_weight: float = 1e-6

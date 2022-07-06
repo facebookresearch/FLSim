@@ -91,7 +91,7 @@ class IFLRoundReducer(abc.ABC):
     @abc.abstractmethod
     def collect_update(self, delta: IFLModel) -> None:
         """
-        Given a updated model from the client, add it to this reducer.
+        Given an updated model from the client, add it to this reducer.
         """
         pass
 
@@ -150,8 +150,8 @@ class RoundReducer(IFLRoundReducer):
         self.num_users_per_round = num_users_per_round
         self.total_number_of_users = total_number_of_users
         # TODO these are specific to mean reducer [this implementation]
-        # we will probably need a level of inheritence here and hide
-        # these frome the main class.
+        # we will probably need a level of inheritance here and hide
+        # these from the main class.
         self.sum_weights: torch.Tensor = torch.zeros(1)
         self.ref_model: IFLModel = global_model
         self.reduced_module: nn.Module = FLModelParamUtils.clone(
@@ -170,13 +170,13 @@ class RoundReducer(IFLRoundReducer):
 
     def _reduce_all(self, op: OperationType = OperationType.SUM_AND_BROADCAST):
         """
-        reduce models accross all workers if multi-processing is used.
+        Reduce models across all workers if multi-processing is used.
         reduction type is defined by `config.reduction_type`, see
         `ReductionType`.
 
         Returns:
             number of the models that have been collected. For weighted
-            reductions types returns sum of all model weights.
+            reduction types, returns the sum of all model weights.
 
         Note:
             The weights are sum of weights only for weighted reduction types

@@ -97,7 +97,7 @@ class DPRoundReducer(RoundReducer):
                 self.logger.error(
                     f"total weights {total_weights} is not equal to "
                     f"number of users {self.num_users_per_round}. "
-                    "Please make sure reduction_type=AVERGAE."
+                    "Please make sure reduction_type=AVERAGE."
                 )
 
             """

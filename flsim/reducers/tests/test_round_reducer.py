@@ -112,7 +112,7 @@ def run_reduction_test(reducer, num_processes: int = 1, num_models: int = 4):
     """
     Used in multiprocess test only.
     Runs a simple scenario in multiple processes.
-    Models are sequentially initilized with
+    Models are sequentially initialized with
     a constant value for params, i.e. 1, 2, ..., num_models.
     """
     _, tmpfile = mkstemp(dir="/tmp")
@@ -193,7 +193,7 @@ class TestRoundReducer(TestRoundReducerBase):
         rr = self.get_round_reducer()
         model = utils.SampleNet(utils.TwoFC())
         # check channel is pass through
-        # TODO modify when there is actuall channel
+        # TODO modify when there is actually a channel
         model2 = rr.receive_through_channel(model)
         mismatched = utils.verify_models_equivalent_after_training(model2, model)
         assertEqual(mismatched, "", mismatched)
@@ -299,7 +299,7 @@ class TestRoundReducer(TestRoundReducerBase):
 class TestDPRoundReducer(TestRoundReducerBase):
     def test_dp_off(self) -> None:
         ref_model = create_ref_model(ref_model_param_value=3.0)
-        # when clipping_value is inf, sensetivity is inf -> dp not supported
+        # when clipping_value is inf, sensitivity is inf -> dp not supported
         dp_rr = get_dp_round_reducer(
             ref_model, clipping_value=float("inf"), noise_multiplier=0
         )
@@ -388,7 +388,7 @@ class TestDPRoundReducer(TestRoundReducerBase):
             """
 
         dp_rr.reduce()
-        # asserts callnig add_noise did not change anything
+        # asserts calling add_noise did not change anything
         expected_param_values = ((3.273268353539886 * num_clients) / num_clients) + 0
 
         model_after_noise, sum_weights = dp_rr.current_results
@@ -452,7 +452,7 @@ class TestDPRoundReducer(TestRoundReducerBase):
 
     def test_noise_added_correctly(self) -> None:
         """
-        Tests that the noise is added correctly to model.
+        Tests that the noise is added correctly to the model.
         """
         num_clients = 100
         global_value = 5.0
