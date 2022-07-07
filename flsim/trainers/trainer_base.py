@@ -11,7 +11,7 @@ import abc
 import logging
 import sys
 from dataclasses import dataclass
-from typing import Any, List, NamedTuple, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import torch
 from flsim.channels.base_channel import FLChannelConfig

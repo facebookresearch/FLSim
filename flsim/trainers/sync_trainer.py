@@ -80,6 +80,13 @@ class SyncTrainer(FLTrainer):
         """
         return self.server.global_model
 
+    def client_models(self) -> Dict[Client, IFLModel]:
+        """Returns the list of latest client-side models."""
+        client_models = {
+            client: client.last_updated_model for client in self.clients.values()
+        }
+        return client_models
+
     @property
     def is_user_level_dp(self):
         """Whether the server is differentially private wrt each user."""
@@ -96,13 +103,15 @@ class SyncTrainer(FLTrainer):
         return isinstance(self.server, SyncSecAggServer)
 
     def create_or_get_client_for_data(self, dataset_id: int, datasets: Any):
-        """Creates training clients for a particular dataset.
+        """Creates one training client for given dataset ID.
         This function is called <code>users_per_round * num_rounds</code> times per
         training epoch. Here, we use <code>OmegaConf.structured</code> instead of
         <code>hydra.instantiate</code> to minimize the overhead of hydra object creation.
 
         Args:
-            dataset_id: Dataset ID to create training clients for.
+            dataset_id: Dataset ID that will be the client's dataset. For each client,
+                we assign it a unique dataset ID. In practice, dataset_id is the same as
+                client index.
             datasets: Data provider object to output training clients.
         Returns:
             List of clients for `dataset_id`. In addition, also modify `self.clients`
@@ -658,11 +667,8 @@ class SyncTrainer(FLTrainer):
             and (timeline.epoch % self.cfg.client_metrics_reported_per_epoch == 0)
         ):
             # Calculate scores for each client-side model on that client's eval data
-            client_models = {
-                client: client.last_updated_model for client in self.clients.values()
-            }
             client_scores = self._calc_post_epoch_client_metrics(
-                client_models, timeline, metrics_reporter
+                self.client_models(), timeline, metrics_reporter
             )
 
             # Find stats over the client_metrics (mean, min, max, median, std)
