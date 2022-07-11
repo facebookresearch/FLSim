@@ -147,7 +147,7 @@ class SyncServer(ISyncServer):
             only_federated_params=self.cfg.only_federated_params,
         )
         self._active_user_selector = instantiate(self.cfg.active_user_selector)
-        self._channel: IFLChannel = channel or IdentityChannel()
+        self._channel = channel or IdentityChannel()
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
@@ -227,7 +227,7 @@ class SyncSQServer(SyncServer):
         return self._global_qparams
 
     def update_qparams(self, aggregated_model: nn.Module):
-        observer, _ = self._channel.get_observers_and_quantizers()  # pyre-ignore [16]
+        observer, _ = self._channel.get_observers_and_quantizers()
         for name, param in aggregated_model.state_dict().items():
             observer.reset_min_max_vals()
             _ = observer(param.data)

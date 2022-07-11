@@ -77,7 +77,7 @@ class Client:
             **OmegaConf.structured(NeverTimeOutSimulatorConfig())
         )
         self.store_last_updated_model = store_last_updated_model
-        self.name = name or "unnamed_client"
+        self._name = name or "unnamed_client"
 
         # base lr needs to match LR in optimizer config, overwrite it
         # pyre-ignore [16]
@@ -123,6 +123,10 @@ class Client:
         """Look at {self.model}"""
         return [self._tracked[s]["weight"] for s in range(self.times_selected)]
 
+    @property
+    def name(self) -> str:
+        return self._name
+
     def generate_local_update(
         self, message: Message, metrics_reporter: Optional[IFLMetricsReporter] = None
     ) -> Tuple[IFLModel, float]:
@@ -144,12 +148,15 @@ class Client:
         # 4. Store updated model if being tracked
         if self.store_last_updated_model:
             self.last_updated_model = FLModelParamUtils.clone(updated_model)
-        # 5. compute delta
+
+        # 5. Compute model delta
         delta = self.compute_delta(
             before=model, after=updated_model, model_to_save=updated_model
         )
-        # 6. track state of the client
+
+        # 6. Track the state of the client
         self.track(delta=delta, weight=weight, optimizer=optimizer)
+
         return delta, weight
 
     def copy_and_train_model(
@@ -433,7 +440,7 @@ class Client:
 class ClientConfig:
     _target_: str = fullclassname(Client)
     _recursive_: bool = False
-    epochs: int = 1  # No. of epochs for local training
+    epochs: int = 1  # Number of epochs for local training
     optimizer: LocalOptimizerConfig = LocalOptimizerConfig()
     lr_scheduler: OptimizerSchedulerConfig = OptimizerSchedulerConfig()
     max_clip_norm_normalized: Optional[float] = None  # gradient clip value

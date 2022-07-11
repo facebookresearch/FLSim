@@ -62,7 +62,9 @@ class SyncTrainer(FLTrainer):
             global_model=model,
             channel=self.channel,
         )
-        # Dictionary that maps dataset_id to list of clients
+        # Dictionary that maps a dataset ID to the associated client object:
+        # Key: dataset_id
+        # Value: client object
         self.clients = {}
         self._last_report_round_after_aggregation = 0
 
@@ -114,8 +116,9 @@ class SyncTrainer(FLTrainer):
                 client index.
             datasets: Data provider object to output training clients.
         Returns:
-            List of clients for `dataset_id`. In addition, also modify `self.clients`
-                dictionary by adding a key-value pair of (dataset ID, list of clients).
+            Client object associated with `dataset_id`. In addition, also modify
+                `self.clients` dictionary by adding a key-value pair of
+                (dataset ID, client object).
         """
         if self.is_sample_level_dp:
             # Differentially private client (sample-level)

@@ -165,10 +165,8 @@ class FLUserDataFromList(IFLUserData):
 
 
 class FLDataProviderFromList(IFLDataProvider):
-    r"""
-    Util class to help ease the transition to IFLDataProvider
+    """Utility class to help ease the transition to IFLDataProvider
 
-    =======
     Args:
         train_user_list: (Iterable[Iterable[Any]]): train data
         eval_user_list: (Iterable[Iterable[Any]]): eval data
@@ -203,22 +201,28 @@ class FLDataProviderFromList(IFLDataProvider):
         }
 
     def train_user_ids(self):
+        """List of all train user IDs."""
         return list(self._train_users.keys())
 
     def num_train_users(self):
+        """Number of train users."""
         return len(self.train_user_ids())
 
     def get_train_user(self, user_index: int):
+        """Returns a train user given user index."""
         if user_index in self._train_users:
             return self._train_users[user_index]
         else:
             raise IndexError(f"Index {user_index} not in {self.train_user_ids()}")
 
     def train_users(self):
+        """Returns a list of all train users."""
         return list(self._train_users.values())
 
     def eval_users(self):
+        """Returns a list of all eval users."""
         return list(self._eval_users.values())
 
     def test_users(self):
+        """Returns a list of test users."""
         return list(self._test_users.values())
