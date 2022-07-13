@@ -1,0 +1,59 @@
+{
+  "config": {
+    "trainer": {
+      "_base_": "base_sync_trainer",
+      "server": {
+        "_base_": "base_sync_pq_server",
+        "server_optimizer": {
+          "_base_": "base_fed_avg_with_lr",
+          "lr": 0.07973798968019044,
+          "momentum": 0
+        },
+        "active_user_selector": {
+          "_base_": "base_uniformly_random_active_user_selector"
+        }
+      },
+      "client": {
+        "epochs": 1,
+        "optimizer": {
+          "_base_": "base_optimizer_sgd",
+          "lr": 0.8991111469452855,
+          "momentum": 0
+        }
+      },
+      "channel": {
+        "_base_": "base_product_quantization_channel",
+        "max_num_centroids": 64,
+        "num_codebooks": 1,
+        "max_block_size": 9,
+        "num_k_means_iter": 5,
+        "verbose": false,
+        "num_warmup_updates": 0,
+        "report_communication_metrics": true,
+        "use_seed_centroids": true
+      },
+      "users_per_round": 100,
+      "epochs": 30,
+      "train_metrics_reported_per_epoch": 100,
+      "always_keep_trained_model": false,
+      "eval_epoch_frequency": 0.2,
+      "do_eval": true,
+      "report_train_metrics_after_aggregation": true
+    },
+    "data": {
+      "local_batch_size": 32,
+      "user_dist": "niid"
+    },
+    "model": {
+      "use_resnet": false,
+      "dropout": 0.1,
+      "target_eval": 90,
+      "window_size": 1,
+      "average_type": "sma"
+    },
+    "distributed_world_size": 1,
+    "use_cuda_if_available": true,
+    "memory_requirement": "50G",
+    "non_fl": false
+  }
+}

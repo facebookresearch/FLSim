@@ -367,7 +367,8 @@ class SyncTrainer(FLTrainer):
         """Select client for training each round."""
         # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
         num_users_overselected = math.ceil(users_per_round / self.cfg.dropout_rate)
-        user_indices_overselected = self.server.select_clients_for_training(
+        # pyre-fixme[16]: `SyncTrainer` has no attribute `_user_indices_overselected`.
+        self._user_indices_overselected = self.server.select_clients_for_training(
             num_total_users=num_users,
             users_per_round=num_users_overselected,
             data_provider=data_provider,
@@ -375,7 +376,7 @@ class SyncTrainer(FLTrainer):
         )
         clients_triggered = [
             self.create_or_get_client_for_data(i, self.data_provider)
-            for i in user_indices_overselected
+            for i in self._user_indices_overselected
         ]
         clients_to_train = self._drop_overselected_users(
             clients_triggered, users_per_round
@@ -419,9 +420,7 @@ class SyncTrainer(FLTrainer):
                 server_state_message,
                 metrics_reporter,
             )
-            self.server.receive_update_from_client(
-                Message(client_delta, weight, qparams=self.server.global_qparams)
-            )
+            self.server.receive_update_from_client(Message(client_delta, weight))
 
         # Update each client-side model
         t = time()
@@ -485,10 +484,31 @@ class SyncTrainer(FLTrainer):
         return agg_metric_clients
 
     def on_before_client_updates(self, **kwargs):
-        # update global qparams once (if applicable)
-        if getattr(self.server, "global_qparams", None):
+        # SyncSQServer: SQ channel with `use_shared_qparams` enabled
+        if getattr(self.server, "_global_qparams", None) is not None:
             global_round_num = kwargs.get("global_round_num", 1)
             self._init_global_qparams(global_round_num=global_round_num)
+
+        # SyncPQServer: PQ channel with `use_seed_centroids` enabled
+        elif getattr(self.server, "_seed_centroids", None) is not None:
+            global_round_num = kwargs.get("global_round_num", 1)
+            self._init_global_pq_centroids(global_round_num=global_round_num)
+
+    def _create_mock_client(self):
+
+        # exclude triggered clients for this round
+        all_clients_idx = set(range(self.data_provider.num_train_users()))
+
+        # select at random among clients not triggered
+        clients_idx_to_exclude = set(self._user_indices_overselected)
+        clients_idx_to_select = list(all_clients_idx - clients_idx_to_exclude)
+        rand_client_idx = random.choice(clients_idx_to_select)
+
+        # create mock client
+        mock_client = self.create_or_get_client_for_data(
+            rand_client_idx, self.data_provider
+        )
+        return mock_client
 
     def _init_global_qparams(self, global_round_num: int) -> None:
         # TODO make it work for distributed setup
@@ -496,18 +516,33 @@ class SyncTrainer(FLTrainer):
             return
         if (global_round_num - 1) % self.channel.cfg.qparams_refresh_freq != 0:
             return
-        # create mock client
-        num_users_on_worker = self.data_provider.num_train_users()
-        rand_client_idx = random.randint(0, num_users_on_worker - 1)
-        mock_client = self.create_or_get_client_for_data(
-            rand_client_idx, self.data_provider
-        )
+
         # generate mock client delta
+        mock_client = self._create_mock_client()
+        mock_message = Message(self.global_model())
         mock_client_delta, mock_client_weight = mock_client.generate_local_update(
-            self.global_model()
+            mock_message
         )
+
         # update server qparams using mock delta
         self.server.update_qparams(mock_client_delta.fl_get_module())
+
+    def _init_global_pq_centroids(self, global_round_num: int) -> None:
+        # TODO make it work for distributed setup
+        if not self.channel.cfg.use_seed_centroids:
+            return
+        if (global_round_num - 1) % self.channel.cfg.seed_centroids_refresh_freq != 0:
+            return
+
+        # generate mock client delta
+        mock_client = self._create_mock_client()
+        mock_message = Message(self.global_model())
+        mock_client_delta, mock_client_weight = mock_client.generate_local_update(
+            mock_message
+        )
+
+        # update server qparams using mock delta
+        self.server.update_seed_centroids(mock_client_delta.fl_get_module())
 
     def _calc_privacy_metrics(
         self,

@@ -77,6 +77,7 @@ class IdentityChannel(IFLChannel):
     """
 
     # defining useful general constants for channel size measurements
+    BYTES_PER_FP16 = 2
     BYTES_PER_FP32 = 4
     BYTES_PER_FP64 = 8
     BYTES_PER_INT64 = 8

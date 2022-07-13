@@ -12,7 +12,7 @@ from .sync_ftrl_servers import SyncFTRLServerConfig
 from .sync_mime_servers import SyncMimeServerConfig
 from .sync_mimelite_servers import SyncMimeLiteServerConfig
 from .sync_secagg_servers import SyncSecAggServerConfig, SyncSecAggSQServerConfig
-from .sync_servers import SyncServerConfig, SyncSQServerConfig
+from .sync_servers import SyncPQServerConfig, SyncServerConfig, SyncSQServerConfig
 
 ConfigStore.instance().store(
     name="base_sync_server",
@@ -59,5 +59,11 @@ ConfigStore.instance().store(
 ConfigStore.instance().store(
     name="base_sync_ftrl_server",
     node=SyncFTRLServerConfig,
+    group="server",
+)
+
+ConfigStore.instance().store(
+    name="base_sync_pq_server",
+    node=SyncPQServerConfig,
     group="server",
 )

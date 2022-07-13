@@ -17,6 +17,7 @@ from flsim.active_user_selectors.simple_user_selector import (
 from flsim.channels.base_channel import IdentityChannel
 from flsim.channels.half_precision_channel import HalfPrecisionChannel
 from flsim.channels.message import Message
+from flsim.channels.product_quantization_channel import ProductQuantizationChannel
 from flsim.channels.scalar_quantization_channel import ScalarQuantizationChannel
 from flsim.common.pytest_helper import assertEmpty, assertEqual, assertTrue
 from flsim.optimizers.server_optimizers import (
@@ -27,7 +28,11 @@ from flsim.optimizers.server_optimizers import (
     FedLARSOptimizerConfig,
 )
 from flsim.servers.aggregator import AggregationType
-from flsim.servers.sync_servers import SyncServerConfig, SyncSQServerConfig
+from flsim.servers.sync_servers import (
+    SyncPQServerConfig,
+    SyncServerConfig,
+    SyncSQServerConfig,
+)
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.test_utils import (
     create_model_with_value,
@@ -333,7 +338,7 @@ class TestSyncSQServer:
         )
         assertEmpty(
             sync_sq_server.global_qparams,
-            msg="Global QParams of SyncSQServer should be empty on instatiation",
+            msg="Global QParams of SyncSQServer should be empty on instantiation",
         )
         agg_model = create_model_with_value(1)
         sync_sq_server.update_qparams(agg_model)
@@ -341,3 +346,41 @@ class TestSyncSQServer:
         qparams = list(sync_sq_server.global_qparams.values())
         assertTrue(all(zp == 0 for _, zp in qparams))
         assertTrue(all(sf == qparams[0][0] for sf, _ in qparams))
+
+
+class TestSyncPQServer:
+    def test_sync_pq_server_instantiation(self) -> None:
+        "Test SyncPQServer instantiation"
+        _ = instantiate(
+            SyncPQServerConfig(),
+            global_model=SampleNet(create_model_with_value(0)),
+            channel=ProductQuantizationChannel(),
+        )
+        # test failure with non SQ channel
+        with pytest.raises(Exception):
+            _ = instantiate(
+                SyncPQServerConfig(),
+                global_model=SampleNet(create_model_with_value(0)),
+                channel=IdentityChannel(),
+            )
+
+    def test_sync_pq_server_global_centroids_update(self) -> None:
+        sync_pq_server = instantiate(
+            SyncPQServerConfig(),
+            global_model=SampleNet(create_model_with_value(0)),
+            channel=ProductQuantizationChannel(
+                max_num_centroids=2, num_codebooks=1, max_block_size=1
+            ),
+        )
+        assertEmpty(
+            sync_pq_server.global_pq_centroids,
+            msg="Global QParams of SyncSQServer should be empty on instantiation",
+        )
+        agg_model = create_model_with_value(1)
+        sync_pq_server.update_seed_centroids(agg_model)
+
+        # we only quantize the first layer, the second one does not have enough elements
+        quantized_layers = set(sync_pq_server.global_pq_centroids.keys())
+        all_layers = set(agg_model.state_dict().keys())
+        assertTrue(len(quantized_layers) > 0)
+        assertTrue(quantized_layers.issubset(all_layers))

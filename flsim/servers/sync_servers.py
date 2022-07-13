@@ -18,6 +18,8 @@ from flsim.active_user_selectors.simple_user_selector import (
 )
 from flsim.channels.base_channel import IdentityChannel, IFLChannel
 from flsim.channels.message import Message
+from flsim.channels.pq_utils.pq import PQ
+from flsim.channels.product_quantization_channel import ProductQuantizationChannel
 from flsim.channels.scalar_quantization_channel import ScalarQuantizationChannel
 from flsim.clients.base_client import Client
 from flsim.data.data_provider import IFLDataProvider
@@ -233,6 +235,63 @@ class SyncSQServer(SyncServer):
             _ = observer(param.data)
             self._global_qparams[name] = observer.calculate_qparams()
 
+    def receive_update_from_client(self, message: Message):
+        message.qparams = self.global_qparams
+        super().receive_update_from_client(message)
+
+
+class SyncPQServer(SyncServer):
+    def __init__(
+        self,
+        *,
+        global_model: IFLModel,
+        channel: Optional[ProductQuantizationChannel] = None,
+        **kwargs,
+    ):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=SyncPQServerConfig,
+            **kwargs,
+        )
+        super().__init__(global_model=global_model, channel=channel, **kwargs)
+        if not isinstance(self._channel, ProductQuantizationChannel):
+            raise TypeError(
+                "SyncPQServer expects channel of type ProductQuantizationChannel,",
+                f" {type(self._channel)} given.",
+            )
+        # set global qparams (need to be empty at the beginning of every round)
+        self._seed_centroids: Dict[str, Tensor] = {}
+
+    @property
+    def global_pq_centroids(self):
+        return self._seed_centroids
+
+    def update_seed_centroids(self, aggregated_model: nn.Module):
+        seed_centroids = {}
+        state_dict = aggregated_model.state_dict()
+        for name, param in state_dict.items():
+            if (
+                param.ndim > 1
+                # pyre-fixme[16]: `IFLChannel` has no attribute `cfg`.
+                and param.numel() >= self._channel.cfg.min_numel_to_quantize
+            ):
+                pq = PQ(
+                    param.data.size(),
+                    self._channel.cfg.max_block_size,
+                    self._channel.cfg.num_codebooks,
+                    self._channel.cfg.max_num_centroids,
+                    self._channel.cfg.num_k_means_iter,
+                    self._channel.cfg.verbose,
+                )
+                centroids, _ = pq.encode(param.data.cpu())
+                seed_centroids[name] = centroids
+        self._seed_centroids = seed_centroids
+
+    def receive_update_from_client(self, message: Message):
+        message.seed_centroids = self.global_pq_centroids
+        super().receive_update_from_client(message)
+
 
 @dataclass
 class SyncServerConfig:
@@ -247,3 +306,8 @@ class SyncServerConfig:
 @dataclass
 class SyncSQServerConfig(SyncServerConfig):
     _target_: str = fullclassname(SyncSQServer)
+
+
+@dataclass
+class SyncPQServerConfig(SyncServerConfig):
+    _target_: str = fullclassname(SyncPQServer)

@@ -53,6 +53,9 @@ class Message:
     # meta data for scalar quantization
     qparams: Optional[Dict[str, Tuple[Tensor, Tensor]]] = field(default=None)
 
+    # meta data for product quantization
+    seed_centroids: Optional[Dict[str, Tensor]] = field(default=None)
+
     def populate_state_dict(self, **kwargs):
         """
         We copy the model's state dict and add it as an attribute to the message.
