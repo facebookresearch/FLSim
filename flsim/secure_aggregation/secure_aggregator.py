@@ -62,7 +62,7 @@ class FixedPointConverter:
         self.max_value = 2 ** (num_bits - 1) - 1
         self.min_value = -(2 ** (num_bits - 1))
         self.scaling_factor = self.cfg.scaling_factor
-        self._convert_overflows = 0  # during fixedpoint conversion
+        self._convert_overflows = 0  # during fixed point conversion
 
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
@@ -98,7 +98,7 @@ class FixedPointConverter:
         Converts numbers in a tensor from fixed point to floating point.
 
         Note that this method does not check if the fixed point numbers
-        is withing the range of numbers that can be represented by
+        are within the range of numbers that can be represented by
         ``num_bits`` bytes.
 
         Args:
@@ -163,7 +163,7 @@ class SecureAggregator:
         Args:
             config: a dictionary of fixed-point configs for different layers of
                 neural network. If the utility ``utility_config_flatter`` is used,
-                same config will be used for all layers of the neural network.
+                the same config will be used for all layers of the neural network.
 
         """
         self.converters = {}
@@ -239,11 +239,11 @@ class SecureAggregator:
 
     def get_aggregate_overflow(self, reset: bool = False):
         """
-        Reports the aggregatation overflow and if reset is set, it resets the
-        aggregatation overflow for the next call (i.e., the next round)
+        Reports the aggregation overflow and if reset is set, it resets the
+        aggregation overflow for the next call (i.e., the next round)
 
         Args:
-            reset: whether to reset the aggregatation overflow
+            reset: whether to reset the aggregation overflow
         """
         overflow = self._aggregate_overflows
         if reset:
@@ -287,7 +287,7 @@ class SecureAggregator:
     def _get_denoise_mask(self) -> Iterator[Tuple[str, nn.Parameter]]:
         """
         Gets the aggregated denoised mask for all participating clients
-        from secure enclave.
+        from the secure enclave.
 
         Returns:
             aggregated denoised mask for all participating clients
@@ -301,7 +301,7 @@ class SecureAggregator:
         Applies denoise mask to the noised aggregated updates from clients
 
         Args:
-            model_aggregate_params: the parameters of the noised aggragated
+            model_aggregate_params: the parameters of the noised aggregate
                 client updates. Used to infer the shape of the denoise mask
 
         Note:
@@ -317,18 +317,18 @@ class SecureAggregator:
         model: nn.Module,
     ):
         """
-        This method is called every time after a delta (in fixedpoint format)
+        This method is called every time after a delta (in fixed point format)
         is received from a client. This method updates the overflow counter
         due to overflows during aggregation. It also adjusts the values of the
-        ``model`` based on max value related to the fixedpoint (see notes).
+        ``model`` based on max value related to the fixed point (see notes).
 
         Args:
             model: the buffered model that holds the current sum, in
-                fixedpoint format.
+                fixed point format.
 
         Notes:
             This is an example to show how this method adjusts the input model
-            based on min and max values of fixedpoint. If we have one parameter,
+            based on min and max values of fixed point. If we have one parameter,
             and if num_bits=8 (allowed range is -128 to +127), when in aggregation
             we add delta=40 to model=90, the input model would be 130. This
             method adjusts 130 to 2 (i.e. 130%128) since 130 is outside the range.
@@ -368,7 +368,7 @@ class SecureAggregator:
         report_rounds: int,
     ) -> Tuple[float, float]:
         """
-        Calcualtes the percentage of average overflow over all model layers,
+        Calculates the percentage of average overflow over all model layers,
         with regards to the number of model parameters. Also resets the
         overflow counters to make them ready for the next round.
 
@@ -380,9 +380,9 @@ class SecureAggregator:
                 and the previous one)
 
         Notes:
-            The assumption here is that the model is always the same acorss
+            The assumption here is that the model is always the same across
             clients and server, since we have one object of secure aggregator,
-            and this object assumes the model is same for all clients and server.
+            and this object assumes the model is the same for all clients and the server.
         """
         num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
@@ -402,9 +402,9 @@ class SecureAggregator:
 class FixedPointConfig:
     _target_: str = fullclassname(FixedPointConverter)
     _recursive_: bool = False
-    # size in bytes of single fixed point number. 1 to 8 inclusive.
+    # size in bytes of a single fixed point number. 1 to 8 inclusive.
     num_bytes: int = 1  # legacy arg. Use num_bits instead
-    # size in bytes of single fixed point number. 1 to 64 inclusive.
+    # size in bytes of a single fixed point number. 1 to 64 inclusive.
     num_bits: Optional[int] = None
     # multiplier to convert from floating to fixed point
     scaling_factor: int = MISSING

@@ -243,7 +243,7 @@ class TestSecureAggregator:
 
     def test_conversion_overflow(self) -> None:
         """
-        Tests whether secure aggeragtion conversion overflow
+        Tests whether the secure aggregation conversion overflow
         variable gets updated correctly
         """
         model = self._create_model(70.0)
@@ -275,8 +275,8 @@ class TestSecureAggregator:
     def test_secure_aggregator_step_large_range(self) -> None:
         """
         Tests whether secure aggregation operations work correctly
-        when the step() method is called, and when the num_bytes is
-        big, so we do not have a possible fixedpoint overflow
+        when the step() method is called and when num_bytes is
+        big, so we do not have a possible fixed point overflow
         """
         scaling_factor = 10
         num_bytes = 4
@@ -308,8 +308,8 @@ class TestSecureAggregator:
     def test_secure_aggregator_step_small_range(self) -> None:
         """
         Tests whether secure aggregation operations work correctly
-        when the step() method is called, and when the num_bytes is
-        small so we have possible fixedpoint conversion overflows
+        when the step() method is called and when num_bytes is
+        small, so we have possible fixed point conversion overflows
         """
         scaling_factor = 100
         num_bytes = 1
@@ -330,10 +330,10 @@ class TestSecureAggregator:
         for client in clients:
             server.receive_update_from_client(Message(SampleNet(client), weight=1.0))
 
-        # when a client update is converted to fixedpoint: 2.123 -> 212.3 -> 127.
+        # when a client update is converted to fixed point: 2.123 -> 212.3 -> 127.
         # when adding `num_clients` updates, the sum would actually get smaller, i.e.
         # 127+127+..+127=128-num_clients in bit representation when `num_bytes=1.
-        # So, the update is (128-10)/10 = 11.8 (in fixedpoint). Convert to float is 0.118
+        # So, the update is (128-10)/10 = 11.8 (in fixed point). Convert to float is 0.118
         expected_param = float(global_param - (0.118 * num_clients) / num_clients)
 
         server.step()
@@ -349,10 +349,10 @@ class TestSecureAggregator:
         for client in clients:
             server.receive_update_from_client(Message(SampleNet(client), weight=1.0))
 
-        # when a client update is converted to fixedpoint: 0.2 -> 20.
+        # when a client update is converted to fixed point: 0.2 -> 20.
         # when adding `num_clients` updates, the sum would actually get smaller, i.e.
         # 20+20+..+20=(200%128)=72 in bit representation when `num_bytes=1.
-        # So, the update is (72)/10 = 7.2 (in fixedpoint). Convert to float is 0.072
+        # So, the update is (72)/10 = 7.2 (in fixed point). Convert to float is 0.072
         new_expected_param = float(expected_param - (0.072 * num_clients) / num_clients)
 
         server.step()
@@ -363,8 +363,8 @@ class TestSecureAggregator:
 
     def test_aggregation_overflow(self) -> None:
         """
-        Tests whether secure aggregation overflow
-        variable are updated correctly during aggregation
+        Tests whether the secure aggregation overflow
+        variable is updated correctly during aggregation
         """
         scaling_factor = 10
         num_bytes = 1
@@ -405,7 +405,7 @@ class TestSecureAggregator:
             if p.requires_grad
         )
 
-        # Client update in fixedpoint is 28. When adding `num_clients` updates,
+        # Client update in fixed point is 28. When adding `num_clients` updates,
         # the sum would overflow, i.e. 28+28+..+28=(280%128)=24 in bit representation
         # when `num_bytes=1, Hence [280/128]=2 aggr overflows occur for any parameter.
         assertEqual(

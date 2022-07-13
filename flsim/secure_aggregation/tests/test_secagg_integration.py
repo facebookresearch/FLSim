@@ -91,7 +91,7 @@ class TestSecureAggregationIntegration:
 
     def test_secagg_not_equivalent_no_secagg(self) -> None:
         """
-        Tests training with secure aggregation will produce a different
+        Tests that training with secure aggregation will produce a different
         model than training without secure aggregation
         """
         # First, call secure trainer
@@ -117,13 +117,13 @@ class TestSecureAggregationIntegration:
 
     def test_secagg_not_equivalent_no_secagg_large_range(self) -> None:
         """
-        Tests training with secure aggregation will produce a different
+        Tests that training with secure aggregation will produce a different
         model than training without secure aggregation, even when the
-        range of fixedpoint number is very large (and scaling factro is 1).
+        range of fixed point number is very large (and the scaling factor is 1).
 
-        The reason that we get a different model is because, even in a big
-        fixedpoint range, we still do rounding when we convert, E.g., 127.1
-        (float) becomes 127 (in fixedpoint), no matter how big the range is.
+        We get a different model because we round during conversion, even in a big
+        fixed point range. For example, 127.1 (float) becomes 127 (in fixed point),
+        regardless of the size of the range.
         """
         # First, call secure trainer
         fixedpoint = FixedPointConfig(num_bytes=7, scaling_factor=1)
@@ -167,8 +167,8 @@ class TestSecureAggregationIntegration:
         def count_word(result, word):
             return str(result).count(word)
 
-        # We have 26 users, 2 users_per_round, which makes 13 rounds per epoch
-        # we also have 3 epochs. So we should get 39 reports for overflow.
+        # We have 26 users, 2 users_per_round, which makes 13 rounds per epoch.
+        # We also have 3 epochs. So we should get 39 reports for overflow.
         # (train_metrics_reported_per_epoch is large so we don't miss a report)
         assertEqual(
             count_word(metrics_reporter.stdout_results, "overflow per round"),
