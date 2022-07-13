@@ -133,12 +133,19 @@ class FLUserDataFromList(IFLUserData):
         self.model = model
         self.training_batches = []
         self.eval_batches = eval_batches if eval_batches is not None else []
+        self._num_eval_batches: int = 0
+        self._num_eval_examples: int = 0
 
         for batch in self.data:
             training_batch = self.model.fl_create_training_batch(batch=batch)
             self.training_batches.append(training_batch)
             self._num_examples += model.get_num_examples(training_batch)
             self._num_batches += 1
+
+        for batch in self.eval_batches:
+            eval_batch = self.model.fl_create_training_batch(batch=batch)
+            self._num_eval_examples += model.get_num_examples(eval_batch)
+            self._num_eval_batches += 1
 
     def train_data(self):
         for batch in self.training_batches:
@@ -155,13 +162,13 @@ class FLUserDataFromList(IFLUserData):
         return self._num_examples
 
     def num_eval_batches(self):
-        return 0
+        return self._num_eval_batches
 
     def num_train_batches(self):
         return self._num_batches
 
     def num_eval_examples(self):
-        return 0
+        return self._num_eval_examples
 
 
 class FLDataProviderFromList(IFLDataProvider):

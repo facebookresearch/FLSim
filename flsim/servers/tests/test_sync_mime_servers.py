@@ -138,3 +138,25 @@ class TestSyncMimeServers:
             message_state_dict,
         )
         assertNotEmpty(error_msg, msg=error_msg)
+
+    def test_empty_client_data(self):
+        """
+        Test if gradient average works if none of the clients have any data
+        """
+        num_clients = 5
+        weights = [0 for i in range(num_clients)]
+        grads = [i + 1 for i in range(num_clients)]
+
+        clients = self._create_fake_clients(grads, weights)
+        server_model = SampleNet(create_model_with_value(0))
+        server = instantiate(
+            SyncMimeServerConfig(),
+            global_model=server_model,
+        )
+        try:
+            server.broadcast_message_to_clients(clients)
+        except AssertionError:
+            pass
+        else:
+            assert "broadcast_message_to_clients must throw an assertion error\
+             if all clients has no training data"

@@ -17,6 +17,12 @@ class TestDataUtils:
         assertEqual(list(batchify([1, 2, 3, 4, 5], 3)), [[1, 2, 3], [4, 5]])
         assertEqual(list(batchify([1, 2, 3, 4], 2)), [[1, 2], [3, 4]])
         assertEqual(list(batchify([1, 2, 3, 4], 1)), [[1], [2], [3], [4]])
+        try:
+            list(batchify([1, 2, 3, 4, 5], 8, True))
+        except AssertionError:
+            pass
+        else:
+            assert "Calling batchify on a dataset with less than batch_size with drop_last=True is not allowed"
 
     def test_merge_dicts(self) -> None:
         expected = {"a": torch.Tensor([1.0, 2.0])}

@@ -69,13 +69,13 @@ class FakeUserData(IFLUserData):
             yield self.gen_batch(self.batch_size, self.val)
 
     def num_eval_batches(self):
-        return 0
+        return self._num_batches
 
     def num_train_batches(self):
         return self._num_batches
 
     def num_eval_examples(self):
-        return 0
+        return self._num_batches * self.batch_size
 
 
 class FakeDataProvider(IFLDataProvider):

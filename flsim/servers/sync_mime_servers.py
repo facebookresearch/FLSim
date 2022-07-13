@@ -50,6 +50,8 @@ class SyncMimeServer(SyncServer):
                 self._grad_average, grad, self._grad_average
             )
             num_examples += weight
+
+        assert num_examples > 0, "All clients in the current round have zero data"
         FLModelParamUtils.multiply_gradient_by_weight(
             self._grad_average, 1.0 / num_examples, self._grad_average
         )

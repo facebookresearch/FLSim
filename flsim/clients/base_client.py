@@ -278,6 +278,8 @@ class Client:
         if self.seed is not None:
             torch.manual_seed(self.seed)
 
+        assert self.dataset.num_train_batches() > 0, "Client has no training data"
+
         for epoch in range(epochs):
             if self.stop_training(num_examples_processed):
                 break
@@ -426,13 +428,18 @@ class Client:
             module.fl_get_module().zero_grad()
             batch_metrics = module.fl_forward(batch)
             batch_metrics.loss.backward()
+            FLModelParamUtils.multiply_gradient_by_weight(
+                module.fl_get_module(),
+                batch_metrics.num_examples,
+                module.fl_get_module(),
+            )
             FLModelParamUtils.add_gradients(grads, module.fl_get_module(), grads)
             num_examples += batch_metrics.num_examples
-
+        assert num_examples > 0, "Client has no training data"
+        # Average out the gradient over the client
         FLModelParamUtils.multiply_gradient_by_weight(
             model=grads, weight=1.0 / num_examples, model_to_save=grads
         )
-
         return grads, num_examples
 
 

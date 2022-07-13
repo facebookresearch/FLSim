@@ -24,10 +24,15 @@ def batchify(
     >>> [[1, 2], [3, 4], [5]]
     """
     iterators = [iter(iterable)] * batch_size
+    num_batches = 0
     for batch in zip_longest(*iterators, fillvalue=None):
         batch = [ex for ex in batch if ex is not None]
         if drop_last and len(batch) != batch_size:
+            assert (
+                num_batches > 0
+            ), "No batches produced by batchify. Try setting drop_last=False"
             break
+        num_batches += 1
         yield batch
 
 

@@ -71,7 +71,7 @@ def prepare_client_test(request) -> None:
 @pytest.mark.usefixtures("prepare_client_test")
 class ClientTestBase:
     def _fake_data(self, num_batches=None, batch_size=None):
-        num_batches = num_batches or self.num_batches
+        num_batches = self.num_batches if num_batches is None else num_batches
         batch_size = batch_size or self.batch_size
         torch.manual_seed(0)
         dataset = [torch.rand(batch_size, 2) for _ in range(num_batches)]
@@ -203,22 +203,6 @@ class ClientTestBase:
         optim = torch.optim.Adam(model.fl_get_module().parameters())
         client._reload_server_state(optim)
         assertEqual(optim.state_dict()["state"], {})
-
-    def _full_dataset_gradient(self, client, module: IFLModel):
-        """Calculate expected average gradient over entire training dataset"""
-        grads = FLModelParamUtils.clone(module.fl_get_module())
-        grads.zero_grad()
-        num_examples = 0
-        for batch in client.dataset.train_data():
-            module.fl_get_module().zero_grad()
-            batch_metrics = module.fl_forward(batch)
-            batch_metrics.loss.backward()
-            FLModelParamUtils.add_gradients(grads, module.fl_get_module(), grads)
-            num_examples += batch_metrics.num_examples
-        FLModelParamUtils.multiply_gradient_by_weight(
-            model=grads, weight=1.0 / num_examples, model_to_save=grads
-        )
-        return grads, num_examples
 
 
 class TestBaseClient(ClientTestBase):
@@ -563,14 +547,31 @@ class TestBaseClient(ClientTestBase):
 
     def test_full_dataset_gradient(self):
         """Test whether average gradient over the training dataset works correctly"""
-        data = self._fake_data(num_batches=5, batch_size=10)
+        data = self._fake_data(num_batches=3, batch_size=5)
         clnt = self._get_client(data)
-        model = utils.SampleNet(utils.TwoFC())
+        model = utils.SampleNet(utils.create_model_with_value(3))
 
         grads, num_examples = clnt.full_dataset_gradient(model)
-        expected_grads, expected_num_examples = self._full_dataset_gradient(clnt, model)
+        expected_grads = utils.TwoFC()
+
+        expected_grads.fc1.weight.grad = torch.tensor([1.19955, 1.59725]).repeat(5, 1)
+        expected_grads.fc2.weight.grad = torch.tensor([5.79683]).repeat(1, 5)
+        expected_grads.fc1.bias.grad = torch.tensor([3.0]).repeat(5)
+        expected_grads.fc2.bias.grad = torch.tensor([1.0])
+
         error_msg = utils.verify_gradients_equal(grads, expected_grads)
         assertEmpty(error_msg)
+
+        data = self._fake_data(num_batches=0, batch_size=10)
+        assertEqual(data.num_train_examples(), 0)
+        clnt = self._get_client(data)
+
+        try:
+            grads, num_examples = clnt.full_dataset_gradient(model)
+        except AssertionError:
+            pass
+        else:
+            assert "full_dataset_gradient must throw an assertion error if called with empty data"
 
 
 class TestDPClient(ClientTestBase):
