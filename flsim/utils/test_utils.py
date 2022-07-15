@@ -5,7 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
+from typing import Any, Dict, List, NamedTuple, Optional, OrderedDict, Tuple, Union
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -571,3 +571,15 @@ def linear_model(value) -> nn.Module:
     model = Linear()
     model.fill_all(value)
     return model
+
+
+def calc_model_sparsity(state_dict: OrderedDict) -> float:
+    """
+    Calculates model sparsity (fraction of zeroed weights in state_dict).
+    """
+    non_zero = 0
+    tot = 1e-6
+    for _, param in state_dict.items():
+        non_zero += torch.count_nonzero(param).item()
+        tot += float(param.numel())
+    return 1.0 - non_zero / (tot + 1e-6)

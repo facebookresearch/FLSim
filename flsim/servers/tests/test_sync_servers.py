@@ -19,7 +19,13 @@ from flsim.channels.half_precision_channel import HalfPrecisionChannel
 from flsim.channels.message import Message
 from flsim.channels.product_quantization_channel import ProductQuantizationChannel
 from flsim.channels.scalar_quantization_channel import ScalarQuantizationChannel
-from flsim.common.pytest_helper import assertEmpty, assertEqual, assertTrue
+from flsim.channels.sparse_mask_channel import SparseMaskChannel
+from flsim.common.pytest_helper import (
+    assertAlmostEqual,
+    assertEmpty,
+    assertEqual,
+    assertTrue,
+)
 from flsim.optimizers.server_optimizers import (
     FedAdamOptimizerConfig,
     FedAvgOptimizerConfig,
@@ -31,10 +37,12 @@ from flsim.servers.aggregator import AggregationType
 from flsim.servers.sync_servers import (
     SyncPQServerConfig,
     SyncServerConfig,
+    SyncSharedSparseServerConfig,
     SyncSQServerConfig,
 )
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.test_utils import (
+    calc_model_sparsity,
     create_model_with_value,
     model_parameters_equal_to_value,
     SampleNet,
@@ -384,3 +392,49 @@ class TestSyncPQServer:
         all_layers = set(agg_model.state_dict().keys())
         assertTrue(len(quantized_layers) > 0)
         assertTrue(quantized_layers.issubset(all_layers))
+
+
+class TestSyncSharedSparseServer:
+    def test_sync_shared_sparse_server_instantiation(self):
+        _ = instantiate(
+            SyncSharedSparseServerConfig(),
+            global_model=SampleNet(create_model_with_value(0)),
+            channel=SparseMaskChannel(),
+        )
+        # test failure with non sparse mask channel
+        with pytest.raises(Exception):
+            _ = instantiate(
+                SyncSharedSparseServerConfig(),
+                global_model=SampleNet(create_model_with_value(0)),
+                channel=IdentityChannel(),
+            )
+        # test failure with TopK sparsity and shared sparse masks
+        with pytest.raises(Exception):
+            _ = instantiate(
+                SyncSharedSparseServerConfig(),
+                global_model=SampleNet(create_model_with_value(0)),
+                channel=SparseMaskChannel(sparsity_method="topk"),
+            )
+
+    def test_sync_shared_sparse_server_mask_update(self):
+        sync_shared_sparse_server = instantiate(
+            SyncSharedSparseServerConfig(),
+            global_model=SampleNet(create_model_with_value(1)),
+            channel=SparseMaskChannel(
+                use_shared_masks=True,
+                mask_params_refresh_freq=1,
+                proportion_of_zero_weights=0.6,
+            ),
+        )
+        # test that the sparsity of the shared mask is as expected
+        agg_model = SampleNet(create_model_with_value(1)).fl_get_module()
+        sync_shared_sparse_server.update_mask_params(agg_model, "random")
+        assertTrue(
+            sync_shared_sparse_server.global_mask_params.keys(),
+            agg_model.state_dict().keys(),
+        )
+        assertAlmostEqual(
+            calc_model_sparsity(sync_shared_sparse_server.global_mask_params),
+            0.6,
+            delta=0.1,
+        )

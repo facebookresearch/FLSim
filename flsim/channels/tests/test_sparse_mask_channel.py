@@ -24,18 +24,6 @@ from torch.nn.utils import prune
 
 
 class TestSparseMaskChannel:
-    @classmethod
-    def calc_model_sparsity(cls, state_dict: OrderedDict) -> float:
-        """
-        Calculates model sparsity (fraction of zeroed weights in state_dict).
-        """
-        non_zero = 0
-        tot = 1e-6
-        for _, param in state_dict.items():
-            non_zero += torch.count_nonzero(param).item()
-            tot += float(param.numel())
-        return 1.0 - non_zero / (tot + 1e-6)
-
     def test_sparse_model_size(self) -> None:
         model = FCModel()
         # Prune model to a quarter of its size
@@ -56,7 +44,7 @@ class TestSparseMaskChannel:
             prune.remove(module, name)
         # pyre-fixme[6]: Expected `OrderedDict[typing.Any, typing.Any]` for 1st
         #  param but got `Dict[str, typing.Any]`.
-        sparsity = self.calc_model_sparsity(model.state_dict())
+        sparsity = utils.calc_model_sparsity(model.state_dict())
         assertAlmostEqual(
             0.75,
             sparsity,
@@ -168,7 +156,7 @@ class TestSparseMaskChannel:
         message = Message(upload_model)
         message = channel.client_to_server(message)
 
-        sparsity = self.calc_model_sparsity(message.model_state_dict)
+        sparsity = utils.calc_model_sparsity(message.model_state_dict)
 
         # sparsity ratio should be approximately proportion_of_zero_weights
         # approximately since we round the number of parameters to prune
@@ -320,4 +308,4 @@ class TestSparseMaskChannel:
 
         # Test that message model has sparsity approximately 0.6
         state_dict = message.model.fl_get_module().state_dict()
-        assertAlmostEqual(self.calc_model_sparsity(state_dict), 0.6, delta=0.05)
+        assertAlmostEqual(utils.calc_model_sparsity(state_dict), 0.6, delta=0.05)

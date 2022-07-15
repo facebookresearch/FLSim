@@ -21,6 +21,7 @@ from flsim.channels.message import Message
 from flsim.channels.pq_utils.pq import PQ
 from flsim.channels.product_quantization_channel import ProductQuantizationChannel
 from flsim.channels.scalar_quantization_channel import ScalarQuantizationChannel
+from flsim.channels.sparse_mask_channel import SparseMaskChannel
 from flsim.clients.base_client import Client
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.model import IFLModel
@@ -119,6 +120,13 @@ class ISyncServer(abc.ABC):
     def global_qparams(self) -> Optional[IFLModel]:
         """
         Returns the current global qparams
+        """
+        return None
+
+    @property
+    def global_mask_params(self) -> Optional[IFLModel]:
+        """
+        Returns the current global mask params
         """
         return None
 
@@ -293,6 +301,48 @@ class SyncPQServer(SyncServer):
         super().receive_update_from_client(message)
 
 
+class SyncSharedSparseServer(SyncServer):
+    def __init__(
+        self,
+        *,
+        global_model: IFLModel,
+        channel: Optional[SparseMaskChannel] = None,
+        **kwargs,
+    ):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=SyncSharedSparseServerConfig,
+            **kwargs,
+        )
+        super().__init__(global_model=global_model, channel=channel, **kwargs)
+        if not isinstance(self._channel, SparseMaskChannel):
+            raise TypeError(
+                "SyncSharedSparseServer expects channel of type SparseMaskChannel,",
+                f" {type(self._channel)} given.",
+            )
+        if self._channel.sparsity_method != "random":
+            raise TypeError(
+                "SyncSharedSparseServer expects channel sparsity method",
+                f"of type random. {type(self._channel.sparsity_method)} given.",
+            )
+        self._global_mask_params: Dict[str, Tensor] = {}
+
+    @property
+    def global_mask_params(self):
+        return self._global_mask_params
+
+    def update_mask_params(self, aggregated_model: nn.Module, sparsity_method: str):
+        # pyre-ignore[16]
+        self._global_mask_params = self._channel.compute_mask(
+            aggregated_model.state_dict(), sparsity_method
+        )
+
+    def receive_update_from_client(self, message: Message):
+        message.sparsity_mask_params = self.global_mask_params
+        super().receive_update_from_client(message)
+
+
 @dataclass
 class SyncServerConfig:
     _target_: str = fullclassname(SyncServer)
@@ -311,3 +361,8 @@ class SyncSQServerConfig(SyncServerConfig):
 @dataclass
 class SyncPQServerConfig(SyncServerConfig):
     _target_: str = fullclassname(SyncPQServer)
+
+
+@dataclass
+class SyncSharedSparseServerConfig(SyncServerConfig):
+    _target_: str = fullclassname(SyncSharedSparseServer)

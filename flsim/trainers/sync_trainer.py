@@ -484,14 +484,16 @@ class SyncTrainer(FLTrainer):
         return agg_metric_clients
 
     def on_before_client_updates(self, **kwargs):
+        global_round_num = kwargs.get("global_round_num", 1)
         # SyncSQServer: SQ channel with `use_shared_qparams` enabled
         if getattr(self.server, "_global_qparams", None) is not None:
-            global_round_num = kwargs.get("global_round_num", 1)
             self._init_global_qparams(global_round_num=global_round_num)
+
+        elif getattr(self.server, "_global_mask_params", None) is not None:
+            self._init_global_mask_params(global_round_num=global_round_num)
 
         # SyncPQServer: PQ channel with `use_seed_centroids` enabled
         elif getattr(self.server, "_seed_centroids", None) is not None:
-            global_round_num = kwargs.get("global_round_num", 1)
             self._init_global_pq_centroids(global_round_num=global_round_num)
 
     def _create_mock_client(self):
@@ -543,6 +545,16 @@ class SyncTrainer(FLTrainer):
 
         # update server qparams using mock delta
         self.server.update_seed_centroids(mock_client_delta.fl_get_module())
+
+    def _init_global_mask_params(self, global_round_num: int) -> None:
+        # TODO make it work for distributed setup
+        if not getattr(self.channel, "use_shared_masks", False):
+            return
+        if (global_round_num - 1) % self.channel.cfg.mask_params_refresh_freq != 0:
+            return
+        # create mock model to generate random mask
+        mock_model = FLModelParamUtils.clone(self.global_model()).fl_get_module()
+        self.server.update_mask_params(mock_model, "random")
 
     def _calc_privacy_metrics(
         self,

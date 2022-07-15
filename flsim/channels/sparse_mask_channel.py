@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from dataclasses import dataclass
+from typing import Dict
 
 import torch
 from flsim.channels.base_channel import FLChannelConfig, IdentityChannel, Message
@@ -32,6 +33,7 @@ class SparseMaskChannel(IdentityChannel):
         self.proportion_of_zero_weights = self.cfg.proportion_of_zero_weights
         self.sparsity_method = self.cfg.sparsity_method
         self.compressed_size_measurement = self.cfg.compressed_size_measurement
+        self.use_shared_masks = self.cfg.use_shared_masks
         assert self.cfg.sparsity_method in {
             "random",
             "topk",
@@ -89,18 +91,47 @@ class SparseMaskChannel(IdentityChannel):
         Here we apply a sparse mask to the parameter updates before sending the message.
 
         Notes:
+            - The message is pruned so that the number of non-sparse entries is
+              deterministic and constant across runs for a given weight matrix.
+        """
+        message.populate_state_dict()
+        mask_params = (
+            message.sparsity_mask_params
+            if self.use_shared_masks
+            else self.compute_mask(message.model_state_dict, self.sparsity_method)
+        )
+        self.apply_mask(mask_params, message.model_state_dict)
+        return message
+
+    def apply_mask(
+        self,
+        mask_params: Dict[str, torch.Tensor],
+        model_state_dict: Dict[str, torch.Tensor],
+    ):
+        """
+        Applies the mask on the state dict based on an input mask.
+        The mask is computed from the state dict itself (as in TopK), or is provided
+        by the server (for example, during global shared sparse masking).
+        """
+        for name, param in model_state_dict.items():
+            param.data.mul_(mask_params[name])
+
+    def compute_mask(
+        self, model_state_dict: Dict[str, torch.Tensor], sparsity_method: str = "random"
+    ):
+        """
+        Computation of the mask acoording to two sparsity methods : random and TopK
+        Returns a sparsity mask as a state dict.
+
+        Note:
             - There are two options for sparsity: random and topk
             - In random sparsity, the mask is randomly selecting parameter weight updates
             - In TopK sparsity, sparsity is applied on each parameter's weight update
               separately depending on the magnitude of the values; the smallest values
               get pruned.
-            - The message is pruned so that the number of non-sparse entries is
-              deterministic and constant across runs for a given weight matrix.
         """
-        message.populate_state_dict()
         new_state_dict = OrderedDict()
-
-        for name, param in message.model_state_dict.items():
+        for name, param in model_state_dict.items():
             # exact number of elements to prune
             num_params_to_prune = int(self.proportion_of_zero_weights * param.numel())
 
@@ -108,7 +139,7 @@ class SparseMaskChannel(IdentityChannel):
             top_k = torch.topk(
                 (
                     torch.rand_like(param.data)
-                    if self.sparsity_method == "random"
+                    if sparsity_method == "random"
                     else torch.abs(param.data)
                 ).view(-1),
                 k=num_params_to_prune,
@@ -116,11 +147,10 @@ class SparseMaskChannel(IdentityChannel):
             )
 
             # prune top-K
-            param.data.view(-1)[top_k.indices] = 0
-            new_state_dict[name] = param.data
+            new_state_dict[name] = torch.ones_like(param.data)
+            new_state_dict[name].view(-1)[top_k.indices] = 0
 
-        message.model_state_dict = new_state_dict
-        return message
+        return new_state_dict
 
 
 @dataclass
@@ -129,3 +159,5 @@ class SparseMaskChannelConfig(FLChannelConfig):
     proportion_of_zero_weights: float = 0.5
     sparsity_method: str = "random"
     compressed_size_measurement: str = "bitmask"
+    use_shared_masks: bool = False
+    mask_params_refresh_freq: int = 1
