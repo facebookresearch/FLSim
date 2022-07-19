@@ -12,7 +12,7 @@ import math
 import random
 from dataclasses import dataclass
 from time import time
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import torch
 from flsim.channels.message import Message
@@ -386,13 +386,27 @@ class SyncTrainer(FLTrainer):
     def _save_model_and_metrics(self, model: IFLModel, best_model_state):
         model.fl_get_module().load_state_dict(best_model_state)
 
+    def _update_clients(
+        self,
+        clients: Iterable[Client],
+        server_state_message: Union[Message, List[Message]],
+        metrics_reporter: Optional[IFLMetricsReporter] = None,
+    ) -> None:
+        """Update each client-side model from server message."""
+        for client in clients:
+            client_delta, weight = client.generate_local_update(
+                server_state_message,
+                metrics_reporter,
+            )
+            self.server.receive_update_from_client(Message(client_delta, weight))
+
     def _train_one_round(
         self,
         timeline: Timeline,
         clients: Iterable[Client],
         agg_metric_clients: Iterable[Client],
         users_per_round: int,
-        metrics_reporter: Optional[IFLMetricsReporter],
+        metrics_reporter: Optional[IFLMetricsReporter] = None,
     ) -> None:
         """Trains the global model for one training round.
 
@@ -414,18 +428,9 @@ class SyncTrainer(FLTrainer):
         # hook before client updates
         self.on_before_client_updates(global_round_num=timeline.global_round_num())
 
-        def update(client):
-            """Update client's model with the global model received from server message."""
-            client_delta, weight = client.generate_local_update(
-                server_state_message,
-                metrics_reporter,
-            )
-            self.server.receive_update_from_client(Message(client_delta, weight))
-
-        # Update each client-side model
+        # Update client-side models from server-side model (in `server_state_message`)
         t = time()
-        for client in clients:
-            update(client)
+        self._update_clients(clients, server_state_message, metrics_reporter)
         self.logger.info(f"Collecting round's clients took {time() - t} s.")
 
         # After all clients finish their updates, update the global model
