@@ -39,10 +39,10 @@ from torch import Tensor
 
 class ISyncServer(abc.ABC):
     """
-    Interface for Sync servers, all sync server should implement this interface.
+    Interface for Sync servers, all sync servers should implement this interface.
     Responsibilities:
         Wrapper for aggregator and optimizer.
-        Collects client updates and sends to aggregator.
+        Collects client updates and sends them to the aggregator.
         Changes the global model using aggregator and optimizer.
     """
 
