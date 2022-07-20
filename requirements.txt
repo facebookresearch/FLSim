@@ -6,6 +6,7 @@ opacus
 pandas
 Pillow
 pytest
+scikit-learn
 setuptools
 tqdm
 tensorboard
