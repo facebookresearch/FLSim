@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 
 from flsim.active_user_selectors.simple_user_selector import (
     UniformlyRandomActiveUserSelectorConfig,
@@ -15,12 +15,13 @@ from flsim.active_user_selectors.simple_user_selector import (
 from flsim.channels.base_channel import IdentityChannel, IFLChannel
 from flsim.channels.message import Message
 from flsim.data.data_provider import IFLDataProvider
+from flsim.interfaces.metrics_reporter import Metric
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.server_optimizers import (
     ServerFTRLOptimizerConfig,
     ServerOptimizerConfig,
 )
-from flsim.privacy.common import PrivacySetting
+from flsim.privacy.common import PrivacySetting, PrivateTrainingMetricsUtils
 from flsim.privacy.privacy_engine import CummuNoiseEffTorch, CummuNoiseTorch
 from flsim.privacy.user_update_clip import UserUpdateClipper
 from flsim.servers.aggregator import AggregationType, Aggregator
@@ -150,15 +151,22 @@ class SyncFTRLServer(SyncServer):
             delta=message.model.fl_get_module(), weight=message.weight
         )
 
-    def step(self):
+    def step(self) -> Optional[List[Metric]]:
         aggregated_model = self._aggregator.aggregate()
         noise = self._privacy_engine()
         FLModelParamUtils.set_gradient(
             model=self._global_model.fl_get_module(),
             reference_gradient=aggregated_model,
         )
+        signal_to_noise = PrivateTrainingMetricsUtils.signal_to_noise_ratio(
+            aggregated_model, noise
+        )
+
         self._optimizer.step(noise)
-        return noise
+        return [
+            Metric("Noise", sum([p.sum() for p in noise])),
+            Metric("Signal_to_noise", signal_to_noise),
+        ]
 
     def should_restart(self):
         return (

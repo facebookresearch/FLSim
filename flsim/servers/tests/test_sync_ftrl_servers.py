@@ -137,8 +137,9 @@ class TestSyncServer:
             # = 0 - (1 + noise)
             # = -(1 + noise)
             optimizer.step(noise)
-            fl_noise = server.step()
-            assertEqual(sum([p.sum() for p in fl_noise]), sum([p.sum() for p in noise]))
+            fl_noise = server.step()[0]
+
+            assertEqual(fl_noise.value, sum([p.sum() for p in noise]))
             error_msg = verify_models_equivalent_after_training(fl_model, nonfl_model)
             assertEmpty(error_msg, msg=error_msg)
 
@@ -189,7 +190,8 @@ class TestSyncServer:
             # = 0 - (1 + noise)
             # = -(1 + noise)
             optimizer.step(noise)
-            fl_noise = server.step()
-            assertEqual(sum([p.sum() for p in fl_noise]), sum([p.sum() for p in noise]))
+            fl_noise = server.step()[0]
+
+            assertEqual(fl_noise.value, sum([p.sum() for p in noise]))
             error_msg = verify_models_equivalent_after_training(fl_model, nonfl_model)
             assertEmpty(error_msg, msg=error_msg)

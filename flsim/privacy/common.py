@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import List, NamedTuple, Optional
 
 import numpy as np
+import torch
 
 
 @dataclass
@@ -39,3 +40,19 @@ class PrivacyBudget(NamedTuple):
 
     def __str__(self):
         return f"eps = {self.epsilon}, delta = {self.delta}, alpha = {self.alpha}"
+
+
+class PrivateTrainingMetricsUtils:
+    @classmethod
+    def signal_to_noise_ratio(cls, aggregated_model, noise):
+        """
+        Following the definition in https://arxiv.org/pdf/2110.05679.pdf
+        signal to noise ratio = norm(g) / norm(noise)
+        """
+        g = cls.l2_norm(aggregated_model.parameters())
+        z = cls.l2_norm(noise)
+        return (g / z).item()
+
+    @classmethod
+    def l2_norm(cls, module: List[torch.Tensor]):
+        return torch.tensor([n.norm(2) for n in module]).norm(2)

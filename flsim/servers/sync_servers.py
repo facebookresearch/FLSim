@@ -24,6 +24,7 @@ from flsim.channels.scalar_quantization_channel import ScalarQuantizationChannel
 from flsim.channels.sparse_mask_channel import SparseMaskChannel
 from flsim.clients.base_client import Client
 from flsim.data.data_provider import IFLDataProvider
+from flsim.interfaces.metrics_reporter import Metric
 from flsim.interfaces.model import IFLModel
 from flsim.optimizers.server_optimizers import (
     FedAvgOptimizerConfig,
@@ -62,7 +63,7 @@ class ISyncServer(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def step(self):
+    def step(self) -> Optional[List[Metric]]:
         """Apply the update the global model."""
         raise NotImplementedError()
 

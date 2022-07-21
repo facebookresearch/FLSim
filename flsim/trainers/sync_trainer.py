@@ -50,7 +50,8 @@ class SyncTrainer(FLTrainer):
     ):
         init_self_cfg(
             self,
-            component_class=__class__,  # pyre-fixme[10]: Name `__class__` is used but not defined.
+            # pyre-fixme[10]: Name `__class__` is used but not defined.
+            component_class=__class__,
             config_class=SyncTrainerConfig,
             **kwargs,
         )
@@ -313,7 +314,8 @@ class SyncTrainer(FLTrainer):
 
             if self.stop_fl_training(
                 epoch=epoch,
-                round=round,  # pyre-fixme[61]: `round` may not be initialized here.
+                # pyre-fixme[61]: `round` may not be initialized here.
+                round=round,
                 num_rounds_in_epoch=num_rounds_in_epoch,
             ):
                 break
@@ -330,7 +332,8 @@ class SyncTrainer(FLTrainer):
         global_round_num = (epoch - 1) * num_rounds_in_epoch + round
         return (
             (global_round_num / num_rounds_in_epoch)
-            >= self.cfg.epochs  # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
+            # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
+            >= self.cfg.epochs
             or self._timeout_simulator.stop_fl()
         )
 
@@ -435,7 +438,7 @@ class SyncTrainer(FLTrainer):
 
         # After all clients finish their updates, update the global model
         t = time()
-        self.server.step()
+        metrics = self.server.step()
         self.logger.info(f"Finalizing round took {time() - t} s.")
 
         # Calculate and report metrics for this round
@@ -445,6 +448,7 @@ class SyncTrainer(FLTrainer):
             model=self.global_model(),
             timeline=timeline,
             metrics_reporter=metrics_reporter,
+            extra_metrics=metrics,
         )
         # Evaluation metrics of global model on training data of `agg_metric_clients`
         self._evaluate_global_model_after_aggregation_on_train_clients(
