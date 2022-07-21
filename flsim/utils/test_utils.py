@@ -128,6 +128,10 @@ class MockQuadratic1DFL(IFLModel):
 
 
 class TwoFC(nn.Module):
+    """
+    A dummy network with two linear layers, used for testing.
+    """
+
     def __init__(self):
         super().__init__()
         self.fc1 = nn.Linear(2, 5)
@@ -147,7 +151,35 @@ class TwoFC(nn.Module):
         self.apply(fill)
 
 
+class TwoConv(nn.Module):
+    """
+    A dummy network with two Conv2d layers, used for testing.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(8, 8, 2, 2)
+        self.conv2 = nn.Conv2d(8, 8, 2, 2)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        return x
+
+    def fill_all(self, value):
+        def fill(layer):
+            if type(layer) == nn.Conv2d:
+                layer.bias.data.fill_(value)
+                layer.weight.data.fill_(value)
+
+        self.apply(fill)
+
+
 class Linear(nn.Module):
+    """
+    A dummy network containing a single linear layer.
+    """
+
     def __init__(self):
         super().__init__()
         self.fc1 = nn.Linear(2, 1)
