@@ -400,7 +400,7 @@ class FLModelParamUtils:
         only_federated_params: bool = False,
     ):
         """Returns model_to_save = model * weight."""
-        FLModelParamUtils.linear_comb_models(
+        cls.linear_comb_models(
             model, weight, model, 0, model_to_save, only_federated_params
         )
 
@@ -413,7 +413,7 @@ class FLModelParamUtils:
         only_federated_params: bool = False,
     ):
         """Returns difference = minuend - subtrahend."""
-        FLModelParamUtils.linear_comb_models(
+        cls.linear_comb_models(
             minuend, 1, subtrahend, -1, difference, only_federated_params
         )
 
@@ -428,6 +428,6 @@ class FLModelParamUtils:
         """
         Returns model_to_save = model1 + model2
         """
-        FLModelParamUtils.linear_comb_models(
+        cls.linear_comb_models(
             model1, 1, model2, 1, model_to_save, only_federated_params
         )
