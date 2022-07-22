@@ -34,6 +34,13 @@
       "local_batch_size": 32,
       "drop_last": false
     },
+    "model": {
+      "use_resnet": false,
+      "dropout": 0.1,
+      "target_eval": 90,
+      "window_size": 1,
+      "average_type": "sma"
+    },
     "distributed_world_size": 1,
     "use_cuda_if_available": true
   }
