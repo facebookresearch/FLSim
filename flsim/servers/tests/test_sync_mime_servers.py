@@ -11,18 +11,24 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 import torch
+import torch.nn as nn
+
 from flsim.channels.message import Message
-from flsim.clients.base_client import Client, ClientConfig
+from flsim.clients.sync_mime_client import MimeClient, MimeClientConfig
 from flsim.common.pytest_helper import (
     assertEmpty,
     assertEqual,
     assertIsInstance,
     assertNotEmpty,
 )
+from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
+from flsim.optimizers.server_optimizers import FedAvgWithLROptimizerConfig
 from flsim.servers.sync_mime_servers import SyncMimeServerConfig
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.test_utils import (
     create_model_with_value,
+    DatasetFromList,
+    DummyUserData,
     model_gradients_equal_to_value,
     SampleNet,
     verify_optimizer_state_dict_equal,
@@ -31,9 +37,18 @@ from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
 
+class SampleFC(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc = nn.Parameter(torch.tensor([0.4]))
+
+    def forward(self, x):
+        return x @ self.fc
+
+
 class TestSyncMimeServers:
     def _fake_client(self, client_grad_value, weight):
-        clnt = Client(dataset=None, **OmegaConf.structured(ClientConfig()))
+        clnt = MimeClient(dataset=None, **OmegaConf.structured(MimeClientConfig()))
 
         def fill(module, *args):
             module = FLModelParamUtils.clone(module.fl_get_module())
@@ -45,7 +60,9 @@ class TestSyncMimeServers:
         clnt.full_dataset_gradient = MagicMock(side_effect=fill)
         return clnt
 
-    def _create_fake_clients(self, client_grad_values, client_weights) -> List[Client]:
+    def _create_fake_clients(
+        self, client_grad_values, client_weights
+    ) -> List[MimeClient]:
         return [
             self._fake_client(client_grad, weight)
             for client_grad, weight in zip(client_grad_values, client_weights)
@@ -160,3 +177,51 @@ class TestSyncMimeServers:
         else:
             assert "broadcast_message_to_clients must throw an assertion error\
              if all clients has no training data"
+
+    def _mime_client(self, dataset=None):
+        clnt = MimeClient(
+            dataset=dataset,
+            **OmegaConf.structured(
+                MimeClientConfig(
+                    optimizer=LocalOptimizerSGDConfig(lr=0.2, momentum=0.9)
+                )
+            ),
+        )
+        return clnt
+
+    def test_mime_training(self):
+        """
+        Test if MIME Training algorithm produces correct model values after training on multiple rounds
+        """
+        dataset = [torch.tensor([[0.6], [0.4]]), torch.tensor([[0.2]])]
+        dataset = DatasetFromList(dataset)
+        dataset = DummyUserData(dataset, SampleNet(SampleFC()))
+        clnt1 = self._mime_client(dataset)
+
+        dataset = [torch.tensor([[0.1], [0.8]])]
+        dataset = DatasetFromList(dataset)
+        dataset = DummyUserData(dataset, SampleNet(SampleFC()))
+        clnt2 = self._mime_client(dataset)
+
+        clients = [clnt1, clnt2]
+
+        server_model = SampleNet(SampleFC())
+
+        server = instantiate(
+            SyncMimeServerConfig(
+                server_optimizer=FedAvgWithLROptimizerConfig(lr=1.0, momentum=0.9)
+            ),
+            global_model=server_model,
+        )
+
+        for _ in range(4):
+            server.init_round()
+            broadcast_message = server.broadcast_message_to_clients(clients)
+            for clnt in clients:
+                delta, weight = clnt.generate_local_update(broadcast_message)
+                server.receive_update_from_client(Message(delta, weight))
+            server.step()
+
+        assert torch.allclose(
+            server._global_model.sample_nn.fc, torch.tensor([-0.81619])
+        ), "MIME parameters not matching"

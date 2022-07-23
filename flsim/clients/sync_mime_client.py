@@ -85,6 +85,7 @@ class MimeClient(Client):
         state_dict = optimizer.state_dict()
         state_dict["state"] = self.server_opt_state
         optimizer.load_state_dict(state_dict)
+        del state_dict
 
     def _batch_train(
         self,
@@ -109,16 +110,32 @@ class MimeClient(Client):
         loss = batch_metrics.loss
         loss.backward()
 
-        self.ref_model.fl_get_module().zero_grad()
-        ref_batch_metrics = self.ref_model.fl_forward(training_batch)
-        ref_batch_metrics.loss.backward()
+        # Skip MIME if train is directly called on the client, such as in personalization
+        use_mime = (
+            hasattr(self, "server_opt_state")
+            and hasattr(self, "mime_control_variate")
+            and self.server_opt_state is not None
+            and self.mime_control_variate is not None
+        )
 
-        FLModelParamUtils.subtract_gradients(
-            model.fl_get_module(), self.ref_model.fl_get_module(), model.fl_get_module()
-        )
-        FLModelParamUtils.add_gradients(
-            model.fl_get_module(), self.mime_control_variate, model.fl_get_module()
-        )
+        if use_mime:
+            self.ref_model.fl_get_module().train()
+            self.ref_model.fl_get_module().zero_grad()
+            ref_batch_metrics = self.ref_model.fl_forward(training_batch)
+            ref_batch_metrics.loss.backward()
+
+            FLModelParamUtils.subtract_gradients(
+                model.fl_get_module(),
+                self.ref_model.fl_get_module(),
+                model.fl_get_module(),
+            )
+            FLModelParamUtils.add_gradients(
+                model.fl_get_module(), self.mime_control_variate, model.fl_get_module()
+            )
+        else:
+            self.logger.debug(
+                "Skipping MIME. Personalization might be enabled or copy_and_train_model is directly called"
+            )
 
         # pyre-fixme[16]: `Client` has no attribute `cfg`.
         if self.cfg.max_clip_norm_normalized is not None:
@@ -128,8 +145,13 @@ class MimeClient(Client):
             )
 
         num_examples = batch_metrics.num_examples
+        # reload server_opt_state
+        if use_mime:
+            self._reload_server_state(optimizer)
+        else:
+            self.logger.debug("Not using MIME")
+
         # adjust lr and take a step
-        self._reload_server_state(optimizer)
         optimizer_scheduler.step(batch_metrics, model, training_batch, epoch)
         optimizer.step()
 

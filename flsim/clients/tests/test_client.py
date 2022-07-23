@@ -177,7 +177,7 @@ class ClientTestBase:
         client.eval(model=model)
         assert model.fl_get_module().training
 
-    def _reload_server_state(self, client):
+    def _test_reload_server_state(self, client):
         model = utils.SampleNet(utils.TwoFC())
         base_optim = torch.optim.Adam(model.fl_get_module().parameters())
 
@@ -729,90 +729,11 @@ class TestDPClient(ClientTestBase):
 
 
 class TestMimeClient(ClientTestBase):
-    def _batch_train_mime(
-        self,
-        batch: IFLUserData,
-        model,
-        optim,
-        server_model: IFLModel,
-        server_opt_state,
-        mime_control_variate: nn.Module,
-    ) -> None:
-        # basically re-write training logic
-        # overall_grad = batch_grad - server_model_grad + mime_control_variate
-        model.fl_get_module().train()
-        server_model.fl_get_module().train()
-
-        optim.zero_grad()
-        server_model.fl_get_module().zero_grad()
-
-        _batch = model.fl_create_training_batch(batch)
-        loss = model.fl_forward(_batch).loss
-        server_loss = server_model.fl_forward(_batch).loss
-
-        loss.backward()
-        server_loss.backward()
-
-        FLModelParamUtils.subtract_gradients(
-            model.fl_get_module(),
-            server_model.fl_get_module(),
-            model.fl_get_module(),
-        )
-        FLModelParamUtils.add_gradients(
-            model.fl_get_module(), mime_control_variate, model.fl_get_module()
-        )
-
-        state_dict = optim.state_dict()
-        state_dict["state"] = server_opt_state
-        optim.load_state_dict(state_dict)
-
-        optim.step()
-
     def test_reload_server_state(self):
         """Test whether server optimizer state is loading correctly in MIMEClient"""
         data = self._fake_data(num_batches=1, batch_size=10)
         clnt = self._get_mime_client(data)
-        self._reload_server_state(clnt)
-
-    def test_mime_train(self) -> None:
-        """Check multiple rounds of training on a MIME Client works correctly"""
-        data = self._fake_data(num_batches=5, batch_size=10)
-        clnt = self._get_mime_client(data)
-        server_model = utils.SampleNet(utils.TwoFC())
-        model, optim, optim_sch = clnt.prepare_for_training(
-            FLModelParamUtils.clone(server_model)
-        )
-        model2, optim2, _ = clnt.prepare_for_training(FLModelParamUtils.clone(model))
-        server_opt_state = {}
-
-        try:
-            # Run two rounds
-            for _ in range(2):
-                # load mime_control_variate as the average gradient
-                mime_control_variate, _ = clnt.full_dataset_gradient(server_model)
-                # set other parameters needed to train a batch
-                clnt.ref_model = FLModelParamUtils.clone(server_model)
-                clnt.mime_control_variate = mime_control_variate
-                clnt.server_opt_state = server_opt_state
-
-                # Verify models are trained correctly at the end of each batch training
-                for batch in clnt.dataset.train_data():
-                    self._batch_train_mime(
-                        batch,
-                        model,
-                        optim,
-                        server_model,
-                        server_opt_state,
-                        mime_control_variate,
-                    )
-                    clnt._batch_train(model2, optim2, batch, 0, None, optim_sch)
-                    mismatched = utils.verify_models_equivalent_after_training(
-                        model2, model
-                    )
-                    assertEmpty(mismatched)
-                server_opt_state = optim2.state_dict()["state"]
-        except BaseException as e:
-            assertTrue(False, e)
+        self._test_reload_server_state(clnt)
 
     def test_mime_generate_local_update(self):
         """The only change from base_client is to load mime_control_variate and
@@ -834,6 +755,7 @@ class TestMimeClient(ClientTestBase):
             )
         )
 
+        # Verify server model and optimizer state did not change in MIMELite Client
         error_msg = utils.verify_models_equivalent_after_training(clnt.ref_model, model)
         assertEmpty(error_msg)
         error_msg = utils.verify_gradients_equal(
@@ -847,31 +769,11 @@ class TestMimeClient(ClientTestBase):
 
 
 class TestMimeLiteClient(TestBaseClient):
-    def _batch_train_mimelite(
-        self,
-        batch: IFLUserData,
-        model,
-        optim,
-        server_model: IFLModel,
-        server_opt_state,
-    ) -> None:
-        # basically re-write training logic
-        # reload server state at the end
-        model.fl_get_module().train()
-        optim.zero_grad()
-        _batch = model.fl_create_training_batch(batch)
-        loss = model.fl_forward(_batch).loss
-        loss.backward()
-        state_dict = optim.state_dict()
-        state_dict["state"] = server_opt_state
-        optim.load_state_dict(state_dict)
-        optim.step()
-
     def test_reload_server_state(self):
         """Test whether server optimizer state is loaded correctly in MIMELite client"""
         data = self._fake_data(num_batches=5, batch_size=10)
         clnt = self._get_mimelite_client(data)
-        self._reload_server_state(clnt)
+        self._test_reload_server_state(clnt)
 
     def test_mimelite_generate_local_update(self):
         """The only change from base_client is to load server_opt_state
@@ -891,6 +793,7 @@ class TestMimeLiteClient(TestBaseClient):
             )
         )
 
+        # Verify server model and optimizer state did not change in MIMELite Client
         error_msg = utils.verify_models_equivalent_after_training(clnt.ref_model, model)
         assertEmpty(error_msg)
 
@@ -898,39 +801,3 @@ class TestMimeLiteClient(TestBaseClient):
             clnt.server_opt_state, server_opt_state
         )
         assertEmpty(error_msg)
-
-    def test_mimelite_train(self) -> None:
-        """Run multiple rounds of MIMELite client training to verify training"""
-        data = self._fake_data(num_batches=5, batch_size=10)
-        clnt = self._get_mimelite_client(data)
-        server_model = utils.SampleNet(utils.TwoFC())
-        model, optim, optim_sch = clnt.prepare_for_training(
-            FLModelParamUtils.clone(server_model)
-        )
-        model2, optim2, _ = clnt.prepare_for_training(FLModelParamUtils.clone(model))
-        server_opt_state = {}
-
-        try:
-            # Run two rounds
-            for _ in range(2):
-                # set other parameters needed to train a batch
-                clnt.ref_model = FLModelParamUtils.clone(server_model)
-                clnt.server_opt_state = server_opt_state
-
-                # Verify models are trained correctly at the end of each batch training
-                for batch in clnt.dataset.train_data():
-                    self._batch_train_mimelite(
-                        batch,
-                        model,
-                        optim,
-                        server_model,
-                        server_opt_state,
-                    )
-                    clnt._batch_train(model2, optim2, batch, 0, None, optim_sch)
-                    mismatched = utils.verify_models_equivalent_after_training(
-                        model2, model
-                    )
-                    assertEmpty(mismatched)
-                server_opt_state = optim2.state_dict()["state"]
-        except BaseException as e:
-            assertTrue(False, e)
