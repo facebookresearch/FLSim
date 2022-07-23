@@ -54,6 +54,7 @@ class MimeLiteClient(Client):
         state_dict = optimizer.state_dict()
         state_dict["state"] = self.server_opt_state
         optimizer.load_state_dict(state_dict)
+        del state_dict
 
     def _batch_train(
         self,
@@ -84,8 +85,22 @@ class MimeLiteClient(Client):
             )
 
         num_examples = batch_metrics.num_examples
-        # reload server_opt_state, adjust lr and take a step
-        self._reload_server_state(optimizer)
+
+        # reload server_opt_state
+        # Skip MIMELite if train is directly called on the client, such as in personalization
+        use_mimelite = (
+            hasattr(self, "server_opt_state")
+            # pyre-ignore [16]
+            and self.server_opt_state is not None
+        )
+        if use_mimelite:
+            self._reload_server_state(optimizer)
+        else:
+            self.logger.debug(
+                "Skipping MIMELite. Personalization might be enabled or copy_and_train_model is directly called"
+            )
+
+        # adjust lr and take a step
         optimizer_scheduler.step(batch_metrics, model, training_batch, epoch)
         optimizer.step()
 

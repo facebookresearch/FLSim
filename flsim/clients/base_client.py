@@ -420,6 +420,7 @@ class Client:
         """
         # `grads` is a dummy module for storing the average gradient.
         # Its network weights are never used.
+        module.fl_get_module().train()
         grads = FLModelParamUtils.clone(module.fl_get_module())
         grads.zero_grad()
         num_examples = 0
