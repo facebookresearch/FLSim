@@ -210,12 +210,12 @@ class FLModelParamUtils:
             if save_p.requires_grad:
                 grad = None
                 if model1_p.grad is not None:
-                    grad = wt1 * model1_p.grad.detach().clone().type(save_p.type())
+                    grad = wt1 * model1_p.grad
                 if model2_p.grad is not None:
                     if grad is not None:
-                        grad += wt2 * model2_p.grad.detach().clone().type(save_p.type())
+                        grad += wt2 * model2_p.grad
                     else:
-                        grad = wt2 * model2_p.grad.detach().clone().type(save_p.type())
+                        grad = wt2 * model2_p.grad
                 if grad is None:
                     cls.logger.warning(
                         "Parameter with requires_grad=True has gradient set to None"
@@ -231,11 +231,12 @@ class FLModelParamUtils:
             if save_p.requires_grad:
                 grad = None
                 if model_p.grad is not None:
-                    grad = weight * model_p.grad.detach().clone().type(save_p.type())
+                    grad = weight * model_p.grad
                 if grad is None:
                     cls.logger.warning(
                         "Parameter with requires_grad=True has gradient set to None"
                     )
+                del save_p.grad
                 save_p.grad = grad
 
     @classmethod
@@ -252,13 +253,14 @@ class FLModelParamUtils:
                     grad = model1_p.grad.detach().clone().type(save_p.type())
                 if model2_p.grad is not None:
                     if grad is not None:
-                        grad += model2_p.grad.detach().clone().type(save_p.type())
+                        grad += model2_p.grad
                     else:
                         grad = model2_p.grad.detach().clone().type(save_p.type())
                 if grad is None:
                     cls.logger.warning(
                         "Parameter with requires_grad=True has gradient set to None"
                     )
+                del save_p.grad
                 save_p.grad = grad
 
     @classmethod
@@ -272,12 +274,10 @@ class FLModelParamUtils:
             if difference_p.requires_grad:
                 grad = None
                 if minuend_p.grad is not None:
-                    grad = minuend_p.grad.detach().clone().type(difference_p.type())
+                    grad = minuend_p.grad
                 if subtrahend_p.grad is not None:
                     if grad is not None:
-                        grad -= (
-                            subtrahend_p.grad.detach().clone().type(difference_p.type())
-                        )
+                        grad -= subtrahend_p.grad
                     else:
                         grad = (
                             -subtrahend_p.grad.detach()
@@ -288,6 +288,7 @@ class FLModelParamUtils:
                     cls.logger.warning(
                         "Parameter with requires_grad=True has gradient set to None"
                     )
+                del difference_p.grad
                 difference_p.grad = grad
 
     @classmethod
@@ -302,6 +303,7 @@ class FLModelParamUtils:
                     cls.logger.warning(
                         "Parameter with requires_grad=True has gradient set to None"
                     )
+                del copy_p.grad
                 copy_p.grad = grad
 
     @classmethod
