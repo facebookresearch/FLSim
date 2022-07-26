@@ -11,6 +11,8 @@ from collections import Counter
 import torch
 from flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorUtils,
+    ImportanceSamplingActiveUserSelector,
+    ImportanceSamplingActiveUserSelectorConfig,
     RandomRoundRobinActiveUserSelector,
     RandomRoundRobinActiveUserSelectorConfig,
     SequentialActiveUserSelector,
@@ -177,6 +179,83 @@ class TestActiveUserSelector:
         assertEqual(len(user_indices), users_per_round)
         assertEqual(len(user_indices_set), users_per_round)
         assertTrue(user_indices_set.issubset(available_user_set))
+
+    def test_importance_sampling_user_selector(self):
+        num_total_users, users_per_round = 60, 5
+        selector = instantiate(
+            ImportanceSamplingActiveUserSelectorConfig(user_selector_seed=1234)
+        )
+        assertIsInstance(selector, ImportanceSamplingActiveUserSelector)
+
+        rng = torch.Generator().manual_seed(17)
+        num_samples_per_user = torch.randint(100, (num_total_users,), generator=rng)
+
+        # Check users selected on subsequent runs
+        selected_indices1 = selector.get_user_indices(
+            num_total_users=num_total_users,
+            users_per_round=users_per_round,
+            num_samples_per_user=num_samples_per_user,
+        )
+
+        selected_indices2 = selector.get_user_indices(
+            num_total_users=num_total_users,
+            users_per_round=users_per_round,
+            num_samples_per_user=num_samples_per_user,
+        )
+
+        assertEqual(
+            selected_indices1,
+            [0, 29, 41, 47, 56],
+            "Selected indices does not match expected user indices",
+        )
+        assertEqual(
+            selected_indices2,
+            [12, 24, 27, 32, 35, 48, 49],
+            "Selected indices does not match expected user indices",
+        )
+
+        # Check error if all clients have zero data
+        try:
+            selector.get_user_indices(
+                num_total_users=num_total_users,
+                users_per_round=users_per_round,
+                num_samples_per_user=torch.zeros(num_total_users),
+            )
+        except AssertionError:
+            pass
+        else:
+            assertTrue(
+                False,
+                "ImportanceSampling with zero data in all clients must throw an AssertionError",
+            )
+
+        # Check mismatch between num_total_uses and len(num_samples_per_user)
+        try:
+            selector.get_user_indices(
+                num_total_users=num_total_users,
+                users_per_round=users_per_round,
+                num_samples_per_user=torch.zeros(num_total_users - 2),
+            )
+        except AssertionError:
+            pass
+        else:
+            assertTrue(
+                False,
+                "ImportanceSampling with non-matching num_total_users and num_samples_per_user length",
+            )
+
+        try:
+            selector.get_user_indices(
+                num_total_users=num_total_users,
+                users_per_round=num_total_users + 2,
+                num_samples_per_user=torch.zeros(num_total_users),
+            )
+        except AssertionError:
+            pass
+        else:
+            assertTrue(
+                False, "ImportanceSampling with users_per_round > num_total_users"
+            )
 
 
 class TestActiveUserSelectorUtils:

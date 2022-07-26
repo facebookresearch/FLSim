@@ -8,6 +8,7 @@
 from hydra.core.config_store import ConfigStore  #  @manual
 
 from .simple_user_selector import (
+    ImportanceSamplingActiveUserSelectorConfig,
     RandomRoundRobinActiveUserSelectorConfig,
     SequentialActiveUserSelectorConfig,
     UniformlyRandomActiveUserSelectorConfig,
@@ -31,5 +32,12 @@ ConfigStore.instance().store(
 ConfigStore.instance().store(
     name="base_random_round_robin_active_user_selector",
     node=RandomRoundRobinActiveUserSelectorConfig,
+    group="active_user_selector",
+)
+
+
+ConfigStore.instance().store(
+    name="base_importance_sampling_active_user_selector",
+    node=ImportanceSamplingActiveUserSelectorConfig,
     group="active_user_selector",
 )

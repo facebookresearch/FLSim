@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 import torch
+from flsim.common.pytest_helper import assertNotEmpty
 from flsim.data.data_provider import IFLDataProvider
 from flsim.utils.config_utils import fullclassname, init_self_cfg
 from omegaconf import MISSING
@@ -287,6 +288,65 @@ class RandomRoundRobinActiveUserSelector(ActiveUserSelector):
         return user_indices
 
 
+class ImportanceSamplingActiveUserSelector(ActiveUserSelector):
+    """User selector which performs Important Sampling.
+    Each user is randomly selected with probability =
+        `number of samples in user * clients per round / total samples in dataset`
+    Ref: https://arxiv.org/pdf/1809.04146.pdf
+    """
+
+    def __init__(self, **kwargs):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=ImportanceSamplingActiveUserSelectorConfig,
+            **kwargs,
+        )
+
+        super().__init__(**kwargs)
+
+    @classmethod
+    def _set_defaults_in_cfg(cls, cfg):
+        pass
+
+    def get_user_indices(self, **kwargs) -> List[int]:
+        required_inputs = ["num_total_users", "users_per_round", "num_samples_per_user"]
+        (
+            num_total_users,
+            users_per_round,
+            num_samples_per_user,
+        ) = self.unpack_required_inputs(required_inputs, kwargs)
+
+        assert (
+            len(num_samples_per_user) == num_total_users
+        ), "Mismatch between num_total_users and num_samples_per_user length"
+        assert users_per_round > 0, "users_per_round must be greater than 0"
+
+        prob = torch.tensor(num_samples_per_user).float()
+        total_samples = torch.sum(prob)
+        assert total_samples > 0, "All clients have empty data"
+        prob = prob * users_per_round / total_samples
+
+        # Iterate num_tries times to ensure that selected indices is non-empty
+        selected_indices = []
+        # pyre-fixme[16]: `ImportanceSamplingActiveUserSelector` has no attribute `cfg`.
+        for _ in range(self.cfg.num_tries):
+            selected_indices = (
+                torch.nonzero(torch.rand(num_total_users, generator=self.rng) < prob)
+                .flatten()
+                .tolist()
+            )
+            if len(selected_indices) > 0:
+                break
+
+        assertNotEmpty(
+            selected_indices,
+            "Importance Sampling did not return any clients for the current round",
+        )
+
+        return selected_indices
+
+
 @dataclass
 class ActiveUserSelectorConfig:
     _target_: str = MISSING
@@ -308,3 +368,9 @@ class SequentialActiveUserSelectorConfig(ActiveUserSelectorConfig):
 @dataclass
 class RandomRoundRobinActiveUserSelectorConfig(ActiveUserSelectorConfig):
     _target_: str = fullclassname(RandomRoundRobinActiveUserSelector)
+
+
+@dataclass
+class ImportanceSamplingActiveUserSelectorConfig(ActiveUserSelectorConfig):
+    _target_: str = fullclassname(ImportanceSamplingActiveUserSelector)
+    num_tries: int = 10
