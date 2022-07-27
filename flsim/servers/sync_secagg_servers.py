@@ -184,6 +184,7 @@ class SyncSecAggSQServer(SyncSecAggServer):
         return self._global_qparams
 
     def receive_update_from_client(self, message: Message):
+        message.qparams = self.global_qparams
         message = self._channel.client_to_server(message)
 
         self._aggregator.apply_weight_to_update(
