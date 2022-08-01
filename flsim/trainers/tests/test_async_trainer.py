@@ -669,7 +669,7 @@ class TestAsyncTrainer:
                     training_duration_sd=0,
                 ),
             )
-            # first num_examples_user1/batch_size batches are for user1. Rest for user2
+            # First num_examples_user1/batch_size batches are for user1. Rest for user2
             all_batches = list(nonfl_data_loader)
             num_user1_batches = num_examples_user1 // batch_size
             user1_batches = all_batches[:num_user1_batches]

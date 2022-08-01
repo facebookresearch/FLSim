@@ -299,7 +299,7 @@ class FedBuffTestUtils:
     ) -> str:
         # to verify training indeed took place
         reference_untrained_model = DummyAlphabetFLModel()
-        # to train a model with FedVuff
+        # to train a model with FedBuff
         fedbuff_model = FLModelParamUtils.clone(reference_untrained_model)
         # to train nonfl
         nonfl_model = FLModelParamUtils.clone(reference_untrained_model)

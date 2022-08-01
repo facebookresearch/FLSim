@@ -194,7 +194,7 @@ class FLTrainer(abc.ABC):
         self, timeline: Timeline, metrics_reporter: Optional[IFLMetricsReporter]
     ):
         """Calculates communication metrics after an epoch ends, such as amount of data
-        communicated bewteen server and client.
+        communicated between server and client.
         TODO: This should really be called `post_round` instead of `post_epoch`.
         """
 

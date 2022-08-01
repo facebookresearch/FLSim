@@ -205,7 +205,7 @@ class TestAsyncTrainerWeights:
         """Create an FL Async task with default values for example weight (equal example weight)
         Note: In async, weight of a user update = example_weight * staleness_weight
         Equal example weight => example_weight = 1.0 irrespective of #examples
-        Verify that weight doesn't depend on number of examples. Train 2 FL tasks:
+        Verify that weight doesn't depend on the number of examples. Train 2 FL tasks:
         Task1: {user1:data1}, {user2:data2}
         Task2: {user1:data1,data1}, {user2:data2,data2} (each user gets duplicate copy of data)
         Both tasks are trained in "sequential" order
@@ -531,7 +531,7 @@ class TestAsyncTrainerWeights:
 
     def test_example_wts_and_staleness_wts_lr_scale(self) -> None:
         """
-        Test for same number of examples and a fixed global learning rate.
+        Test for the same number of examples and a fixed global learning rate.
         Async with no example weight should be the same as linear example weight where
         ex_local_lr= 1, ex_global_lr = 1
         no_ex_local_lr = ex_local_lr, no_ex_global_lr = ex_global_lr / max_num_examples

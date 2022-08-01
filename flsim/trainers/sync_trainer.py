@@ -343,7 +343,7 @@ class SyncTrainer(FLTrainer):
         """Keeps top `num_users_keep` users with least training times."""
         all_training_times = [c.get_total_training_time() for c in clents_triggered]
         all_training_times.sort()
-        # only select first num_users_keep userids sort by their finish time
+        # only select first num_users_keep userids sorted by their finish time
         num_users_keep = min([num_users_keep, len(all_training_times)])
         last_user_time = all_training_times[num_users_keep - 1]
         num_users_added = 0
