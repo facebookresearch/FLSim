@@ -13,6 +13,10 @@ import torch.nn as nn
 from flsim.channels.message import Message
 from flsim.clients.base_client import Client, ClientConfig
 from flsim.clients.dp_client import DPClient, DPClientConfig
+from flsim.clients.sync_fedshuffle_client import (
+    FedShuffleClient,
+    FedShuffleClientConfig,
+)
 from flsim.clients.sync_mime_client import MimeClient, MimeClientConfig
 from flsim.clients.sync_mimelite_client import MimeLiteClient, MimeLiteClientConfig
 from flsim.common.pytest_helper import (
@@ -31,7 +35,6 @@ from flsim.common.timeout_simulator import (
     NeverTimeOutSimulatorConfig,
 )
 from flsim.data.data_provider import IFLUserData
-from flsim.interfaces.model import IFLModel
 from flsim.optimizers.local_optimizers import (
     LocalOptimizerFedProxConfig,
     LocalOptimizerSGD,
@@ -801,3 +804,37 @@ class TestMimeLiteClient(TestBaseClient):
             clnt.server_opt_state, server_opt_state
         )
         assertEmpty(error_msg)
+
+
+class TestFedShuffleClient(TestBaseClient):
+    def test_fedshuffle_generate_local_update(self):
+        # Verify that the deltas match with expected value
+        model = utils.SampleNet(utils.linear_model(4.0))
+        data = self._fake_data(3, 2)
+        config = FedShuffleClientConfig(
+            optimizer=LocalOptimizerSGDConfig(lr=0.2),
+            shuffle_batch_order=False,
+            epochs=2,
+        )
+        client = FedShuffleClient(**OmegaConf.structured(config), dataset=data)
+        server_message = Message(model=model)
+        delta, weight = client.generate_local_update(server_message)
+
+        # Value obtained on FedShuffle's official implementation for same client data
+        expected_delta = utils.linear_model(0.0)
+        expected_delta.fc1.weight = nn.Parameter(
+            torch.tensor([[0.07289219, 0.11549282]])
+        )
+        expected_delta.fc1.bias = nn.Parameter(torch.tensor([0.19999981]))
+
+        error_msg = utils.verify_models_equivalent_after_training(
+            delta, expected_delta, model
+        )
+        assertEmpty(error_msg, error_msg)
+
+        # Verify that client does not change any part of the server_message
+        expected_model = utils.SampleNet(utils.linear_model(4.0))
+        error_msg = utils.verify_models_equivalent_after_training(
+            server_message.model, expected_model
+        )
+        assertEmpty(error_msg, error_msg)
