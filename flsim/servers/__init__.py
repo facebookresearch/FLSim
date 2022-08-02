@@ -8,6 +8,7 @@
 from hydra.core.config_store import ConfigStore  #  @manual
 
 from .sync_dp_servers import SyncDPSGDServerConfig
+from .sync_fedshuffle_servers import SyncFedShuffleServerConfig
 from .sync_ftrl_servers import SyncFTRLServerConfig
 from .sync_mime_servers import SyncMimeServerConfig
 from .sync_mimelite_servers import SyncMimeLiteServerConfig
@@ -46,6 +47,12 @@ ConfigStore.instance().store(
 ConfigStore.instance().store(
     name="base_sync_mimelite_server",
     node=SyncMimeLiteServerConfig,
+    group="server",
+)
+
+ConfigStore.instance().store(
+    name="base_sync_fedshuffle_server",
+    node=SyncFedShuffleServerConfig,
     group="server",
 )
 
