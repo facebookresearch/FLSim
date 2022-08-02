@@ -385,3 +385,44 @@ class TestFLModelParamUtils:
         assertTrue(
             FLTestUtils.do_two_models_have_same_weights(fc_model, copied_fc_model)
         )
+
+    def test_scale_optimizer_lr(self) -> None:
+        model = FCModel()
+
+        # Test LR scaling with Adam
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.02, betas=(0.9, 0.99))
+        FLModelParamUtils.scale_optimizer_lr(optimizer, 1 / 2.0)
+        for param_group in optimizer.param_groups:
+            assertEqual(
+                param_group["lr"],
+                0.04,
+                "Adam LR does not match expected value after scaling",
+            )
+            assertEqual(
+                param_group["betas"],
+                (0.9, 0.99),
+                "Adam betas does not match expected value after scaling",
+            )
+
+        # Test LR scaling with SGD momentum
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.02, momentum=0.9)
+        FLModelParamUtils.scale_optimizer_lr(optimizer, 1 / 2.0)
+        for param_group in optimizer.param_groups:
+            assertEqual(
+                param_group["lr"],
+                0.04,
+                "SGD LR does not match expected value after scaling",
+            )
+            assertEqual(
+                param_group["momentum"],
+                0.9,
+                "SGD momentum does not match expected value after scaling",
+            )
+
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.02, momentum=0.9)
+        try:
+            FLModelParamUtils.scale_optimizer_lr(optimizer, -2.0)
+        except AssertionError:
+            pass
+        else:
+            assertTrue(True, "Scaling LR with a negative value must result in an error")

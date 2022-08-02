@@ -433,3 +433,16 @@ class FLModelParamUtils:
         cls.linear_comb_models(
             model1, 1, model2, 1, model_to_save, only_federated_params
         )
+
+    @classmethod
+    def scale_optimizer_lr(
+        cls, optimizer: torch.optim.Optimizer, scaling_factor: float
+    ):
+        """
+        Set optimizer.lr = optimizer.lr / scaling_factor for all param groups
+        """
+        assert (
+            scaling_factor > 0
+        ), "Scaling factor needs to be postive to keep learning rate >= 0"
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = param_group["lr"] / scaling_factor
