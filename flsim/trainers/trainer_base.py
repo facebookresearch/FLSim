@@ -10,6 +10,7 @@ from __future__ import annotations
 import abc
 import logging
 import sys
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple
 
@@ -150,7 +151,8 @@ class FLTrainer(abc.ABC):
         if self.cfg.always_keep_trained_model or eval_metric_better_than_prev:
             best_metric = eval_metric
             model_state = self.global_model().fl_get_module().state_dict()
-            best_model_state = model_state
+            best_model_state = deepcopy(model_state)
+
         sys.stdout.flush()
         return best_metric, best_model_state
 
