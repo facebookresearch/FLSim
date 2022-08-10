@@ -676,14 +676,14 @@ class SyncTrainer(FLTrainer):
             report_rounds = current_round - self._last_report_round_after_aggregation
             self._last_report_round_after_aggregation = current_round
 
-            with torch.no_grad():
-                model.fl_get_module().eval()
-                for client in clients:
-                    for batch in client.dataset.train_data():
-                        batch_metrics = model.get_eval_metrics(batch)
-                        if metrics_reporter is not None:
-                            metrics_reporter.add_batch_metrics(batch_metrics)
-                model.fl_get_module().train()
+            model.fl_get_module().eval()
+            self._calc_eval_metrics_on_clients(
+                model=model,
+                clients_data=[client.dataset for client in clients],
+                data_split="train",
+                metrics_reporter=metrics_reporter,
+            )
+            model.fl_get_module().train()
 
             privacy_metrics = self._calc_privacy_metrics(
                 clients, model, metrics_reporter

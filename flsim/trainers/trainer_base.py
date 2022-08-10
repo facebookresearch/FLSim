@@ -12,7 +12,7 @@ import logging
 import sys
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple
+from typing import Any, Iterable, List, Optional, Tuple
 
 import torch
 from flsim.channels.base_channel import FLChannelConfig
@@ -25,7 +25,7 @@ from flsim.common.timeout_simulator import (
     NeverTimeOutSimulatorConfig,
     TimeOutSimulatorConfig,
 )
-from flsim.data.data_provider import IFLDataProvider
+from flsim.data.data_provider import IFLDataProvider, IFLUserData
 from flsim.interfaces.metrics_reporter import IFLMetricsReporter, Metric, TrainingStage
 from flsim.interfaces.model import IFLModel
 from flsim.utils.config_utils import init_self_cfg
@@ -192,6 +192,22 @@ class FLTrainer(abc.ABC):
                 extra_metrics=extra_metrics,
             )
 
+    @torch.no_grad()
+    def _calc_eval_metrics_on_clients(
+        self,
+        model: IFLModel,
+        clients_data: Iterable[IFLUserData],
+        data_split: str,
+        metrics_reporter: IFLMetricsReporter,
+    ) -> None:
+        """Calculate eval metrics on `clients` and record in `metrics_reporter` using
+        `model`. `model` is expected to be in eval mode.
+        """
+        for client_data in clients_data:
+            for batch in getattr(client_data, f"{data_split}_data")():
+                batch_metrics = model.get_eval_metrics(batch)
+                metrics_reporter.add_batch_metrics(batch_metrics)
+
     def _calc_post_epoch_communication_metrics(
         self, timeline: Timeline, metrics_reporter: Optional[IFLMetricsReporter]
     ):
@@ -263,25 +279,26 @@ class FLTrainer(abc.ABC):
         """
         Evaluate global model on eval users
         """
-        with torch.no_grad():
-            self._cuda_state_manager.before_train_or_eval(global_model)
-            global_model.fl_get_module().eval()
-            print(f"{timeline}: \t Evaluates global model on all data of eval users")
-            for user in data_provider.eval_users():
-                for batch in user.eval_data():
-                    batch_metrics = global_model.get_eval_metrics(batch)
-                    metrics_reporter.add_batch_metrics(batch_metrics)
+        print(f"{timeline}: \t Evaluates global model on all data of eval users")
+        self._cuda_state_manager.before_train_or_eval(global_model)
+        global_model.fl_get_module().eval()
+        self._calc_eval_metrics_on_clients(
+            model=global_model,
+            clients_data=data_provider.eval_users(),
+            data_split="eval",
+            metrics_reporter=metrics_reporter,
+        )
 
-            metrics, found_best_model = metrics_reporter.report_metrics(
-                model=global_model,
-                reset=True,
-                stage=TrainingStage.EVAL,
-                timeline=timeline,
-                epoch=timeline.global_round_num(),  # for legacy
-                print_to_channels=True,
-            )
-            self._cuda_state_manager.after_train_or_eval(global_model)
-            return metrics, found_best_model
+        metrics, found_best_model = metrics_reporter.report_metrics(
+            model=global_model,
+            reset=True,
+            stage=TrainingStage.EVAL,
+            timeline=timeline,
+            epoch=timeline.global_round_num(),  # for legacy
+            print_to_channels=True,
+        )
+        self._cuda_state_manager.after_train_or_eval(global_model)
+        return metrics, found_best_model
 
     def _test(
         self,
@@ -305,26 +322,26 @@ class FLTrainer(abc.ABC):
                 epochs=self.cfg.personalized_epochs,
             )
 
-        with torch.no_grad():
-            self._cuda_state_manager.before_train_or_eval(model)
-            model.fl_get_module().eval()
-            print(f"Running {timeline} for {TrainingStage.TEST.name.title()}")
+        print(f"Running {timeline} for {TrainingStage.TEST.name.title()}")
+        self._cuda_state_manager.before_train_or_eval(model)
+        model.fl_get_module().eval()
+        self._calc_eval_metrics_on_clients(
+            model=model,
+            clients_data=data_provider.test_users(),
+            data_split="eval",
+            metrics_reporter=metrics_reporter,
+        )
 
-            for test_user in data_provider.test_users():
-                for batch in test_user.eval_data():
-                    batch_metrics = model.get_eval_metrics(batch)
-                    metrics_reporter.add_batch_metrics(batch_metrics)
-
-            metrics, _ = metrics_reporter.report_metrics(
-                model=model,
-                reset=True,
-                stage=TrainingStage.TEST,
-                timeline=timeline,
-                epoch=timeline.global_round_num(),  # for legacy
-                print_to_channels=True,
-            )
-            self._cuda_state_manager.after_train_or_eval(model)
-            return metrics
+        metrics, _ = metrics_reporter.report_metrics(
+            model=model,
+            reset=True,
+            stage=TrainingStage.TEST,
+            timeline=timeline,
+            epoch=timeline.global_round_num(),  # for legacy
+            print_to_channels=True,
+        )
+        self._cuda_state_manager.after_train_or_eval(model)
+        return metrics
 
 
 @dataclass
