@@ -420,9 +420,5 @@ class TestFLModelParamUtils:
             )
 
         optimizer = torch.optim.SGD(model.parameters(), lr=0.02, momentum=0.9)
-        try:
+        with assertRaises(AssertionError):
             FLModelParamUtils.scale_optimizer_lr(optimizer, -2.0)
-        except AssertionError:
-            pass
-        else:
-            assertTrue(True, "Scaling LR with a negative value must result in an error")
