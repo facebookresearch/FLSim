@@ -37,7 +37,7 @@ class ScalarQuantizationChannel(IdentityChannel):
         - We do not quantize the biases for the moment since their compression
           overhead is very small.
         - We arbitrarily choose to set the int_repr() of a quantized tensor
-          to [-(2 ** (n_bits - 1)), (2 ** n_bits) - 1]; symmetric around 0.
+          to [-(2 ** (n_bits - 1)), (2 ** (n_bits - 1)) - 1]; symmetric around 0.
         - All the quantized tensors share the same type, ie `torch.qint8`.
           However, when quantizing to less than 8 bits, this is not memory
           efficient since each element is stored over 1 byte anyway. Since
@@ -160,7 +160,7 @@ class ScalarQuantizationChannel(IdentityChannel):
             )
             observer = PerChannelMinMaxObserver(
                 dtype=torch.qint8,
-                qscheme=torch.per_channel_affine,
+                qscheme=qscheme,
                 quant_min=self.quant_min,
                 quant_max=self.quant_max,
                 reduce_range=False,
