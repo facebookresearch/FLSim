@@ -10,6 +10,8 @@ from flsim.common.pytest_helper import assertEqual, assertTrue
 from flsim.optimizers.optimizer_scheduler import (
     ArmijoLineSearch,
     ArmijoLineSearchSchedulerConfig,
+    MultiStepLRScheduler,
+    MultiStepLRSchedulerConfig,
 )
 from flsim.utils.test_utils import MockQuadratic1DFL, Quadratic1D
 from omegaconf import OmegaConf
@@ -67,3 +69,32 @@ class TestOptimizerScheduler:
             optimizer.step()
         # check converging to 0 (true answer)
         assertTrue(quadratic1D.fl_get_module().state_dict()["x"].item() <= 1e-7)
+
+
+class TestMultiStepLRScheduler:
+    def test_decay_lr_correct(self):
+        quadratic1D = MockQuadratic1DFL(Quadratic1D())
+        lr = 10.0
+        optimizer = torch.optim.SGD(
+            quadratic1D.fl_get_module().parameters(), lr=lr, momentum=0.0
+        )
+        config = MultiStepLRSchedulerConfig(base_lr=lr, gamma=0.1, milestones=[2, 6])
+        scheduler = MultiStepLRScheduler(
+            optimizer=optimizer, **OmegaConf.structured(config)
+        )
+        lrs = []
+        for t in range(6):
+            scheduler.step(global_round_num=t)
+            lrs.append(scheduler.get_lr()[0])
+
+        assertEqual(
+            [
+                10.0,
+                10.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+            ],
+            lrs,
+        )

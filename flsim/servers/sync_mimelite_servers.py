@@ -81,7 +81,9 @@ class SyncMimeLiteServer(SyncServer):
         if OmegaConf.is_missing(cfg.server_optimizer, "_target_"):
             cfg.server_optimizer = FedAvgWithLROptimizerConfig(lr=1.0)
 
-    def broadcast_message_to_clients(self, clients: Iterable[Client]) -> Message:
+    def broadcast_message_to_clients(
+        self, clients: Iterable[Client], global_round_num: Optional[int] = 0
+    ) -> Message:
         """
         Message has additional metadata apart from the model:
         Server Optimizer State: To be used during client training

@@ -94,7 +94,9 @@ class ISyncServer(abc.ABC):
         """
         pass
 
-    def broadcast_message_to_clients(self, clients: Iterable[Client]) -> Message:
+    def broadcast_message_to_clients(
+        self, clients: Iterable[Client], global_round_num: int = 0
+    ) -> Message:
         """
         Create a message common for every client during generate_local_update.
         Message must include the global_model as it is the only way to send it to each client.
@@ -108,7 +110,7 @@ class ISyncServer(abc.ABC):
             Message: The message common for all clients. Pass the global model here.
             Trainer should pass this message while calling generate_local_update for each client.
         """
-        return Message(model=self.global_model)
+        return Message(model=self.global_model, global_round_num=global_round_num)
 
     @property
     def global_model(self) -> IFLModel:

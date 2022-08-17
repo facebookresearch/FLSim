@@ -8,15 +8,17 @@
 from __future__ import annotations
 
 import abc
+import bisect
 import copy
-from dataclasses import dataclass
-from typing import Any, Optional
+from dataclasses import dataclass, field
+from typing import Any, List, Optional
 
 from flsim.interfaces.batch_metrics import IFLBatchMetrics
 from flsim.interfaces.model import IFLModel
 from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.fl.common import FLModelParamUtils
 from omegaconf import MISSING
+from torch.optim.lr_scheduler import MultiStepLR
 from torch.optim.optimizer import Optimizer
 
 
@@ -51,6 +53,7 @@ class OptimizerScheduler(abc.ABC):
         model: Optional[IFLModel] = None,
         data: Optional[Any] = None,
         epoch: Optional[int] = None,
+        global_round_num: Optional[int] = 0,
     ):
         """
         Interface for updating learning rate. Some learning rate scheduling methods
@@ -90,6 +93,7 @@ class ConstantLRScheduler(OptimizerScheduler):
         model: Optional[IFLModel] = None,
         data: Optional[Any] = None,
         epoch: Optional[int] = None,
+        global_round_num: Optional[int] = 0,
     ):
         pass
 
@@ -128,6 +132,7 @@ class LRBatchSizeNormalizer(OptimizerScheduler):
         model: Optional[IFLModel] = None,
         data: Optional[Any] = None,
         epoch: Optional[int] = None,
+        global_round_num: Optional[int] = 0,
     ):
         assert (
             batch_metric is not None
@@ -185,6 +190,7 @@ class ArmijoLineSearch(OptimizerScheduler):
         model: Optional[IFLModel],
         data: Optional[Any] = None,
         epoch: Optional[int] = None,
+        global_round_num: Optional[int] = 0,
     ):
         assert (
             batch_metric is not None
@@ -245,11 +251,49 @@ class ArmijoLineSearch(OptimizerScheduler):
             param_group["lr"] = self.cfg.base_lr
 
 
+class MultiStepLRScheduler(OptimizerScheduler):
+    """
+    Decay the LR by the given factor after specified number of rounds
+    """
+
+    def __init__(
+        self,
+        *,
+        optimizer: Optimizer,
+        **kwargs,
+    ):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=MultiStepLRSchedulerConfig,
+            **kwargs,
+        )
+
+        super().__init__(optimizer=optimizer, **kwargs)
+        self._scheduler = MultiStepLR(
+            optimizer=optimizer,
+            milestones=self.cfg.milestones,
+            gamma=self.cfg.gamma,
+            verbose=self.cfg.verbose,
+        )
+
+    def step(
+        self,
+        batch_metric: Optional[IFLBatchMetrics] = None,
+        model: Optional[IFLModel] = None,
+        data: Optional[Any] = None,
+        epoch: Optional[int] = None,
+        global_round_num: int = 0,
+    ):
+        self._scheduler.step(global_round_num)
+
+
 @dataclass
 class OptimizerSchedulerConfig:
     _target_: str = MISSING
     _recursive_: bool = False
     base_lr: float = 0.001
+    verbose: bool = False
 
 
 @dataclass
@@ -276,3 +320,10 @@ class ArmijoLineSearchSchedulerConfig(OptimizerSchedulerConfig):
     reset: bool = False
     # maximum number of line-search iterations
     max_iter: int = 5
+
+
+@dataclass
+class MultiStepLRSchedulerConfig(OptimizerSchedulerConfig):
+    _target_: str = fullclassname(MultiStepLRScheduler)
+    gamma: float = 0.1
+    milestones: List[int] = field(default_factory=list)

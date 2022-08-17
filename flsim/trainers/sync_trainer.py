@@ -426,7 +426,9 @@ class SyncTrainer(FLTrainer):
         self.logger.info(f"Round initialization took {time() - t} s.")
 
         # Receive message from server to clients, i.e. global model state
-        server_state_message = self.server.broadcast_message_to_clients(clients)
+        server_state_message = self.server.broadcast_message_to_clients(
+            clients, timeline.global_round_num()
+        )
 
         # hook before client updates
         self.on_before_client_updates(global_round_num=timeline.global_round_num())

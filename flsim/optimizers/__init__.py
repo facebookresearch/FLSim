@@ -23,6 +23,7 @@ from .optimizer_scheduler import (
     ArmijoLineSearchSchedulerConfig,
     ConstantLRSchedulerConfig,
     LRBatchSizeNormalizerSchedulerConfig,
+    MultiStepLRSchedulerConfig,
 )
 from .server_optimizers import (
     FedAdamOptimizerConfig,
@@ -77,6 +78,13 @@ ConfigStore.instance().store(
 ConfigStore.instance().store(
     name="base_armijo_line_search_lr_scheduer",
     node=ArmijoLineSearchSchedulerConfig,
+    group="lr_scheduler",
+)
+
+
+ConfigStore.instance().store(
+    name="base_multistep_lr_scheduler",
+    node=MultiStepLRSchedulerConfig,
     group="lr_scheduler",
 )
 

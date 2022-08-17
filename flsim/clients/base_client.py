@@ -95,6 +95,8 @@ class Client:
         self.last_updated_model = None
         self.logger.setLevel(logging.INFO)
 
+        self.global_round_num = 0
+
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
         if OmegaConf.is_missing(cfg.optimizer, "_target_"):
@@ -141,6 +143,7 @@ class Client:
             will be called on the reporter; else reports will be accumulated in memory.
         """
         model = message.model
+        self.global_round_num = message.global_round_num
 
         updated_model, weight, optimizer = self.copy_and_train_model(
             model, metrics_reporter=metrics_reporter
@@ -398,7 +401,13 @@ class Client:
 
         num_examples = batch_metrics.num_examples
         # Adjust lr and take a gradient step
-        optimizer_scheduler.step(batch_metrics, model, training_batch, epoch)
+        optimizer_scheduler.step(
+            batch_metrics,
+            model,
+            training_batch,
+            epoch,
+            global_round_num=self.global_round_num,
+        )
         optimizer.step()
 
         if metrics_reporter is not None:

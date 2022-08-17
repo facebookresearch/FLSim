@@ -59,6 +59,8 @@ class Message:
     # meta data for sparsity masks
     sparsity_mask_params: Optional[Dict[str, Tensor]] = field(default=None)
 
+    global_round_num: int = field(default_factory=int)
+
     def populate_state_dict(self, **kwargs):
         """
         We copy the model's state dict and add it as an attribute to the message.
