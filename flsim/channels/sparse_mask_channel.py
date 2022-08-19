@@ -138,7 +138,7 @@ class SparseMaskChannel(IdentityChannel):
             # select flat indices to prune
             top_k = torch.topk(
                 (
-                    torch.rand_like(param.data)
+                    torch.rand(param.data.shape)
                     if sparsity_method == "random"
                     else torch.abs(param.data)
                 ).view(-1),
