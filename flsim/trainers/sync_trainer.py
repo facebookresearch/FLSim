@@ -438,6 +438,8 @@ class SyncTrainer(FLTrainer):
             server_return_metrics=server_return_metrics,
         )
 
+        self._post_train_one_round(timeline)
+
     def _train_one_round_apply_updates(
         self,
         timeline: Timeline,
@@ -509,6 +511,10 @@ class SyncTrainer(FLTrainer):
             metrics_reporter,
         )
         self.logger.info(f"Aggregate round reporting took {time() - t} s.")
+
+    def _post_train_one_round(self, timeline: Timeline):
+        """Optional processing after training for one round is finished."""
+        pass
 
     def _choose_clients_for_post_aggregation_metrics(
         self,
