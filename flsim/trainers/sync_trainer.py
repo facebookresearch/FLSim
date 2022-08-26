@@ -421,6 +421,36 @@ class SyncTrainer(FLTrainer):
             users_per_round: Number of participating users.
             metrics_reporter: Metric reporter to pass to other methods.
         """
+        server_return_metrics = self._train_one_round_apply_updates(
+            timeline=timeline,
+            clients=clients,
+            agg_metric_clients=agg_metric_clients,
+            users_per_round=users_per_round,
+            metrics_reporter=metrics_reporter,
+        )
+
+        self._train_one_round_report_metrics(
+            timeline=timeline,
+            clients=clients,
+            agg_metric_clients=agg_metric_clients,
+            users_per_round=users_per_round,
+            metrics_reporter=metrics_reporter,
+            server_return_metrics=server_return_metrics,
+        )
+
+    def _train_one_round_apply_updates(
+        self,
+        timeline: Timeline,
+        clients: Iterable[Client],
+        agg_metric_clients: Iterable[Client],
+        users_per_round: int,
+        metrics_reporter: Optional[IFLMetricsReporter] = None,
+    ) -> Optional[List[Metric]]:
+        """Apply updates to client and server models during train one round.
+        See `_train_one_round` for argument descriptions.
+        Returns: Optional list of `Metric`, same as the return value of `step`
+            method in `ISyncServer`.
+        """
         t = time()
         self.server.init_round()
         self.logger.info(f"Round initialization took {time() - t} s.")
@@ -430,7 +460,7 @@ class SyncTrainer(FLTrainer):
             clients, timeline.global_round_num()
         )
 
-        # hook before client updates
+        # Hook before client updates
         self.on_before_client_updates(global_round_num=timeline.global_round_num())
 
         # Update client-side models from server-side model (in `server_state_message`)
@@ -440,9 +470,22 @@ class SyncTrainer(FLTrainer):
 
         # After all clients finish their updates, update the global model
         t = time()
-        metrics = self.server.step()
+        server_return_metrics = self.server.step()
         self.logger.info(f"Finalizing round took {time() - t} s.")
+        return server_return_metrics
 
+    def _train_one_round_report_metrics(
+        self,
+        timeline: Timeline,
+        clients: Iterable[Client],
+        agg_metric_clients: Iterable[Client],
+        users_per_round: int,
+        metrics_reporter: Optional[IFLMetricsReporter] = None,
+        server_return_metrics: Optional[List[Any]] = None,
+    ) -> None:
+        """Report metrics during train one round.
+        See `_train_one_round` for argument descriptions.
+        """
         # Calculate and report metrics for this round
         t = time()
         # Train metrics of global model (e.g. loss and accuracy)
@@ -450,7 +493,7 @@ class SyncTrainer(FLTrainer):
             model=self.global_model(),
             timeline=timeline,
             metrics_reporter=metrics_reporter,
-            extra_metrics=metrics,
+            extra_metrics=server_return_metrics,
         )
         # Evaluation metrics of global model on training data of `agg_metric_clients`
         self._evaluate_global_model_after_aggregation_on_train_clients(
