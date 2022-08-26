@@ -5,7 +5,11 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import pytest
+import torch
+
 from flsim.common.pytest_helper import (
+    assertAlmostEqual,
     assertEqual,
     assertFalse,
     assertNotEqual,
@@ -14,6 +18,8 @@ from flsim.common.pytest_helper import (
 )
 from flsim.privacy.common import PrivacySetting
 from flsim.privacy.privacy_engine import (
+    CummuNoiseEffTorch,
+    CummuNoiseTorch,
     GaussianPrivacyEngine,
     PrivacyEngineNotAttachedException,
 )
@@ -191,3 +197,29 @@ class TestGaussianPrivacyEngine:
         except PrivacyEngineNotAttachedException:
             raised_exception = True
         assertFalse(raised_exception)
+
+
+class TestTreeNoise:
+    @pytest.mark.parametrize(
+        "total_steps, expected_variance, noise_std, efficient",
+        [
+            (5, 8.0, 2.0, False),
+            (6, 0.5, 0.5, False),
+            (7, 3.0, 1.0, False),
+            (8, 1.0, 1.0, False),
+            (3, 1.0 + 2.0 / 3.0, 1.0, True),
+            (4, 4.0 / 7.0, 1.0, True),
+        ],
+    )
+    def test_tree_noise_match_expected_variance(
+        self, total_steps, expected_variance, noise_std, efficient
+    ):
+        tree = (
+            CummuNoiseEffTorch(std=noise_std, device="cpu", shapes=[(10000,)], seed=0)
+            if efficient
+            else CummuNoiseTorch(std=noise_std, device="cpu", shapes=[(10000,)], seed=0)
+        )
+        noise = None
+        for _ in range(total_steps):
+            noise = tree()
+        assertAlmostEqual(torch.stack(noise).var(), expected_variance, delta=0.5)
