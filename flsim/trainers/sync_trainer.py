@@ -510,6 +510,9 @@ class SyncTrainer(FLTrainer):
             timeline,
             metrics_reporter,
         )
+
+        self._post_train_one_round(timeline)
+
         self.logger.info(f"Aggregate round reporting took {time() - t} s.")
 
     def _post_train_one_round(self, timeline: Timeline):
