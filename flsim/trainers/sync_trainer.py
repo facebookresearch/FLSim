@@ -233,7 +233,10 @@ class SyncTrainer(FLTrainer):
                 #### Initial setup ####
                 # Initialize point of time for logging
                 timeline = Timeline(
-                    epoch=epoch, round=round, rounds_per_epoch=num_rounds_in_epoch
+                    epoch=epoch,
+                    round=round,
+                    rounds_per_epoch=num_rounds_in_epoch,
+                    total_epochs=self.cfg.epochs,
                 )
 
                 # Select clients for training this round

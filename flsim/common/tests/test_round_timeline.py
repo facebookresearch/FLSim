@@ -5,6 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import pytest
 from flsim.common.pytest_helper import (
     assertAlmostEqual,
     assertEqual,
@@ -143,3 +144,37 @@ class TestTimeline:
                 tl = Timeline(epoch=e, round=r, rounds_per_epoch=10)
                 sum += tl.tick(0.9)
         assertEqual(sum, 111)
+
+    def test_progress_fraction(self) -> None:
+        # Test first round
+        tl = Timeline(epoch=1, round=1, rounds_per_epoch=1, total_epochs=10)
+        assertTrue(
+            tl.progress_fraction() == 0.1,
+            f"Expected progress fraction to be 0.1, but got {tl.progress_fraction()}",
+        )
+
+        # Test intermediate round
+        tl = Timeline(epoch=6, round=5, rounds_per_epoch=10, total_epochs=10)
+        assertTrue(
+            tl.progress_fraction() == 0.55,
+            f"Expected progress fraction to be 0.55, but got {tl.progress_fraction()}",
+        )
+
+        # Test final round
+        tl = Timeline(epoch=5, round=5, rounds_per_epoch=5, total_epochs=5)
+        assertTrue(
+            tl.progress_fraction() == 1.0,
+            f"Expected progress fraction to be 1.0, but got {tl.progress_fraction()}",
+        )
+
+        # Test fractional total epoch
+        tl = Timeline(epoch=1, round=5, rounds_per_epoch=100, total_epochs=0.5)
+        assertTrue(
+            tl.progress_fraction() == 0.1,
+            f"Expected progress fraction to be 0.1, but got {tl.progress_fraction()}",
+        )
+
+        # Test calling `progress_fraction` without specifying `total_epochs`
+        tl = Timeline(epoch=1, round=5, rounds_per_epoch=100)
+        with pytest.raises(Exception):
+            tl.progress_fraction()
