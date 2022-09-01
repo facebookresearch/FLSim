@@ -18,7 +18,7 @@ from flsim.interfaces.model import IFLModel
 from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.fl.common import FLModelParamUtils
 from omegaconf import MISSING
-from torch.optim.lr_scheduler import MultiStepLR
+from torch.optim.lr_scheduler import MultiStepLR, StepLR
 from torch.optim.optimizer import Optimizer
 
 
@@ -291,6 +291,47 @@ class MultiStepLRScheduler(OptimizerScheduler):
         self._scheduler.step(global_round_num)
 
 
+class StepLRScheduler(OptimizerScheduler):
+    """
+    Decays the learning rate of each parameter group by gamma every step_size rounds.
+    Notice that such decay can happen simultaneously with other changes to the learning rate from outside this scheduler.
+    """
+
+    def __init__(
+        self,
+        *,
+        optimizer: Optimizer,
+        **kwargs,
+    ):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=StepLRSchedulerConfig,
+            **kwargs,
+        )
+
+        super().__init__(optimizer=optimizer, **kwargs)
+        self._scheduler = StepLR(
+            optimizer=optimizer,
+            # pyre-ignore[16]
+            step_size=self.cfg.step_size,
+            # pyre-ignore[16]
+            gamma=self.cfg.gamma,
+            # pyre-ignore[16]
+            verbose=self.cfg.verbose,
+        )
+
+    def step(
+        self,
+        batch_metric: Optional[IFLBatchMetrics] = None,
+        model: Optional[IFLModel] = None,
+        data: Optional[Any] = None,
+        epoch: Optional[int] = None,
+        global_round_num: Optional[int] = 0,
+    ):
+        self._scheduler.step(global_round_num)
+
+
 @dataclass
 class OptimizerSchedulerConfig:
     _target_: str = MISSING
@@ -330,3 +371,10 @@ class MultiStepLRSchedulerConfig(OptimizerSchedulerConfig):
     _target_: str = fullclassname(MultiStepLRScheduler)
     gamma: float = 0.1
     milestones: List[int] = field(default_factory=list)
+
+
+@dataclass
+class StepLRSchedulerConfig(OptimizerSchedulerConfig):
+    _target_: str = fullclassname(StepLRScheduler)
+    gamma: float = 0.1
+    step_size: int = MISSING

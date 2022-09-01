@@ -12,6 +12,8 @@ from flsim.optimizers.optimizer_scheduler import (
     ArmijoLineSearchSchedulerConfig,
     MultiStepLRScheduler,
     MultiStepLRSchedulerConfig,
+    StepLRScheduler,
+    StepLRSchedulerConfig,
 )
 from flsim.utils.test_utils import MockQuadratic1DFL, Quadratic1D
 from omegaconf import OmegaConf
@@ -96,5 +98,25 @@ class TestMultiStepLRScheduler:
                 1.0,
                 1.0,
             ],
+            lrs,
+        )
+
+
+class TestStepLRScheduler:
+    def test_step_lr_correct(self):
+        quadratic1D = MockQuadratic1DFL(Quadratic1D())
+        lr = 10.0
+        optimizer = torch.optim.SGD(
+            quadratic1D.fl_get_module().parameters(), lr=lr, momentum=0.0
+        )
+        config = StepLRSchedulerConfig(base_lr=lr, gamma=0.1, step_size=2)
+        scheduler = StepLRScheduler(optimizer=optimizer, **OmegaConf.structured(config))
+        lrs = []
+        for t in range(6):
+            scheduler.step(global_round_num=t)
+            lrs.append(scheduler.get_lr()[0])
+
+        assertEqual(
+            [10.0, 10.0, 1.0, 1.0, 0.10000000000000002, 0.10000000000000002],
             lrs,
         )

@@ -5,6 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from flsim.optimizers.optimizer_scheduler import StepLRSchedulerConfig
 from hydra.core.config_store import ConfigStore  #  @manual
 
 from .async_aggregators import (
@@ -88,6 +89,11 @@ ConfigStore.instance().store(
     group="lr_scheduler",
 )
 
+ConfigStore.instance().store(
+    name="base_step_lr_scheduler",
+    node=StepLRSchedulerConfig,
+    group="lr_scheduler",
+)
 
 ConfigStore.instance().store(
     name="base_fed_avg_sync_aggregator",
