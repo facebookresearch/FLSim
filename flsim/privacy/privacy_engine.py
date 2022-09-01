@@ -17,7 +17,7 @@ from typing import Any, Optional
 
 import torch
 from flsim.common.logger import Logger
-from flsim.privacy.common import PrivacyBudget, PrivacySetting
+from flsim.privacy.common import ClippingType, PrivacyBudget, PrivacySetting
 from opacus.accountants.analysis import rdp as privacy_analysis
 from torch import nn
 
@@ -83,6 +83,17 @@ class GaussianPrivacyEngine(IPrivacyEngine):
 
         super().__init__(privacy_setting, users_per_round, num_total_users)
         self.noise_multiplier = privacy_setting.noise_multiplier
+        if privacy_setting.clipping.clipping_type == ClippingType.ADAPTIVE:
+            assert (
+                privacy_setting.clipping.unclipped_num_std > 0
+            ), "Adaptive clipping noise term must be greater than 0"
+            # theorem 1 in https://arxiv.org/abs/1905.03871
+            self.noise_multiplier = pow(
+                pow(self.noise_multiplier + 1e-10, -2)
+                - pow(2.0 * privacy_setting.clipping.unclipped_num_std, -2),
+                -0.5,
+            )
+
         self.target_delta = privacy_setting.target_delta
         self.alphas = privacy_setting.alphas
         self.user_sampling_rate = float(users_per_round) / num_total_users
@@ -133,7 +144,8 @@ class GaussianPrivacyEngine(IPrivacyEngine):
                 f"(device={self.device}, random number generator exists: {random_gen})."
                 "Call attach() function first before calling."
             )
-        if self.noise_multiplier > 0 and sensitivity > 0:
+
+        if self.noise_multiplier > 0.0 and sensitivity > 0.0:
             return torch.normal(
                 0,
                 self.noise_multiplier * sensitivity,

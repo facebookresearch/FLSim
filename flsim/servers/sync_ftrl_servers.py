@@ -6,6 +6,10 @@
 
 from __future__ import annotations
 
+import logging
+
+from copy import deepcopy
+
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -14,6 +18,7 @@ from flsim.active_user_selectors.simple_user_selector import (
 )
 from flsim.channels.base_channel import IdentityChannel, IFLChannel
 from flsim.channels.message import Message
+from flsim.common.logger import Logger
 from flsim.data.data_provider import IFLDataProvider
 from flsim.interfaces.metrics_reporter import Metric
 from flsim.interfaces.model import IFLModel
@@ -21,9 +26,13 @@ from flsim.optimizers.server_optimizers import (
     ServerFTRLOptimizerConfig,
     ServerOptimizerConfig,
 )
-from flsim.privacy.common import PrivacySetting, PrivateTrainingMetricsUtils
+from flsim.privacy.common import (
+    ClippingType,
+    PrivacySetting,
+    PrivateTrainingMetricsUtils,
+)
 from flsim.privacy.privacy_engine import CummuNoiseEffTorch, CummuNoiseTorch
-from flsim.privacy.user_update_clip import UserUpdateClipper
+from flsim.privacy.user_update_clip import IUserClipper
 from flsim.servers.aggregator import AggregationType, Aggregator
 from flsim.servers.sync_servers import SyncServer, SyncServerConfig
 from flsim.utils.config_utils import fullclassname, init_self_cfg
@@ -34,6 +43,9 @@ from omegaconf import OmegaConf
 
 
 class SyncFTRLServer(SyncServer):
+
+    logger: logging.Logger = Logger.get_logger(__name__)
+
     def __init__(
         self,
         *,
@@ -69,12 +81,21 @@ class SyncFTRLServer(SyncServer):
         self._active_user_selector = instantiate(self.cfg.active_user_selector)
         self._channel: IFLChannel = channel or IdentityChannel()
         self._restart_rounds = self.cfg.restart_rounds
-        self._clipping_value = self.cfg.privacy_setting.clipping_value
+
         self._noise_std = self.cfg.privacy_setting.noise_multiplier
-        self._user_update_clipper = UserUpdateClipper()
+        self._clipping_value = self.cfg.privacy_setting.clipping.clipping_value
+
+        self._user_update_clipper = IUserClipper.create_clipper(
+            self.cfg.privacy_setting
+        )
         self._shapes = [p.shape for p in global_model.fl_get_module().parameters()]
         self._device = next(global_model.fl_get_module().parameters()).device
         self._privacy_engine = None
+        self._per_user_norms: List[float] = []
+        if self.cfg.privacy_setting.clipping.clipping_type == ClippingType.ADAPTIVE:
+            self.logger.warn(
+                "Privacy accounting for adaptive clipping with DP-FTRL is unclear. Please note that the epsilon will be slightly higher with adaptive clipping."
+            )
 
     def _create_tree(self, users_per_round):
         std = (self._noise_std * self._clipping_value) / users_per_round
@@ -127,6 +148,7 @@ class SyncFTRLServer(SyncServer):
     def init_round(self):
         self._aggregator.zero_weights()
         self._optimizer.zero_grad()
+        self._user_update_clipper.reset_clipper_stats()
 
         if self.should_restart():
             last_noise = None
@@ -144,9 +166,7 @@ class SyncFTRLServer(SyncServer):
             delta=message.model.fl_get_module(), weight=message.weight
         )
 
-        self._user_update_clipper.clip(
-            message.model.fl_get_module(), max_norm=self._clipping_value
-        )
+        self._user_update_clipper.clip(message.model.fl_get_module())
         self._aggregator.add_update(
             delta=message.model.fl_get_module(), weight=message.weight
         )
@@ -158,14 +178,17 @@ class SyncFTRLServer(SyncServer):
             model=self._global_model.fl_get_module(),
             reference_gradient=aggregated_model,
         )
-        signal_to_noise = PrivateTrainingMetricsUtils.signal_to_noise_ratio(
-            aggregated_model, noise
-        )
-
+        grad = deepcopy(aggregated_model)
         self._optimizer.step(noise)
+        self._user_update_clipper.update_clipper_stats()
+
         return [
             Metric("Noise", sum([p.sum() for p in noise])),
-            Metric("Signal_to_noise", signal_to_noise),
+            Metric(
+                "Signal_to_noise",
+                PrivateTrainingMetricsUtils.signal_to_noise_ratio(grad, noise),
+            ),
+            Metric("Num_Unclipped", self._user_update_clipper.unclipped_num),
         ]
 
     def should_restart(self):

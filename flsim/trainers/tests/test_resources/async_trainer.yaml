@@ -17,7 +17,8 @@ trainer:
         privacy_setting:
             alphas: [2, 3, 4, 6, 7, 8, 9, 10, 20, 30 , 40 , 60]
             noise_multiplier: 1e-6
-            clipping_value: 10.0
+            clipping:
+              clipping_value: 10.0
             target_delta: 1e-5
     num_users_per_round: 10
     total_number_of_users: 10000

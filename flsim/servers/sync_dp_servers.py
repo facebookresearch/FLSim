@@ -21,7 +21,7 @@ from flsim.optimizers.server_optimizers import FedAvgOptimizerConfig
 from flsim.privacy.common import PrivacyBudget, PrivacySetting
 from flsim.privacy.privacy_engine import IPrivacyEngine
 from flsim.privacy.privacy_engine_factory import NoiseType, PrivacyEngineFactory
-from flsim.privacy.user_update_clip import UserUpdateClipper
+from flsim.privacy.user_update_clip import IUserClipper
 from flsim.servers.aggregator import AggregationType, Aggregator
 from flsim.servers.sync_servers import ISyncServer, SyncServerConfig
 from flsim.utils.config_utils import fullclassname, init_self_cfg
@@ -61,13 +61,16 @@ class SyncDPSGDServer(ISyncServer):
         ), "DP training must be done with simple averaging and uniform weights."
 
         self.privacy_budget = PrivacyBudget()
-        self._clipping_value = self.cfg.privacy_setting.clipping_value
         self._optimizer = instantiate(
             config=self.cfg.server_optimizer,
             model=global_model.fl_get_module(),
         )
         self._global_model: IFLModel = global_model
-        self._user_update_clipper: UserUpdateClipper = UserUpdateClipper()
+        self._clipping_value = self.cfg.privacy_setting.clipping.clipping_value
+
+        self._user_update_clipper = IUserClipper.create_clipper(
+            self.cfg.privacy_setting
+        )
         self._aggregator: Aggregator = Aggregator(
             module=global_model.fl_get_module(),
             aggregation_type=self.cfg.aggregation_type,
@@ -116,6 +119,7 @@ class SyncDPSGDServer(ISyncServer):
         self._aggregator.zero_weights()
         self._optimizer.zero_grad()
         self._privacy_engine.attach(self._global_model.fl_get_module())
+        self._user_update_clipper.reset_clipper_stats()
 
     def receive_update_from_client(self, message: Message):
         message = self._channel.client_to_server(message)
@@ -124,9 +128,8 @@ class SyncDPSGDServer(ISyncServer):
             delta=message.model.fl_get_module(), weight=message.weight
         )
 
-        self._user_update_clipper.clip(
-            message.model.fl_get_module(), max_norm=self._clipping_value
-        )
+        self._user_update_clipper.clip(message.model.fl_get_module())
+
         self._aggregator.add_update(
             delta=message.model.fl_get_module(), weight=message.weight
         )
@@ -139,7 +142,8 @@ class SyncDPSGDServer(ISyncServer):
         if FLDistributedUtils.is_master_worker():
             self._privacy_engine.add_noise(
                 aggregated_model,
-                self._clipping_value / self._aggregator.sum_weights.item(),
+                self._user_update_clipper.max_norm
+                / self._aggregator.sum_weights.item(),
             )
 
         FLDistributedUtils.synchronize_model_across_workers(
@@ -154,6 +158,7 @@ class SyncDPSGDServer(ISyncServer):
         )
         self._optimizer.step()
         self.privacy_budget = self._privacy_engine.get_privacy_spent()
+        self._user_update_clipper.update_clipper_stats()
 
 
 @dataclass

@@ -55,10 +55,12 @@ class DPRoundReducer(RoundReducer):
         self.privacy_on = (
             # pyre-ignore[16]
             self.cfg.privacy_setting.noise_multiplier >= 0
-            and self.cfg.privacy_setting.clipping_value < float("inf")
+            and self.cfg.privacy_setting.clipping.clipping_value < float("inf")
         )
-        self.clipping_value = self.cfg.privacy_setting.clipping_value
-        self.user_update_clipper = UserUpdateClipper(self.dtype)
+        self.clipping_value = self.cfg.privacy_setting.clipping.clipping_value
+        self.user_update_clipper = UserUpdateClipper(
+            max_norm=self.clipping_value, precision=self.dtype
+        )
         if self.privacy_on:
             self.privacy_engine: IPrivacyEngine = PrivacyEngineFactory.create(
                 self.cfg.privacy_setting,
@@ -82,7 +84,7 @@ class DPRoundReducer(RoundReducer):
         -----
         """
         if self.privacy_on:
-            self.user_update_clipper.clip(delta_module, self.clipping_value)
+            self.user_update_clipper.clip(delta_module)
         super().update_reduced_module(delta_module, weight)
 
     def reduce(self) -> Tuple[nn.Module, float]:

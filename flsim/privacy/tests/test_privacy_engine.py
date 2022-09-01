@@ -6,8 +6,8 @@
 # LICENSE file in the root directory of this source tree.
 
 import pytest
-import torch
 
+import torch
 from flsim.common.pytest_helper import (
     assertAlmostEqual,
     assertEqual,
@@ -16,7 +16,7 @@ from flsim.common.pytest_helper import (
     assertRaises,
     assertTrue,
 )
-from flsim.privacy.common import PrivacySetting
+from flsim.privacy.common import ClippingSetting, ClippingType, PrivacySetting
 from flsim.privacy.privacy_engine import (
     CummuNoiseEffTorch,
     CummuNoiseTorch,
@@ -223,3 +223,37 @@ class TestTreeNoise:
         for _ in range(total_steps):
             noise = tree()
         assertAlmostEqual(torch.stack(noise).var(), expected_variance, delta=0.5)
+
+    def test_privacy_noise_with_adaptive_clipping(self):
+        """
+        Test that new gaussian noise will follow the formula in Theorem 1
+        of https://arxiv.org/pdf/1905.03871.pdf where
+        noise_multiplier_delta = (noise_multiplier^(-2) - (2*unclipped_num_std)^(-2))^(-1/2)
+        """
+        privacy_setting = PrivacySetting(
+            noise_multiplier=1.0,
+            noise_seed=0,
+            clipping=ClippingSetting(
+                clipping_type=ClippingType.ADAPTIVE,
+                clipping_value=1.0,
+                unclipped_num_std=5,
+            ),
+        )
+        privacy_engine = GaussianPrivacyEngine(
+            privacy_setting=privacy_setting,
+            users_per_round=10,
+            num_total_users=100,
+        )
+        model = utils.Linear(1000, 1000)
+        model.fill_all(0)
+        privacy_engine.attach(model)
+
+        model_diff = utils.Linear(1000, 1000)
+        model_diff.fill_all(0)
+        privacy_engine.add_noise(model_diff, sensitivity=1.0)
+        # 1.00503782 =(noise_multiplier^(-2) - (2*unclipped_num_std)^(-2))^(-1/2)
+        assertAlmostEqual(privacy_engine.noise_multiplier, 1.00503782, delta=1e-3)
+        noise_added_std = (
+            torch.cat([p.flatten() for p in model_diff.parameters()]).std().item()
+        )
+        assertAlmostEqual(noise_added_std, 1.00503782, delta=1e-3)

@@ -19,7 +19,7 @@ from flsim.channels.base_channel import IdentityChannel
 from flsim.channels.half_precision_channel import HalfPrecisionChannel
 from flsim.channels.message import Message
 from flsim.common.pytest_helper import assertEmpty, assertEqual
-from flsim.privacy.common import PrivacySetting
+from flsim.privacy.common import ClippingSetting, PrivacySetting
 from flsim.privacy.privacy_engine import GaussianPrivacyEngine
 from flsim.servers.aggregator import AggregationType
 from flsim.servers.sync_dp_servers import SyncDPSGDServerConfig
@@ -142,7 +142,7 @@ class TestSyncDPSGDServer:
                 aggregation_type=AggregationType.AVERAGE,
                 server_optimizer=FedAvgOptimizerConfig(),
                 privacy_setting=PrivacySetting(
-                    clipping_value=clipping_value,
+                    clipping=ClippingSetting(clipping_value=clipping_value),
                     noise_multiplier=noise_multiplier,
                     noise_seed=0,
                 ),

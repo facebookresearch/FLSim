@@ -180,9 +180,9 @@ class Linear(nn.Module):
     A dummy network containing a single linear layer.
     """
 
-    def __init__(self):
+    def __init__(self, in_size=2, out_size=1):
         super().__init__()
-        self.fc1 = nn.Linear(2, 1)
+        self.fc1 = nn.Linear(in_size, out_size)
 
     def forward(self, x):
         x = self.fc1(x)

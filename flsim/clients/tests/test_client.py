@@ -44,7 +44,7 @@ from flsim.optimizers.optimizer_scheduler import (
     ConstantLRScheduler,
     ConstantLRSchedulerConfig,
 )
-from flsim.privacy.common import PrivacySetting
+from flsim.privacy.common import ClippingSetting, PrivacySetting
 from flsim.utils import test_utils as utils
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.timing.training_duration_distribution import (
@@ -106,7 +106,8 @@ class ClientTestBase:
         store_models_and_optimizers: bool = False,
     ):
         privacy_setting = PrivacySetting(
-            noise_multiplier=noise_multiplier, clipping_value=clipping_value
+            noise_multiplier=noise_multiplier,
+            clipping=ClippingSetting(clipping_value=clipping_value),
         )
         config = DPClientConfig(
             store_models_and_optimizers=store_models_and_optimizers,

@@ -62,7 +62,7 @@ class DPClient(Client):
         self.privacy_on = (
             # pyre-fixme[16]: `DPClient` has no attribute `cfg`.
             self.cfg.privacy_setting.noise_multiplier >= 0
-            and self.cfg.privacy_setting.clipping_value < float("inf")
+            and self.cfg.privacy_setting.clipping.clipping_value < float("inf")
         )
         if self.privacy_on:
             self.accountant = RDPAccountant()
@@ -105,7 +105,7 @@ class DPClient(Client):
             optimizer = DPOptimizer(
                 optimizer=optimizer,
                 noise_multiplier=self.cfg.privacy_setting.noise_multiplier,
-                max_grad_norm=self.cfg.privacy_setting.clipping_value,
+                max_grad_norm=self.cfg.privacy_setting.clipping.clipping_value,
                 expected_batch_size=batch_size,
                 generator=generator,
             )

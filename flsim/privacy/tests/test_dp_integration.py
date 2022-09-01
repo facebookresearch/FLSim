@@ -18,7 +18,7 @@ from flsim.clients.dp_client import DPClientConfig
 from flsim.common.pytest_helper import assertEmpty, assertEqual, assertNotEmpty
 from flsim.optimizers.async_aggregators import FedAvgWithLRFedBuffAggregatorConfig
 from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
-from flsim.privacy.common import PrivacySetting
+from flsim.privacy.common import ClippingSetting, ClippingType, PrivacySetting
 from flsim.reducers.base_round_reducer import ReductionType
 from flsim.reducers.weighted_dp_round_reducer import WeightedDPRoundReducerConfig
 from flsim.servers.aggregator import AggregationType
@@ -59,7 +59,8 @@ class TestDifferentialPrivacyIntegration:
             min_weight=min_weight,
             max_weight=max_weight,
             privacy_setting=PrivacySetting(
-                noise_multiplier=noise, clipping_value=clipping
+                noise_multiplier=noise,
+                clipping=ClippingSetting(clipping_value=clipping),
             ),
         )
 
@@ -195,7 +196,9 @@ class TestDifferentialPrivacyIntegration:
                         privacy_setting=PrivacySetting(
                             alphas=dp_config["alphas"],
                             noise_multiplier=dp_config["sample_dp_noise_multiplier"],
-                            clipping_value=dp_config["sample_dp_clipping_value"],
+                            clipping=ClippingSetting(
+                                clipping_value=dp_config["sample_dp_clipping_value"]
+                            ),
                             target_delta=dp_config["delta"],
                             noise_seed=noise_func_seed,
                         ),
@@ -210,7 +213,13 @@ class TestDifferentialPrivacyIntegration:
                         privacy_setting=PrivacySetting(
                             alphas=dp_config["alphas"],
                             noise_multiplier=dp_config["user_dp_noise_multiplier"],
-                            clipping_value=dp_config["user_dp_clipping_value"],
+                            clipping=ClippingSetting(
+                                clipping_value=dp_config["user_dp_clipping_value"],
+                                clipping_type=dp_config.get(
+                                    "clipping_type", ClippingType.FLAT
+                                ),
+                                unclipped_num_std=dp_config.get("unclipped_num_std", 1),
+                            ),
                             target_delta=dp_config["delta"],
                             noise_seed=noise_func_seed,
                         ),
@@ -759,3 +768,48 @@ class TestDifferentialPrivacyIntegration:
             buffer_size=buffer_size,
         )
         assertNotEmpty(is_different_msg, msg=is_different_msg)
+
+    def test_dp_sgd_with_adaptive_clipping(self):
+        dp_config_with_no_noise = {
+            "alphas": [10, 100],
+            "sample_dp_noise_multiplier": 0,
+            "sample_dp_clipping_value": float("inf"),
+            "user_dp_noise_multiplier": 0,
+            "user_dp_clipping_value": 0.001,
+            "clipping_type": ClippingType.ADAPTIVE,
+            "unclipped_num_std": 5,
+            "delta": 0.00001,
+        }
+        torch.manual_seed(1)
+        dp_model_no_noise = self._train_fl_model(
+            lr=1.0,
+            momentum=0,
+            one_user=False,
+            dp_config=dp_config_with_no_noise,
+            noise_func_seed=1234,
+        )
+        dp_config_with_noise = {
+            "alphas": [10, 100],
+            "sample_dp_noise_multiplier": 0,
+            "sample_dp_clipping_value": float("inf"),
+            "user_dp_noise_multiplier": 1,
+            "user_dp_clipping_value": 0.001,
+            "clipping_type": ClippingType.ADAPTIVE,
+            "unclipped_num_std": 5,
+            "delta": 0.00001,
+        }
+        dp_model_with_noise = self._train_fl_model(
+            lr=1.0,
+            momentum=0,
+            one_user=False,
+            dp_config=dp_config_with_noise,
+            noise_func_seed=1234,
+        )
+        is_different = verify_models_equivalent_after_training(
+            dp_model_no_noise,
+            dp_model_with_noise,
+            None,
+            rel_epsilon=1e-6,
+            abs_epsilon=1e-6,
+        )
+        assertNotEmpty(is_different, msg=is_different)

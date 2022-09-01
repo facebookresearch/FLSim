@@ -8,7 +8,9 @@
         "reduction_type": "WEIGHTED_SUM",
         "privacy_setting": {
           "noise_multiplier": 1e-6,
-          "clipping_value": 10,
+          "clipping": {
+            "clipping_value": 1.0
+          },
           "target_delta": 1e-5
         },
         "max_weight": 1.0,

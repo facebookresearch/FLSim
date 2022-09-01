@@ -7,10 +7,49 @@
 
 
 from dataclasses import dataclass, field
+from enum import auto, Enum
 from typing import List, NamedTuple, Optional
 
 import numpy as np
 import torch
+
+
+class ClippingType(Enum):
+    FLAT = auto()
+    ADAPTIVE = auto()
+
+
+__EPS__ = 1e-10
+
+
+def calc_clip_factor(clipping_value: float, norm: float) -> float:
+    """
+    Calculates the clip factor that will be used to clip the user updates
+    """
+    if clipping_value < 0 or norm < 0:
+        raise ValueError("Error: max_norm and per_user_norm must be both positive.")
+    clip_factor = clipping_value / (norm + __EPS__)
+    clip_factor = min(clip_factor, 1.0)
+    return clip_factor
+
+
+def calc_norm(params) -> float:
+    """
+    Calculates the l-2 norm of the user updates
+    """
+    squarred_sum = sum(p.pow(2).sum().item() for p in params)
+    return squarred_sum**0.5
+
+
+@dataclass
+class ClippingSetting:
+    clipping_type: ClippingType = ClippingType.FLAT
+    clipping_value: float = float("inf")
+    unclipped_quantile: float = 0.5
+    clipbound_learning_rate: float = 0.1
+    max_clipbound: float = 10
+    min_clipbound: float = 1e-4
+    unclipped_num_std: float = 1
 
 
 @dataclass
@@ -23,7 +62,7 @@ class PrivacySetting:
         default_factory=lambda: np.arange(1.1, 100, 0.1).tolist()
     )  # Renyi privacy alpha range
     noise_multiplier: float = 0.0  # Normalized Noise Variance
-    clipping_value: float = float("inf")
+    clipping: ClippingSetting = ClippingSetting()
     target_delta: float = 1e-5  # Maximum delta for (epsilon, delta) privacy
     noise_seed: Optional[int] = None  # [debug] Seed of the noise generation function
     secure_rng: bool = False

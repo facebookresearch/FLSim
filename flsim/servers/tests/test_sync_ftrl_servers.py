@@ -13,7 +13,7 @@ import pytest
 from flsim.channels.message import Message
 from flsim.common.pytest_helper import assertEmpty, assertEqual
 from flsim.optimizers.server_optimizers import ServerFTRLOptimizerConfig
-from flsim.privacy.common import PrivacySetting
+from flsim.privacy.common import ClippingSetting, PrivacySetting
 from flsim.privacy.privacy_engine import CummuNoiseEffTorch, CummuNoiseTorch
 from flsim.servers.sync_ftrl_servers import SyncFTRLServerConfig
 from flsim.utils.fl.common import FLModelParamUtils
@@ -77,7 +77,7 @@ class TestSyncServer:
                 server_optimizer=ServerFTRLOptimizerConfig(lr=1.0),
                 privacy_setting=PrivacySetting(
                     noise_multiplier=noise_multiplier,
-                    clipping_value=clip_value,
+                    clipping=ClippingSetting(clipping_value=clip_value),
                     noise_seed=0,
                 ),
                 tree_completion=tree_completion,

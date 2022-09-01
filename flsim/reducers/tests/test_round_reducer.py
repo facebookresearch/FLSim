@@ -25,7 +25,7 @@ from flsim.common.pytest_helper import (
     assertNotEqual,
     assertTrue,
 )
-from flsim.privacy.common import PrivacySetting
+from flsim.privacy.common import ClippingSetting, PrivacySetting
 from flsim.reducers.base_round_reducer import (
     ReductionType,
     RoundReducer,
@@ -66,7 +66,8 @@ def get_dp_round_reducer(
 ):
     ref_model = ref_model or utils.SampleNet(utils.TwoFC())
     privacy_setting = PrivacySetting(
-        noise_multiplier=noise_multiplier, clipping_value=clipping_value
+        noise_multiplier=noise_multiplier,
+        clipping=ClippingSetting(clipping_value=clipping_value),
     )
     dp_rr = DPRoundReducer(
         **OmegaConf.structured(
@@ -541,7 +542,8 @@ class TestWeightedDPRoundReducer(TestRoundReducerBase):
     ):
         ref_model = ref_model or utils.SampleNet(utils.TwoFC())
         privacy_setting = PrivacySetting(
-            noise_multiplier=noise_multiplier, clipping_value=clipping_value
+            noise_multiplier=noise_multiplier,
+            clipping=ClippingSetting(clipping_value=clipping_value),
         )
         reducer = WeightedDPRoundReducer(
             **OmegaConf.structured(
