@@ -272,11 +272,14 @@ class MultiStepLRScheduler(OptimizerScheduler):
         super().__init__(optimizer=optimizer, **kwargs)
         self._scheduler = MultiStepLR(
             optimizer=optimizer,
+            # pyre-fixme[16]: `MultiStepLRScheduler` has no attribute `cfg`.
             milestones=self.cfg.milestones,
             gamma=self.cfg.gamma,
             verbose=self.cfg.verbose,
         )
 
+    # pyre-fixme[14]: `step` overrides method defined in `OptimizerScheduler`
+    #  inconsistently.
     def step(
         self,
         batch_metric: Optional[IFLBatchMetrics] = None,

@@ -284,7 +284,6 @@ class SyncPQServer(SyncServer):
         for name, param in state_dict.items():
             if (
                 param.ndim > 1
-                # pyre-fixme[16]: `IFLChannel` has no attribute `cfg`.
                 and param.numel() >= self._channel.cfg.min_numel_to_quantize
             ):
                 pq = PQ(
@@ -336,7 +335,6 @@ class SyncSharedSparseServer(SyncServer):
         return self._global_mask_params
 
     def update_mask_params(self, aggregated_model: nn.Module, sparsity_method: str):
-        # pyre-ignore[16]
         self._global_mask_params = self._channel.compute_mask(
             aggregated_model.state_dict(), sparsity_method
         )
