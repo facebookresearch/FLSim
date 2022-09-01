@@ -12,7 +12,7 @@ import math
 import random
 from dataclasses import dataclass
 from time import time
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import torch
 from flsim.channels.message import Message
@@ -395,14 +395,14 @@ class SyncTrainer(FLTrainer):
     def _update_clients(
         self,
         clients: Iterable[Client],
-        server_state_message: Union[Message, List[Message]],
+        server_state_message: Message,
         metrics_reporter: Optional[IFLMetricsReporter] = None,
     ) -> None:
         """Update each client-side model from server message."""
         for client in clients:
             client_delta, weight = client.generate_local_update(
-                server_state_message,
-                metrics_reporter,
+                message=server_state_message,
+                metrics_reporter=metrics_reporter,
             )
             self.server.receive_update_from_client(Message(client_delta, weight))
 
@@ -462,7 +462,7 @@ class SyncTrainer(FLTrainer):
 
         # Receive message from server to clients, i.e. global model state
         server_state_message = self.server.broadcast_message_to_clients(
-            clients, timeline.global_round_num()
+            clients=clients, global_round_num=timeline.global_round_num()
         )
 
         # Hook before client updates
@@ -470,7 +470,11 @@ class SyncTrainer(FLTrainer):
 
         # Update client-side models from server-side model (in `server_state_message`)
         t = time()
-        self._update_clients(clients, server_state_message, metrics_reporter)
+        self._update_clients(
+            clients=clients,
+            server_state_message=server_state_message,
+            metrics_reporter=metrics_reporter,
+        )
         self.logger.info(f"Collecting round's clients took {time() - t} s.")
 
         # After all clients finish their updates, update the global model
