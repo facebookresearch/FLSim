@@ -18,11 +18,16 @@ from flsim.clients.dp_client import DPClientConfig
 from flsim.common.pytest_helper import assertEmpty, assertEqual, assertNotEmpty
 from flsim.optimizers.async_aggregators import FedAvgWithLRFedBuffAggregatorConfig
 from flsim.optimizers.local_optimizers import LocalOptimizerSGDConfig
+from flsim.optimizers.server_optimizers import (
+    FedAvgWithLROptimizerConfig,
+    ServerFTRLOptimizerConfig,
+)
 from flsim.privacy.common import ClippingSetting, ClippingType, PrivacySetting
 from flsim.reducers.base_round_reducer import ReductionType
 from flsim.reducers.weighted_dp_round_reducer import WeightedDPRoundReducerConfig
 from flsim.servers.aggregator import AggregationType
 from flsim.servers.sync_dp_servers import SyncDPSGDServerConfig
+from flsim.servers.sync_ftrl_servers import SyncFTRLServerConfig
 from flsim.servers.sync_servers import SyncServerConfig
 from flsim.trainers.sync_trainer import SyncTrainer, SyncTrainerConfig
 from flsim.utils.async_trainer.async_staleness_weights import (
@@ -148,6 +153,8 @@ class TestDifferentialPrivacyIntegration:
         lr: float,
         momentum: float,
         one_user: bool,
+        server_lr: float = 1.0,
+        server_momentum: float = 0,
         dp_config: Optional[Dict[str, Any]] = None,
         noise_func_seed: Optional[int] = None,
         data_size: int = 26,
@@ -158,9 +165,7 @@ class TestDifferentialPrivacyIntegration:
         """
         # create dummy FL model on alphabet
         global_fl_model = DummyAlphabetFLModel()
-        data_provider, _ = kwargs.pop(
-            "data_provider", self._load_data(one_user, data_size)
-        )
+        data_provider, _ = self._load_data(one_user, data_size)
         world_size = 1
 
         metrics_reporter = FakeMetricReporter()
@@ -175,7 +180,73 @@ class TestDifferentialPrivacyIntegration:
         train_metrics_reported_per_epoch = kwargs.pop(
             "train_metrics_reported_per_epoch", 1
         )
+
         aggregation_type = kwargs.pop("aggregation_type", AggregationType.AVERAGE)
+        if dp_config is not None:
+            if dp_config.get("dp_type", None) == "DP-FTRL":
+                server_config = SyncFTRLServerConfig(
+                    active_user_selector=SequentialActiveUserSelectorConfig(),
+                    server_optimizer=ServerFTRLOptimizerConfig(
+                        lr=server_lr, momentum=server_momentum
+                    ),
+                    privacy_setting=PrivacySetting(
+                        alphas=dp_config["alphas"],
+                        noise_multiplier=dp_config["user_dp_noise_multiplier"],
+                        clipping=ClippingSetting(
+                            clipping_value=dp_config["user_dp_clipping_value"],
+                            clipping_type=dp_config.get(
+                                "clipping_type", ClippingType.FLAT
+                            ),
+                            unclipped_num_std=dp_config.get("unclipped_num_std", 1),
+                        ),
+                        target_delta=dp_config["delta"],
+                        noise_seed=noise_func_seed,
+                    ),
+                )
+            else:
+                server_config = SyncDPSGDServerConfig(
+                    active_user_selector=SequentialActiveUserSelectorConfig(),
+                    privacy_setting=PrivacySetting(
+                        alphas=dp_config["alphas"],
+                        noise_multiplier=dp_config["user_dp_noise_multiplier"],
+                        clipping=ClippingSetting(
+                            clipping_value=dp_config["user_dp_clipping_value"],
+                            clipping_type=dp_config.get(
+                                "clipping_type", ClippingType.FLAT
+                            ),
+                            unclipped_num_std=dp_config.get("unclipped_num_std", 1),
+                        ),
+                        target_delta=dp_config["delta"],
+                        noise_seed=noise_func_seed,
+                    ),
+                    aggregation_type=aggregation_type,
+                )
+        else:
+            server_config = SyncServerConfig(
+                server_optimizer=FedAvgWithLROptimizerConfig(
+                    lr=server_lr, momentum=server_momentum
+                )
+            )
+
+        if dp_config is not None:
+            client_config = DPClientConfig(
+                epochs=1,
+                optimizer=LocalOptimizerSGDConfig(lr=lr, momentum=momentum),
+                privacy_setting=PrivacySetting(
+                    alphas=dp_config["alphas"],
+                    noise_multiplier=dp_config["sample_dp_noise_multiplier"],
+                    clipping=ClippingSetting(
+                        clipping_value=dp_config["sample_dp_clipping_value"]
+                    ),
+                    target_delta=dp_config["delta"],
+                    noise_seed=noise_func_seed,
+                ),
+            )
+        else:
+            client_config = ClientConfig(
+                epochs=1,
+                optimizer=LocalOptimizerSGDConfig(lr=lr, momentum=momentum),
+            )
 
         sync_trainer = SyncTrainer(
             model=global_fl_model,
@@ -190,43 +261,8 @@ class TestDifferentialPrivacyIntegration:
                     eval_epoch_frequency=eval_epoch_frequency,
                     do_eval=True,
                     report_train_metrics_after_aggregation=True,
-                    client=DPClientConfig(
-                        epochs=1,
-                        optimizer=LocalOptimizerSGDConfig(lr=lr, momentum=momentum),
-                        privacy_setting=PrivacySetting(
-                            alphas=dp_config["alphas"],
-                            noise_multiplier=dp_config["sample_dp_noise_multiplier"],
-                            clipping=ClippingSetting(
-                                clipping_value=dp_config["sample_dp_clipping_value"]
-                            ),
-                            target_delta=dp_config["delta"],
-                            noise_seed=noise_func_seed,
-                        ),
-                    )
-                    if dp_config is not None
-                    else ClientConfig(
-                        epochs=1,
-                        optimizer=LocalOptimizerSGDConfig(lr=lr, momentum=momentum),
-                    ),
-                    server=SyncDPSGDServerConfig(
-                        active_user_selector=SequentialActiveUserSelectorConfig(),
-                        privacy_setting=PrivacySetting(
-                            alphas=dp_config["alphas"],
-                            noise_multiplier=dp_config["user_dp_noise_multiplier"],
-                            clipping=ClippingSetting(
-                                clipping_value=dp_config["user_dp_clipping_value"],
-                                clipping_type=dp_config.get(
-                                    "clipping_type", ClippingType.FLAT
-                                ),
-                                unclipped_num_std=dp_config.get("unclipped_num_std", 1),
-                            ),
-                            target_delta=dp_config["delta"],
-                            noise_seed=noise_func_seed,
-                        ),
-                        aggregation_type=aggregation_type,
-                    )
-                    if dp_config is not None
-                    else SyncServerConfig(),
+                    client=client_config,
+                    server=server_config,
                 )
             ),
         )
@@ -813,3 +849,141 @@ class TestDifferentialPrivacyIntegration:
             abs_epsilon=1e-6,
         )
         assertNotEmpty(is_different, msg=is_different)
+
+    def test_dp_ftrl_with_no_noise_same_as_fedavg(self):
+        dp_config = {
+            "dp_type": "DP-FTRL",
+            "alphas": [10],
+            "sample_dp_noise_multiplier": 0,
+            "sample_dp_clipping_value": float("inf"),
+            "user_dp_noise_multiplier": 0,
+            "user_dp_clipping_value": 10000.0,
+            "delta": 0.00001,
+        }
+        torch.manual_seed(1)
+        dp_server_model = self._train_fl_model(
+            lr=0.1,
+            momentum=0,
+            server_lr=1.0,
+            server_momentum=0,
+            one_user=False,
+            dp_config=dp_config,
+            data_size=26,
+            users_per_round=26,
+            noise_func_seed=1234,
+        )
+        torch.manual_seed(1)
+        fedavgm_server_model = self._train_fl_model(
+            lr=0.1,
+            momentum=0,
+            server_lr=1.0,
+            server_momentum=0,
+            one_user=False,
+            dp_config=None,
+            data_size=26,
+            users_per_round=26,
+            noise_func_seed=1234,
+        )
+        error_msg = verify_models_equivalent_after_training(
+            dp_server_model, fedavgm_server_model, rel_epsilon=1e-3
+        )
+        assertEmpty(error_msg, msg=error_msg)
+
+        # With server side momentum
+        torch.manual_seed(1)
+        dp_server_model = self._train_fl_model(
+            lr=0.1,
+            momentum=0,
+            server_lr=1.0,
+            server_momentum=0.9,
+            one_user=False,
+            dp_config=dp_config,
+            data_size=26,
+            users_per_round=26,
+            noise_func_seed=1234,
+        )
+        torch.manual_seed(1)
+        fedavgm_server_model = self._train_fl_model(
+            lr=0.1,
+            momentum=0,
+            server_lr=1.0,
+            server_momentum=0.9,
+            one_user=False,
+            dp_config=None,
+            data_size=26,
+            users_per_round=26,
+            noise_func_seed=1234,
+        )
+        error_msg = verify_models_equivalent_after_training(
+            dp_server_model, fedavgm_server_model
+        )
+        assertEmpty(error_msg, msg=error_msg)
+
+    def test_dp_sgd_with_no_noise_same_as_fedavg(self):
+        dp_config = {
+            "dp_type": "DP-SGD",
+            "alphas": [10],
+            "sample_dp_noise_multiplier": 0,
+            "sample_dp_clipping_value": float("inf"),
+            "user_dp_noise_multiplier": 0,
+            "user_dp_clipping_value": 10000.0,
+            "delta": 0.00001,
+        }
+        torch.manual_seed(1)
+        dp_server_model = self._train_fl_model(
+            lr=0.1,
+            momentum=0,
+            server_lr=1.0,
+            server_momentum=0,
+            one_user=False,
+            dp_config=dp_config,
+            data_size=26,
+            users_per_round=26,
+            noise_func_seed=1234,
+        )
+        torch.manual_seed(1)
+        fedavgm_server_model = self._train_fl_model(
+            lr=0.1,
+            momentum=0,
+            server_lr=1.0,
+            server_momentum=0,
+            one_user=False,
+            dp_config=None,
+            data_size=26,
+            users_per_round=26,
+            noise_func_seed=1234,
+        )
+        error_msg = verify_models_equivalent_after_training(
+            dp_server_model, fedavgm_server_model, rel_epsilon=1e-3
+        )
+        assertEmpty(error_msg, msg=error_msg)
+
+        # With server side momentum
+        torch.manual_seed(1)
+        dp_server_model = self._train_fl_model(
+            lr=0.1,
+            momentum=0,
+            server_lr=1.0,
+            server_momentum=0.9,
+            one_user=False,
+            dp_config=dp_config,
+            data_size=26,
+            users_per_round=26,
+            noise_func_seed=1234,
+        )
+        torch.manual_seed(1)
+        fedavgm_server_model = self._train_fl_model(
+            lr=0.1,
+            momentum=0,
+            server_lr=1.0,
+            server_momentum=0.9,
+            one_user=False,
+            dp_config=None,
+            data_size=26,
+            users_per_round=26,
+            noise_func_seed=1234,
+        )
+        error_msg = verify_models_equivalent_after_training(
+            dp_server_model, fedavgm_server_model
+        )
+        assertEmpty(error_msg, msg=error_msg)
