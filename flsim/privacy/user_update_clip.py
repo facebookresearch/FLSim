@@ -158,6 +158,7 @@ class AdaptiveClipper(IUserClipper):
         )
 
         self.noisy_unclipped_num = float(self.unclipped_num)
+        # pyre-fixme[8]: Attribute has type `float`; used as `Tensor`.
         self.noisy_unclipped_num += unclipped_num_noise
 
         with torch.no_grad():

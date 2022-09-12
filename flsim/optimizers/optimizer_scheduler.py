@@ -315,9 +315,7 @@ class StepLRScheduler(OptimizerScheduler):
             optimizer=optimizer,
             # pyre-ignore[16]
             step_size=self.cfg.step_size,
-            # pyre-ignore[16]
             gamma=self.cfg.gamma,
-            # pyre-ignore[16]
             verbose=self.cfg.verbose,
         )
 
