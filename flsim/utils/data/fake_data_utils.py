@@ -113,6 +113,9 @@ class FakeDataProvider(IFLDataProvider):
     def num_train_users(self) -> int:
         return self._num_users
 
+    def num_users(self):
+        return self._num_users
+
     def num_total_users(self) -> int:
         return self._num_total_users
 
