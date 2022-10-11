@@ -82,7 +82,7 @@ class SyncFedShuffleServer(SyncServer):
         num_total_users,
         users_per_round,
         data_provider: Optional[IFLDataProvider] = None,
-        epoch: Optional[int] = None,
+        global_round_num: Optional[int] = None,
     ):
         assert (
             data_provider is not None
@@ -102,8 +102,7 @@ class SyncFedShuffleServer(SyncServer):
             users_per_round=users_per_round,
             num_samples_per_user=self.samples_per_user,
             data_provider=data_provider,
-            global_model=self.global_model,
-            epoch=epoch,
+            global_round_num=global_round_num,
         )
 
         return selected_clients

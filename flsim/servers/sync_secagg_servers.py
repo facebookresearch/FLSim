@@ -86,14 +86,13 @@ class SyncSecAggServer(ISyncServer):
         num_total_users,
         users_per_round,
         data_provider: Optional[IFLDataProvider] = None,
-        epoch: Optional[int] = None,
+        global_round_num: Optional[int] = None,
     ):
         return self._active_user_selector.get_user_indices(
             num_total_users=num_total_users,
             users_per_round=users_per_round,
             data_provider=data_provider,
-            global_model=self.global_model,
-            epoch=epoch,
+            global_round_num=global_round_num,
         )
 
     def init_round(self):

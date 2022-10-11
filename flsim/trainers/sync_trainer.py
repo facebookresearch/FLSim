@@ -242,11 +242,10 @@ class SyncTrainer(FLTrainer):
                 # Select clients for training this round
                 t = time()
                 clients = self._client_selection(
-                    num_users_on_worker,
-                    users_per_round_on_worker,
-                    data_provider,
-                    self.global_model(),
-                    epoch,
+                    num_users=num_users_on_worker,
+                    users_per_round=users_per_round_on_worker,
+                    data_provider=data_provider,
+                    timeline=timeline,
                 )
                 self.logger.info(f"Client Selection took: {time() - t} s.")
 
@@ -367,8 +366,7 @@ class SyncTrainer(FLTrainer):
         num_users: int,
         users_per_round: int,
         data_provider: IFLDataProvider,
-        global_model: IFLModel,
-        epoch: int,
+        timeline: Timeline,
     ) -> List[Client]:
         """Select client for training each round."""
         # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
@@ -378,15 +376,16 @@ class SyncTrainer(FLTrainer):
             num_total_users=num_users,
             users_per_round=num_users_overselected,
             data_provider=data_provider,
-            epoch=epoch,
+            global_round_num=timeline.global_round_num(),
         )
-        clients_triggered = [
+        clients_to_train = [
             self.create_or_get_client_for_data(i, self.data_provider)
             for i in self._user_indices_overselected
         ]
-        clients_to_train = self._drop_overselected_users(
-            clients_triggered, users_per_round
-        )
+        if not math.isclose(self.cfg.dropout_rate, 1.0):
+            clients_to_train = self._drop_overselected_users(
+                clients_to_train, users_per_round
+            )
         return clients_to_train
 
     def _save_model_and_metrics(self, model: IFLModel, best_model_state):
