@@ -252,7 +252,7 @@ class FLDistributedUtils:
         generic_type = torch.float
         for p in params:
             if p.dtype != generic_type:
-                cls.logger.warning("non float tensor types sent to all reduce")
+                cls.logger.debug("non float tensor types sent to all reduce")
 
         buffer = params[0].new_empty(numels, dtype=generic_type)
         offset = 0
