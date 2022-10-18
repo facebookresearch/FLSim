@@ -225,9 +225,12 @@ def compute_rdp_single_tree(
     else:
         rdp = np.array(
             [
-                # pyre-ignore[6]
                 _compute_gaussian_rdp(
-                    noise_multiplier, sum_sensitivity_square, alpha
+                    noise_multiplier,
+                    sum_sensitivity_square,
+                    # pyre-fixme[6]: For 3rd param expected `Collection[float]` but
+                    #  got `float`.
+                    alpha,
                 )
                 for alpha in orders
             ]
