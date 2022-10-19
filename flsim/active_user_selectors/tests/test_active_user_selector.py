@@ -13,6 +13,8 @@ from flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorUtils,
     ImportanceSamplingActiveUserSelector,
     ImportanceSamplingActiveUserSelectorConfig,
+    RandomMultiStepActiveUserSelector,
+    RandomMultiStepActiveUserSelectorConfig,
     RandomRoundRobinActiveUserSelector,
     RandomRoundRobinActiveUserSelectorConfig,
     SequentialActiveUserSelector,
@@ -126,6 +128,27 @@ class TestActiveUserSelector:
                 assertEqual(user_indices, [3, 4, 5])
             if round_index % 3 == 2:
                 assertEqual(user_indices, [6, 7, 8])
+
+    def test_random_multi_step_user_selector(self) -> None:
+        selector = instantiate(
+            RandomMultiStepActiveUserSelectorConfig(milestones=[2, 4]), gamma=10
+        )
+        assertIsInstance(selector, RandomMultiStepActiveUserSelector)
+
+        num_total_users, users_per_round, round_num = 1000, 5, 10
+        for round_index in range(round_num):
+            user_indices = selector.get_user_indices(
+                num_total_users=num_total_users,
+                users_per_round=users_per_round,
+                global_round_num=round_index,
+            )
+
+            if round_index < 2:
+                assertEqual(len(user_indices), users_per_round)
+            if round_index >= 2 and round_index < 4:
+                assertEqual(len(user_indices), users_per_round * 10)
+            if round_index > 4:
+                assertEqual(len(user_indices), users_per_round * 100)
 
     def test_random_round_robin_user_selector(self) -> None:
         # 1) test if num_users is not divisible by users_per_round

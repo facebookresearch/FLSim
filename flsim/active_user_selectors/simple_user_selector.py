@@ -10,7 +10,7 @@ from __future__ import annotations
 import abc
 import copy
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 import torch
@@ -347,6 +347,50 @@ class ImportanceSamplingActiveUserSelector(ActiveUserSelector):
         return selected_indices
 
 
+class RandomMultiStepActiveUserSelector(ActiveUserSelector):
+    """Simple User Selector which does random sampling of users"""
+
+    def __init__(self, **kwargs):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=RandomMultiStepActiveUserSelectorConfig,
+            **kwargs,
+        )
+        self.gamma = self.cfg.gamma
+        self.milestones = self.cfg.milestones
+        self.users_per_round = 0
+        super().__init__(**kwargs)
+
+    @classmethod
+    def _set_defaults_in_cfg(cls, cfg):
+        pass
+
+    def get_user_indices(self, **kwargs) -> List[int]:
+        required_inputs = ["num_total_users", "users_per_round", "global_round_num"]
+        (
+            num_total_users,
+            users_per_round,
+            global_round_num,
+        ) = self.unpack_required_inputs(required_inputs, kwargs)
+
+        if global_round_num in self.milestones:
+            self.users_per_round *= self.gamma
+            print(f"Increase Users Per Round to {self.users_per_round}")
+        elif self.users_per_round == 0:
+            self.users_per_round = users_per_round
+
+        selected_indices = torch.multinomial(
+            torch.ones(num_total_users, dtype=torch.float),
+            self.users_per_round,
+            # pyre-ignore[16]
+            replacement=self.cfg.random_with_replacement,
+            generator=self.rng,
+        ).tolist()
+
+        return selected_indices
+
+
 @dataclass
 class ActiveUserSelectorConfig:
     _target_: str = MISSING
@@ -374,3 +418,11 @@ class RandomRoundRobinActiveUserSelectorConfig(ActiveUserSelectorConfig):
 class ImportanceSamplingActiveUserSelectorConfig(ActiveUserSelectorConfig):
     _target_: str = fullclassname(ImportanceSamplingActiveUserSelector)
     num_tries: int = 10
+
+
+@dataclass
+class RandomMultiStepActiveUserSelectorConfig(ActiveUserSelectorConfig):
+    _target_: str = fullclassname(RandomMultiStepActiveUserSelector)
+    random_with_replacement: bool = False
+    gamma: int = 10
+    milestones: List[int] = field(default_factory=list)
