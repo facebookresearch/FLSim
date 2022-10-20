@@ -133,7 +133,27 @@ class SyncDPSGDServer(ISyncServer):
             delta=message.model.fl_get_module(), weight=message.weight
         )
 
-    def step(self):
+    def mock_step(self):
+        """
+        Populates the grad attributes of the global model without performing
+        an optimization step and returns the aggregated *sum* and not avearge.
+        Useful for the CANIFE Empirical Privacy Measurement method.
+        """
+
+        # mock step that updates the gradients of the global model
+        self.step(mock=True)
+
+        # scale by sum_weights
+        model = self._global_model.fl_get_module()
+        FLModelParamUtils.multiply_gradient_by_weight(
+            model,
+            self._aggregator.sum_weights.item(),
+            model,
+        )
+
+        return model
+
+    def step(self, mock=False):
         assert self._privacy_engine is not None, "PrivacyEngine is not initialized"
 
         aggregated_model = self._aggregator.aggregate(distributed_op=OperationType.SUM)
@@ -155,9 +175,11 @@ class SyncDPSGDServer(ISyncServer):
             model=self._global_model.fl_get_module(),
             reference_gradient=aggregated_model,
         )
-        self._optimizer.step()
-        self.privacy_budget = self._privacy_engine.get_privacy_spent()
-        self._user_update_clipper.update_clipper_stats()
+
+        if not mock:
+            self._optimizer.step()
+            self.privacy_budget = self._privacy_engine.get_privacy_spent()
+            self._user_update_clipper.update_clipper_stats()
 
 
 @dataclass

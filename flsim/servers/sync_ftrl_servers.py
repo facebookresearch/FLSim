@@ -170,25 +170,47 @@ class SyncFTRLServer(SyncServer):
             delta=message.model.fl_get_module(), weight=message.weight
         )
 
-    def step(self) -> Optional[List[Metric]]:
+    def mock_step(self):
+        """
+        Populates the grad attributes of the global model without performing
+        an optimization step and returns the aggregated *sum* and not avearge.
+        Useful for the CANIFE Empirical Privacy Measurement method.
+        """
+
+        # mock step that updates the gradients of the global model
+        self.step(mock=True)
+
+        # scale by sum_weights
+        model = self._global_model.fl_get_module()
+        FLModelParamUtils.multiply_gradient_by_weight(
+            model,
+            self._aggregator.sum_weights.item(),
+            model,
+        )
+
+        return model
+
+    def step(self, mock=False) -> Optional[List[Metric]]:
         aggregated_model = self._aggregator.aggregate()
         noise = self._privacy_engine()
         FLModelParamUtils.set_gradient(
             model=self._global_model.fl_get_module(),
             reference_gradient=aggregated_model,
         )
-        grad = deepcopy(aggregated_model)
-        self._optimizer.step(noise)
-        self._user_update_clipper.update_clipper_stats()
 
-        return [
-            Metric("Noise", sum([p.sum() for p in noise])),
-            Metric(
-                "Signal_to_noise",
-                PrivateTrainingMetricsUtils.signal_to_noise_ratio(grad, noise),
-            ),
-            Metric("Num_Unclipped", self._user_update_clipper.unclipped_num),
-        ]
+        if not mock:
+            grad = deepcopy(aggregated_model)
+            self._optimizer.step(noise)
+            self._user_update_clipper.update_clipper_stats()
+
+            return [
+                Metric("Noise", sum([p.sum() for p in noise])),
+                Metric(
+                    "Signal_to_noise",
+                    PrivateTrainingMetricsUtils.signal_to_noise_ratio(grad, noise),
+                ),
+                Metric("Num_Unclipped", self._user_update_clipper.unclipped_num),
+            ]
 
     def should_restart(self):
         return (
