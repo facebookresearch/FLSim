@@ -82,5 +82,5 @@ class Timeline(NamedTuple):
         assert (self.epoch > 0 and self.round > 0) or self.global_round > 0
         e = self.epoch or ((self.global_round - 1) // self.rounds_per_epoch + 1)
         r = self.round or (((self.global_round - 1) % self.rounds_per_epoch) + 1)
-        gr = self.global_round or ((e - 1) * self.rounds_per_epoch + r)
+        gr = ((e - 1) * self.rounds_per_epoch + r) or self.global_round
         return f"(epoch = {e}, round = {r}, global round = {gr})"
