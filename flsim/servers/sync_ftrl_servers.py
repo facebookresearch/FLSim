@@ -175,13 +175,26 @@ class SyncFTRLServer(SyncServer):
         Populates the grad attributes of the global model without performing
         an optimization step and returns the aggregated *sum* and not avearge.
         Useful for the CANIFE Empirical Privacy Measurement method.
+
+        We populate p.grad with:
+        buff = grad_sum_after + noise_after - (grad_sum_before + noise_before)
+             = p.grad + noise_after - noise_before
+        since grad_sum_after = grad_sum_before + p.grad
         """
 
         # mock step that updates the gradients of the global model
         self.step(mock=True)
 
-        # scale by sum_weights
+        # get sum of gradients + noise for current mock round
+        noise = self._privacy_engine()
         model = self._global_model.fl_get_module()
+
+        for p, nz in zip(model.parameters(), noise):
+            # copy difference of noisy sums in the grad attribute
+            nz_before = self._optimizer.state[p]["last_noise"]
+            p.grad.add_(nz - nz_before)
+
+        # scale by sum_weights
         FLModelParamUtils.multiply_gradient_by_weight(
             model,
             self._aggregator.sum_weights.item(),
@@ -192,13 +205,13 @@ class SyncFTRLServer(SyncServer):
 
     def step(self, mock=False) -> Optional[List[Metric]]:
         aggregated_model = self._aggregator.aggregate()
-        noise = self._privacy_engine()
         FLModelParamUtils.set_gradient(
             model=self._global_model.fl_get_module(),
             reference_gradient=aggregated_model,
         )
 
         if not mock:
+            noise = self._privacy_engine()
             grad = deepcopy(aggregated_model)
             self._optimizer.step(noise)
             self._user_update_clipper.update_clipper_stats()
