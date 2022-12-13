@@ -231,7 +231,6 @@ class ServerFTRLOptimizer(IServerOptimizer, torch.optim.Optimizer):
         )
 
         IServerOptimizer.__init__(self, model=model, **kwargs)
-        # pyre-ignore[28]
         torch.optim.Optimizer.__init__(self, params=model.parameters(), defaults={})
         # pyre-ignore[16]
         self.momentum = self.cfg.momentum
