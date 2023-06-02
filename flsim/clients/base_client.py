@@ -47,7 +47,7 @@ from flsim.utils.cuda import DEFAULT_CUDA_MANAGER, ICudaStateManager
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
-
+from functorch import make_functional_with_buffers
 
 class Client:
     logger = Logger.get_logger(__name__)
@@ -95,8 +95,6 @@ class Client:
         self.last_updated_model = None
         self.logger.setLevel(logging.INFO)
 
-        self.global_round_num = 0
-
     @classmethod
     def _set_defaults_in_cfg(cls, cfg):
         if OmegaConf.is_missing(cfg.optimizer, "_target_"):
@@ -143,7 +141,6 @@ class Client:
             will be called on the reporter; else reports will be accumulated in memory.
         """
         model = message.model
-        self.global_round_num = message.global_round_num
 
         updated_model, weight, optimizer = self.copy_and_train_model(
             model, metrics_reporter=metrics_reporter
@@ -309,6 +306,24 @@ class Client:
                 # Stop training depending on time-out condition
                 if self.stop_training(num_examples_processed):
                     break
+                # dimasquest: The vog stuff could potentially go in here?
+            plis_scores = {key: model.calculate_plis(pl).item() for key, pl in metrics_reporter.plis_dict.items()}
+            vogs = {key: model.calculate_vog(grads).item() for key, grads in metrics_reporter.grads_dict.items()}
+            
+            # generate the cross-epoch metrics
+            desc_vog_idxs, asc_vog_idxs, vogs_per_class = model.process(vogs)
+            desc_plis_idxs, asc_plis_idxs, plis_per_class = model.process(plis_scores)
+            desc_norm_idxs, asc_norm_idxs, norms_per_class = model.process(metrics_reporter.norm_dict, normalise=False)
+            desc_loss_idxs, asc_loss_idxs, losses_per_class = model.process(metrics_reporter.loss_dict, normalise=False)
+            desc_entropy_idxs, asc_entropy_idxs, entropies_per_class = model.process(metrics_reporter.entropy_dict, normalise=False)
+            
+            # add these to the resulting metrics_reporter
+            metrics_reporter.add_scores(vogs_per_class, plis_per_class, norms_per_class, losses_per_class, entropies_per_class)
+            metrics_reporter.add_idxs(desc_vog_idxs, 'vogs_desc')
+            metrics_reporter.add_idxs(desc_plis_idxs, 'plis_desc')
+            metrics_reporter.add_idxs(desc_norm_idxs, 'norms_desc')
+            metrics_reporter.add_idxs(desc_loss_idxs, 'losses_desc')
+            metrics_reporter.add_idxs(desc_entropy_idxs, 'entropies_desc')
 
         # Tell cuda manager we're done with training
         # cuda manager may move model out of GPU memory if needed
@@ -371,6 +386,7 @@ class Client:
         model.fl_get_module().train()
         self.cuda_state_manager.after_train_or_eval(model)
 
+# dimasquest: I am modifying this part of training to try to accomodate for vogs etc.
     def _batch_train(
         self,
         model,
@@ -391,6 +407,10 @@ class Client:
         loss = batch_metrics.loss
 
         loss.backward()
+        images, target = torch.stack(training_batch['data']), torch.tensor(training_batch['target'])
+        with torch.no_grad():
+            plis_scores, grad_norms = model.plis_func(images, target, model.fmodel, model.params, model.buffers, model.criterion)
+            plis_scores, grad_norms = plis_scores.cpu(), grad_norms.cpu()
         # pyre-fixme[16]: `Client` has no attribute `cfg`.
         # Optional gradient clipping
         if self.cfg.max_clip_norm_normalized is not None:
@@ -401,15 +421,19 @@ class Client:
 
         num_examples = batch_metrics.num_examples
         # Adjust lr and take a gradient step
-        optimizer_scheduler.step(
-            batch_metrics,
-            model,
-            training_batch,
-            epoch,
-            global_round_num=self.global_round_num,
-        )
+        optimizer_scheduler.step(batch_metrics, model, training_batch, epoch)
         optimizer.step()
+        
+        _, model.params, model.buffers = make_functional_with_buffers(model.fl_get_module())
+        if epoch in model.epoch_idxs:
+            with torch.no_grad():
+                input_grads = model.input_grad_func(images, target, model.fmodel, model.params, model.buffers, model.criterion).cpu()
+            for id, gr, pls, n, loss, e in zip(training_batch['idx'], input_grads, plis_scores,
+                                                            grad_norms, batch_metrics.losses, batch_metrics.entropies):
+                batch_metrics.add_training_metrics(id, gr, pls, n, loss.detach().cpu(), e)
 
+        # dimasquest: We need to A) collate the metrics from batches in metrics reporter
+        # and B) make them persistent across epochs (for VoGs for instance)
         if metrics_reporter is not None:
             metrics_reporter.add_batch_metrics(batch_metrics)
 
