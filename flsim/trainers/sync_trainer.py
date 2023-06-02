@@ -12,7 +12,7 @@ import math
 import random
 from dataclasses import dataclass
 from time import time
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import torch
 from flsim.channels.message import Message
@@ -233,17 +233,19 @@ class SyncTrainer(FLTrainer):
                 #### Initial setup ####
                 # Initialize point of time for logging
                 timeline = Timeline(
-                    epoch=epoch, round=round, rounds_per_epoch=num_rounds_in_epoch
+                    epoch=epoch,
+                    round=round,
+                    rounds_per_epoch=num_rounds_in_epoch,
+                    total_epochs=self.cfg.epochs,
                 )
 
                 # Select clients for training this round
                 t = time()
                 clients = self._client_selection(
-                    num_users_on_worker,
-                    users_per_round_on_worker,
-                    data_provider,
-                    self.global_model(),
-                    epoch,
+                    num_users=num_users_on_worker,
+                    users_per_round=users_per_round_on_worker,
+                    data_provider=data_provider,
+                    timeline=timeline,
                 )
                 self.logger.info(f"Client Selection took: {time() - t} s.")
 
@@ -343,7 +345,7 @@ class SyncTrainer(FLTrainer):
         """Keeps top `num_users_keep` users with least training times."""
         all_training_times = [c.get_total_training_time() for c in clents_triggered]
         all_training_times.sort()
-        # only select first num_users_keep userids sort by their finish time
+        # only select first num_users_keep userids sorted by their finish time
         num_users_keep = min([num_users_keep, len(all_training_times)])
         last_user_time = all_training_times[num_users_keep - 1]
         num_users_added = 0
@@ -364,8 +366,7 @@ class SyncTrainer(FLTrainer):
         num_users: int,
         users_per_round: int,
         data_provider: IFLDataProvider,
-        global_model: IFLModel,
-        epoch: int,
+        timeline: Timeline,
     ) -> List[Client]:
         """Select client for training each round."""
         # pyre-fixme[16]: `SyncTrainer` has no attribute `cfg`.
@@ -375,15 +376,16 @@ class SyncTrainer(FLTrainer):
             num_total_users=num_users,
             users_per_round=num_users_overselected,
             data_provider=data_provider,
-            epoch=epoch,
+            global_round_num=timeline.global_round_num(),
         )
-        clients_triggered = [
+        clients_to_train = [
             self.create_or_get_client_for_data(i, self.data_provider)
             for i in self._user_indices_overselected
         ]
-        clients_to_train = self._drop_overselected_users(
-            clients_triggered, users_per_round
-        )
+        if not math.isclose(self.cfg.dropout_rate, 1.0):
+            clients_to_train = self._drop_overselected_users(
+                clients_to_train, users_per_round
+            )
         return clients_to_train
 
     def _save_model_and_metrics(self, model: IFLModel, best_model_state):
@@ -392,14 +394,14 @@ class SyncTrainer(FLTrainer):
     def _update_clients(
         self,
         clients: Iterable[Client],
-        server_state_message: Union[Message, List[Message]],
+        server_state_message: Message,
         metrics_reporter: Optional[IFLMetricsReporter] = None,
     ) -> None:
         """Update each client-side model from server message."""
         for client in clients:
             client_delta, weight = client.generate_local_update(
-                server_state_message,
-                metrics_reporter,
+                message=server_state_message,
+                metrics_reporter=metrics_reporter,
             )
             self.server.receive_update_from_client(Message(client_delta, weight))
 
@@ -421,26 +423,77 @@ class SyncTrainer(FLTrainer):
             users_per_round: Number of participating users.
             metrics_reporter: Metric reporter to pass to other methods.
         """
+        server_return_metrics = self._train_one_round_apply_updates(
+            timeline=timeline,
+            clients=clients,
+            agg_metric_clients=agg_metric_clients,
+            users_per_round=users_per_round,
+            metrics_reporter=metrics_reporter,
+        )
+
+        self._train_one_round_report_metrics(
+            timeline=timeline,
+            clients=clients,
+            agg_metric_clients=agg_metric_clients,
+            users_per_round=users_per_round,
+            metrics_reporter=metrics_reporter,
+            server_return_metrics=server_return_metrics,
+        )
+
+        self._post_train_one_round(timeline)
+
+    def _train_one_round_apply_updates(
+        self,
+        timeline: Timeline,
+        clients: Iterable[Client],
+        agg_metric_clients: Iterable[Client],
+        users_per_round: int,
+        metrics_reporter: Optional[IFLMetricsReporter] = None,
+    ) -> Optional[List[Metric]]:
+        """Apply updates to client and server models during train one round.
+        See `_train_one_round` for argument descriptions.
+        Returns: Optional list of `Metric`, same as the return value of `step`
+            method in `ISyncServer`.
+        """
         t = time()
         self.server.init_round()
         self.logger.info(f"Round initialization took {time() - t} s.")
 
         # Receive message from server to clients, i.e. global model state
-        server_state_message = self.server.broadcast_message_to_clients(clients)
+        server_state_message = self.server.broadcast_message_to_clients(
+            clients=clients, global_round_num=timeline.global_round_num()
+        )
 
-        # hook before client updates
+        # Hook before client updates
         self.on_before_client_updates(global_round_num=timeline.global_round_num())
 
         # Update client-side models from server-side model (in `server_state_message`)
         t = time()
-        self._update_clients(clients, server_state_message, metrics_reporter)
+        self._update_clients(
+            clients=clients,
+            server_state_message=server_state_message,
+            metrics_reporter=metrics_reporter,
+        )
         self.logger.info(f"Collecting round's clients took {time() - t} s.")
 
         # After all clients finish their updates, update the global model
         t = time()
-        metrics = self.server.step()
+        server_return_metrics = self.server.step()
         self.logger.info(f"Finalizing round took {time() - t} s.")
+        return server_return_metrics
 
+    def _train_one_round_report_metrics(
+        self,
+        timeline: Timeline,
+        clients: Iterable[Client],
+        agg_metric_clients: Iterable[Client],
+        users_per_round: int,
+        metrics_reporter: Optional[IFLMetricsReporter] = None,
+        server_return_metrics: Optional[List[Any]] = None,
+    ) -> None:
+        """Report metrics during train one round.
+        See `_train_one_round` for argument descriptions.
+        """
         # Calculate and report metrics for this round
         t = time()
         # Train metrics of global model (e.g. loss and accuracy)
@@ -448,7 +501,7 @@ class SyncTrainer(FLTrainer):
             model=self.global_model(),
             timeline=timeline,
             metrics_reporter=metrics_reporter,
-            extra_metrics=metrics,
+            extra_metrics=server_return_metrics,
         )
         # Evaluation metrics of global model on training data of `agg_metric_clients`
         self._evaluate_global_model_after_aggregation_on_train_clients(
@@ -463,7 +516,14 @@ class SyncTrainer(FLTrainer):
             timeline,
             metrics_reporter,
         )
+
+        self._post_train_one_round(timeline)
+
         self.logger.info(f"Aggregate round reporting took {time() - t} s.")
+
+    def _post_train_one_round(self, timeline: Timeline):
+        """Optional processing after training for one round is finished."""
+        pass
 
     def _choose_clients_for_post_aggregation_metrics(
         self,
@@ -676,14 +736,14 @@ class SyncTrainer(FLTrainer):
             report_rounds = current_round - self._last_report_round_after_aggregation
             self._last_report_round_after_aggregation = current_round
 
-            with torch.no_grad():
-                model.fl_get_module().eval()
-                for client in clients:
-                    for batch in client.dataset.train_data():
-                        batch_metrics = model.get_eval_metrics(batch)
-                        if metrics_reporter is not None:
-                            metrics_reporter.add_batch_metrics(batch_metrics)
-                model.fl_get_module().train()
+            model.fl_get_module().eval()
+            self._calc_eval_metrics_on_clients(
+                model=model,
+                clients_data=[client.dataset for client in clients],
+                data_split="train",
+                metrics_reporter=metrics_reporter,
+            )
+            model.fl_get_module().train()
 
             privacy_metrics = self._calc_privacy_metrics(
                 clients, model, metrics_reporter
