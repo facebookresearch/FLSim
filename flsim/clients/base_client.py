@@ -307,23 +307,23 @@ class Client:
                 if self.stop_training(num_examples_processed):
                     break
                 # dimasquest: The vog stuff could potentially go in here?
-            plis_scores = {key: model.calculate_plis(pl).item() for key, pl in metrics_reporter.plis_dict.items()}
-            vogs = {key: model.calculate_vog(grads).item() for key, grads in metrics_reporter.grads_dict.items()}
-            
-            # generate the cross-epoch metrics
-            desc_vog_idxs, asc_vog_idxs, vogs_per_class = model.process(vogs)
-            desc_plis_idxs, asc_plis_idxs, plis_per_class = model.process(plis_scores)
-            desc_norm_idxs, asc_norm_idxs, norms_per_class = model.process(metrics_reporter.norm_dict, normalise=False)
-            desc_loss_idxs, asc_loss_idxs, losses_per_class = model.process(metrics_reporter.loss_dict, normalise=False)
-            desc_entropy_idxs, asc_entropy_idxs, entropies_per_class = model.process(metrics_reporter.entropy_dict, normalise=False)
-            
-            # add these to the resulting metrics_reporter
-            metrics_reporter.add_scores(vogs_per_class, plis_per_class, norms_per_class, losses_per_class, entropies_per_class)
-            metrics_reporter.add_idxs(desc_vog_idxs, 'vogs_desc')
-            metrics_reporter.add_idxs(desc_plis_idxs, 'plis_desc')
-            metrics_reporter.add_idxs(desc_norm_idxs, 'norms_desc')
-            metrics_reporter.add_idxs(desc_loss_idxs, 'losses_desc')
-            metrics_reporter.add_idxs(desc_entropy_idxs, 'entropies_desc')
+        plis_scores = {key: model.calculate_plis(pl).item() for key, pl in metrics_reporter.plis_dict.items()}
+        vogs = {key: model.calculate_vog(grads).item() for key, grads in metrics_reporter.grads_dict.items()}
+        
+        # generate the cross-epoch metrics
+        desc_vog_idxs, asc_vog_idxs, vogs_per_class = model.process(vogs)
+        desc_plis_idxs, asc_plis_idxs, plis_per_class = model.process(plis_scores)
+        desc_norm_idxs, asc_norm_idxs, norms_per_class = model.process(metrics_reporter.norm_dict, normalise=False)
+        desc_loss_idxs, asc_loss_idxs, losses_per_class = model.process(metrics_reporter.loss_dict, normalise=False)
+        desc_entropy_idxs, asc_entropy_idxs, entropies_per_class = model.process(metrics_reporter.entropy_dict, normalise=False)
+        
+        # add these to the resulting metrics_reporter
+        metrics_reporter.add_scores(vogs_per_class, plis_per_class, norms_per_class, losses_per_class, entropies_per_class)
+        metrics_reporter.add_idxs(desc_vog_idxs, 'vogs_desc')
+        metrics_reporter.add_idxs(desc_plis_idxs, 'plis_desc')
+        metrics_reporter.add_idxs(desc_norm_idxs, 'norms_desc')
+        metrics_reporter.add_idxs(desc_loss_idxs, 'losses_desc')
+        metrics_reporter.add_idxs(desc_entropy_idxs, 'entropies_desc')
 
         # Tell cuda manager we're done with training
         # cuda manager may move model out of GPU memory if needed
