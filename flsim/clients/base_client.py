@@ -324,6 +324,12 @@ class Client:
         metrics_reporter.add_idxs(desc_norm_idxs, 'norms_desc')
         metrics_reporter.add_idxs(desc_loss_idxs, 'losses_desc')
         metrics_reporter.add_idxs(desc_entropy_idxs, 'entropies_desc')
+        
+        metrics_reporter.add_idxs(asc_vog_idxs, 'vogs_asc')
+        metrics_reporter.add_idxs(asc_plis_idxs, 'plis_asc')
+        metrics_reporter.add_idxs(asc_norm_idxs, 'norms_asc')
+        metrics_reporter.add_idxs(asc_loss_idxs, 'losses_asc')
+        metrics_reporter.add_idxs(asc_entropy_idxs, 'entropies_asc')
 
         # Tell cuda manager we're done with training
         # cuda manager may move model out of GPU memory if needed
@@ -331,9 +337,12 @@ class Client:
         self.logger.debug(
             f"Processed {num_examples_processed} of {self.dataset.num_train_examples()}"
         )
-
+        # dimasquest: Maybe need to throw the processing into here to de-clutter?
+        # can even modify the dataset here, because this method is not used elsewhere
+        # total samples changes after this, but for the purposes of training this round
+        # it should be ok?
         # Optional post-processing after the entire training is done
-        self.post_train(model, total_samples, optimizer)
+        self.post_train(model, total_samples, optimizer, metrics_reporter)
 
         # If training stops early (i.e. `num_examples_processed < total_samples`), use
         # `num_examples_processed` instead as weight.
@@ -341,9 +350,44 @@ class Client:
 
         return model, float(example_weight)
 
-    def post_train(self, model: IFLModel, total_samples: int, optimizer: Any):
+    def post_train(self, model: IFLModel, total_samples: int, optimizer: Any, metrics_reporter: Optional[IFLMetricsReporter]):
         """Post-processing after the entire training on multiple epochs is done."""
-        pass
+        current_train_dataset = list(self.dataset.train_data())
+        batch_size = len(current_train_dataset[0]['idx'])
+        # select the removal criteria
+        
+        idxs = metrics_reporter.idx_dict[model.removal_metric]
+        
+        top_values_to_be_removed_per_class = {}
+        for key, value in idxs.items():
+            top_values_to_be_removed_per_class[key] = value[:model.num_points_to_remove]
+        idxs_to_be_removed = []
+        for value in top_values_to_be_removed_per_class.values():
+            idxs_to_be_removed.extend(value)
+            
+        # remove the data points
+        def remove_datapoints(dataset, idxs_to_remove, batch_size):
+            updated_dataset = []
+            for batch in dataset:
+                idxs, data_points, labels = batch['idx'], batch['data'], batch['target']
+                for idx, data, label in zip(idxs, data_points, labels):
+                    if idx.item() not in idxs_to_remove:
+                        updated_dataset.append({'idx': idx, 'data': data, 'target': label})
+            # for i, data in enumerate(updated_dataset):
+            batched_list = [updated_dataset[i:i+batch_size] for i in range(0, len(updated_dataset), batch_size)]
+            final_batches = []
+            for row in batched_list:
+                new_row = {'idx':[], 'data':[], 'target':[]}
+                for record in row:
+                    new_row['idx'].append(record['idx'])
+                    new_row['data'].append(record['data'])
+                    new_row['target'].append(record['target'])
+                final_batches.append(new_row)
+            return final_batches
+        train_dataset = remove_datapoints(current_train_dataset, idxs_to_be_removed, batch_size)
+        # overwrite the dataset (as currently it is a generator)
+        # TODO: This is where we need to take care of all dataset size changes
+        self.dataset._train_batches = train_dataset
 
     def post_batch_train(
         self, epoch: int, model: IFLModel, sample_count: int, optimizer: Any
@@ -425,12 +469,11 @@ class Client:
         optimizer.step()
         
         _, model.params, model.buffers = make_functional_with_buffers(model.fl_get_module())
-        if epoch in model.epoch_idxs:
-            with torch.no_grad():
-                input_grads = model.input_grad_func(images, target, model.fmodel, model.params, model.buffers, model.criterion).cpu()
-            for id, gr, pls, n, loss, e in zip(training_batch['idx'], input_grads, plis_scores,
-                                                            grad_norms, batch_metrics.losses, batch_metrics.entropies):
-                batch_metrics.add_training_metrics(id, gr, pls, n, loss.detach().cpu(), e)
+        with torch.no_grad():
+            input_grads = model.input_grad_func(images, target, model.fmodel, model.params, model.buffers, model.criterion).cpu()
+        for id, gr, pls, n, loss, e in zip(training_batch['idx'], input_grads, plis_scores,
+                                                        grad_norms, batch_metrics.losses, batch_metrics.entropies):
+            batch_metrics.add_training_metrics(id, gr, pls, n, loss.detach().cpu(), e)
 
         # dimasquest: We need to A) collate the metrics from batches in metrics reporter
         # and B) make them persistent across epochs (for VoGs for instance)
