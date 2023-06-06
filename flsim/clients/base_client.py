@@ -387,7 +387,7 @@ class Client:
         train_dataset = remove_datapoints(current_train_dataset, idxs_to_be_removed, batch_size)
         # overwrite the dataset (as currently it is a generator)
         # TODO: This is where we need to take care of all dataset size changes
-        self.dataset._train_batches = train_dataset
+        self.dataset.modify_dataset_after_training(train_dataset)
 
     def post_batch_train(
         self, epoch: int, model: IFLModel, sample_count: int, optimizer: Any
