@@ -16,6 +16,7 @@ from typing import Any, Dict, Iterable, List, Tuple, TypeVar
 import numpy as np
 import torch
 from flsim.utils.config_utils import fullclassname, init_self_cfg
+from flsim.data.partition_utils import create_lda_partitions
 from omegaconf import MISSING
 from torch.utils.data import Dataset
 
@@ -245,6 +246,71 @@ class PowerLawSharder(FLDataSharder):
         return shards
 
 
+def uncollate_fn(data_rows):
+    features, labels = np.array([]), []
+    for row in tqdm(data_rows):
+        feat = row['features']
+        lab = row['labels']
+
+        if features.size == 0:
+            features = np.array(feat[None, :, :, :])
+        else:
+            features = np.vstack((features, np.array(feat[None, :, :, :])))
+        labels += [lab]
+
+    return features, np.array(labels)
+
+
+def collate_fn(batch: Tuple) -> Dict[str, Any]:
+    feature, label = batch
+    return {"features": feature, "labels": label}
+
+
+class LDASharder(FLDataSharder):
+    """
+    LDA Sharder
+    """
+
+    def __init__(self, **kwargs):
+        init_self_cfg(
+            self,
+            component_class=__class__,
+            config_class=LDASharderConfig,
+            **kwargs,
+        )
+        super().__init__(**kwargs)
+        assert 0.0 < self.cfg.alpha <= 1.0, "alpha must be in the interval (0, 1]"
+
+    def shard_for_row(self, csv_row: Dict[Any, Any]) -> List[int]:
+        # pyre-fixme[16]: `FLDataSharder` has no attribute `cfg`.
+        pass
+
+    def shard_rows(self, data_rows: Shardable) -> Iterable[Tuple[str, Any]]:
+        # sanity check to avoid empty shards
+        dirichlet_dist = np.random.dirichlet(
+            alpha=[self.cfg.alpha]*self.cfg.num_classes, size=self.cfg.num_shards)
+
+        uncollated_dataset = uncollate_fn(data_rows)
+        partitions, dirichlet_dist = create_lda_partitions(
+            uncollated_dataset, dirichlet_dist=dirichlet_dist,
+            num_partitions=self.cfg.num_shards, concentration=self.cfg.alpha, accept_imbalanced=True
+        )
+
+        shards = defaultdict(list)
+
+        for i, partition in enumerate(partitions):
+            for j in range(len(partition[1])):
+                shards[str(i)].append(collate_fn(
+                    (torch.Tensor(partition[0][j]), partition[1][j])))
+
+        assert (
+            sum(1 for _shard in shards)
+            # pyre-fixme[16]: `FLDataSharder` has no attribute `cfg`.
+            >= self.cfg.num_shards
+        ), "number of rows must be at least the number of shards"
+        return shards.items()
+
+
 @dataclass
 class FLDataSharderConfig:
     _target_: str = MISSING
@@ -286,3 +352,11 @@ class PowerLawSharderConfig(FLDataSharderConfig):
     _target_: str = fullclassname(PowerLawSharder)
     num_shards: int = MISSING
     alpha: float = MISSING
+
+
+@dataclass
+class LDASharderConfig(FLDataSharderConfig):
+    _target_: str = fullclassname(LDASharder)
+    alpha: float = MISSING
+    num_shards: int = MISSING
+    num_classes: int = MISSING

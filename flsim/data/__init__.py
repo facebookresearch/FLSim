@@ -14,6 +14,7 @@ from .data_sharder import (
     RandomSharderConfig,
     RoundRobinSharderConfig,
     SequentialSharderConfig,
+    LDASharderConfig,
 )
 
 ConfigStore.instance().store(
@@ -49,5 +50,11 @@ ConfigStore.instance().store(
 ConfigStore.instance().store(
     name="base_power_law_sharder",
     node=PowerLawSharderConfig,
+    group="sharder",
+)
+
+ConfigStore.instance().store(
+    name="base_lda_sharder",
+    node=LDASharderConfig,
     group="sharder",
 )
