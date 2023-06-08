@@ -19,6 +19,7 @@ from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.data.partition_utils import create_lda_partitions
 from omegaconf import MISSING
 from torch.utils.data import Dataset
+from tqdm import tqdm
 
 
 Shardable = TypeVar("Shardable", Iterable[Dict[str, Any]], Dataset)
