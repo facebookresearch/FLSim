@@ -48,6 +48,7 @@ from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from functorch import make_functional_with_buffers
+from captum.attr import ShapleyValueSampling
 
 class Client:
     logger = Logger.get_logger(__name__)
@@ -307,29 +308,55 @@ class Client:
                 if self.stop_training(num_examples_processed):
                     break
                 # dimasquest: The vog stuff could potentially go in here?
-        plis_scores = {key: model.calculate_plis(pl).item() for key, pl in metrics_reporter.plis_dict.items()}
-        vogs = {key: model.calculate_vog(grads).item() for key, grads in metrics_reporter.grads_dict.items()}
+        if model.use_bw_metrics:
+            plis_scores = {key: model.calculate_plis(pl).item() for key, pl in metrics_reporter.plis_dict.items()}
+            vogs = {key: model.calculate_vog(grads).item() for key, grads in metrics_reporter.grads_dict.items()}
+            desc_vog_idxs, asc_vog_idxs, vogs_per_class = model.process(vogs)
+            desc_plis_idxs, asc_plis_idxs, plis_per_class = model.process(plis_scores)
+            desc_norm_idxs, asc_norm_idxs, norms_per_class = model.process(metrics_reporter.norm_dict, normalise=False)
+            metrics_reporter.add_idxs(desc_vog_idxs, 'vogs_desc')
+            metrics_reporter.add_idxs(desc_plis_idxs, 'plis_desc')
+            metrics_reporter.add_idxs(desc_norm_idxs, 'norms_desc')
+            metrics_reporter.add_idxs(asc_vog_idxs, 'vogs_asc')
+            metrics_reporter.add_idxs(asc_plis_idxs, 'plis_asc')
+            metrics_reporter.add_idxs(asc_norm_idxs, 'norms_asc')
         
         # generate the cross-epoch metrics
-        desc_vog_idxs, asc_vog_idxs, vogs_per_class = model.process(vogs)
-        desc_plis_idxs, asc_plis_idxs, plis_per_class = model.process(plis_scores)
-        desc_norm_idxs, asc_norm_idxs, norms_per_class = model.process(metrics_reporter.norm_dict, normalise=False)
         desc_loss_idxs, asc_loss_idxs, losses_per_class = model.process(metrics_reporter.loss_dict, normalise=False)
         desc_entropy_idxs, asc_entropy_idxs, entropies_per_class = model.process(metrics_reporter.entropy_dict, normalise=False)
         
         # add these to the resulting metrics_reporter
-        metrics_reporter.add_scores(vogs_per_class, plis_per_class, norms_per_class, losses_per_class, entropies_per_class)
-        metrics_reporter.add_idxs(desc_vog_idxs, 'vogs_desc')
-        metrics_reporter.add_idxs(desc_plis_idxs, 'plis_desc')
-        metrics_reporter.add_idxs(desc_norm_idxs, 'norms_desc')
         metrics_reporter.add_idxs(desc_loss_idxs, 'losses_desc')
         metrics_reporter.add_idxs(desc_entropy_idxs, 'entropies_desc')
         
-        metrics_reporter.add_idxs(asc_vog_idxs, 'vogs_asc')
-        metrics_reporter.add_idxs(asc_plis_idxs, 'plis_asc')
-        metrics_reporter.add_idxs(asc_norm_idxs, 'norms_asc')
         metrics_reporter.add_idxs(asc_loss_idxs, 'losses_asc')
         metrics_reporter.add_idxs(asc_entropy_idxs, 'entropies_asc')
+        if model.use_bw_metrics:
+            metrics_reporter.add_full_scores(vogs_per_class, plis_per_class, norms_per_class, losses_per_class, entropies_per_class)
+        else: 
+            metrics_reporter.add_forward_scores(losses_per_class, entropies_per_class)
+            
+        # this Shapley implementation uses the entire dataset, need to change
+        if model.shap:
+            svs = ShapleyValueSampling(model.model)
+            current_train_dataset = list(self.dataset.train_data())
+            def flatten_dataset(dataset):
+                idxs, data, labels = [], [], []
+                for batch in dataset:
+                    ids, data_points, targets = batch['idx'], batch['data'], batch['target']
+                    for id, datapoint, label in zip(ids, data_points, targets):
+                        idxs.append(id)
+                        data.append(datapoint)
+                        labels.append(label)
+                return idxs, data, labels
+            shap_ids, shap_images, shap_labels = flatten_dataset(current_train_dataset)
+            attr = svs.attribute(torch.stack(shap_images), target=shap_labels, show_progress=True)
+            l2_norms_shap = [shap.norm(2) for shap in attr]
+            metrics_reporter.shap_norms = dict(zip(shap_ids, l2_norms_shap))
+            desc_shap, asc_shap, shap_per_class = process_metric(scores.shap_norms, idxs_to_labels, cfg.dataset.num_classes, normalise=False)
+            metrics_reporter.add_idxs(desc_shap, "shap_desc")
+            metrics_reporter.add_idxs(asc_shap, "shap_asc")
+            metrics_reporter.add_score_dict(shap_per_class, "shap")
 
         # Tell cuda manager we're done with training
         # cuda manager may move model out of GPU memory if needed
@@ -354,13 +381,13 @@ class Client:
         """Post-processing after the entire training on multiple epochs is done."""
         current_train_dataset = list(self.dataset.train_data())
         batch_size = len(current_train_dataset[0]['idx'])
-        # select the removal criteria
-        
+        # select the points to remove
+        num_points_to_remove = int(total_samples * model.proportion_to_remove)
         idxs = metrics_reporter.idx_dict[model.removal_metric]
         
         top_values_to_be_removed_per_class = {}
         for key, value in idxs.items():
-            top_values_to_be_removed_per_class[key] = value[:model.num_points_to_remove]
+            top_values_to_be_removed_per_class[key] = value[:num_points_to_remove]
         idxs_to_be_removed = []
         for value in top_values_to_be_removed_per_class.values():
             idxs_to_be_removed.extend(value)
@@ -373,11 +400,10 @@ class Client:
                 for idx, data, label in zip(idxs, data_points, labels):
                     if idx.item() not in idxs_to_remove:
                         updated_dataset.append({'idx': idx, 'data': data, 'target': label})
-            # for i, data in enumerate(updated_dataset):
             batched_list = [updated_dataset[i:i+batch_size] for i in range(0, len(updated_dataset), batch_size)]
             final_batches = []
             for row in batched_list:
-                new_row = {'idx':[], 'data':[], 'target':[]}
+                new_row = {'idx': [], 'data': [], 'target': []}
                 for record in row:
                     new_row['idx'].append(record['idx'])
                     new_row['data'].append(record['data'])
@@ -451,12 +477,13 @@ class Client:
         loss = batch_metrics.loss
 
         loss.backward()
-        images, target = torch.stack(training_batch['data']), torch.tensor(training_batch['target'])
-        with torch.no_grad():
-            plis_scores, grad_norms = model.plis_func(images, target, model.fmodel, model.params, model.buffers, model.criterion)
-            plis_scores, grad_norms = plis_scores.cpu(), grad_norms.cpu()
-        # pyre-fixme[16]: `Client` has no attribute `cfg`.
-        # Optional gradient clipping
+        if model.use_bw_metrics:
+            images, target = torch.stack(training_batch['data']), torch.tensor(training_batch['target'])
+            with torch.no_grad():
+                plis_scores, grad_norms = model.plis_func(images, target, model.fmodel, model.params, model.buffers, model.criterion)
+                plis_scores, grad_norms = plis_scores.cpu(), grad_norms.cpu()
+            # pyre-fixme[16]: `Client` has no attribute `cfg`.
+            # Optional gradient clipping
         if self.cfg.max_clip_norm_normalized is not None:
             max_norm = self.cfg.max_clip_norm_normalized
             FLModelParamUtils.clip_gradients(
@@ -468,12 +495,17 @@ class Client:
         optimizer_scheduler.step(batch_metrics, model, training_batch, epoch)
         optimizer.step()
         
-        _, model.params, model.buffers = make_functional_with_buffers(model.fl_get_module())
-        with torch.no_grad():
-            input_grads = model.input_grad_func(images, target, model.fmodel, model.params, model.buffers, model.criterion).cpu()
-        for id, gr, pls, n, loss, e in zip(training_batch['idx'], input_grads, plis_scores,
-                                                        grad_norms, batch_metrics.losses, batch_metrics.entropies):
-            batch_metrics.add_training_metrics(id, gr, pls, n, loss.detach().cpu(), e)
+        if model.use_bw_metrics:
+            _, model.params, model.buffers = make_functional_with_buffers(model.fl_get_module())
+            with torch.no_grad():
+                input_grads = model.input_grad_func(images, target, model.fmodel, model.params, model.buffers, model.criterion).cpu()
+            for id, gr, pls, n, loss, e in zip(training_batch['idx'], input_grads, plis_scores,
+                                                            grad_norms, batch_metrics.losses, batch_metrics.entropies):
+                batch_metrics.add_full_training_metrics(id, gr, pls, n, loss.detach().cpu(), e)
+        else:
+            for id, loss, e in zip(training_batch['idx'], batch_metrics.losses, batch_metrics.entropies):
+                batch_metrics.add_forward_training_metrics(id, loss.detach().cpu(), e)
+            
 
         # dimasquest: We need to A) collate the metrics from batches in metrics reporter
         # and B) make them persistent across epochs (for VoGs for instance)
