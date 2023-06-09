@@ -19,7 +19,6 @@ from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.data.partition_utils import create_lda_partitions
 from omegaconf import MISSING
 from torch.utils.data import Dataset
-from tqdm import tqdm
 
 
 Shardable = TypeVar("Shardable", Iterable[Dict[str, Any]], Dataset)
@@ -248,18 +247,11 @@ class PowerLawSharder(FLDataSharder):
 
 
 def uncollate_fn(data_rows):
-    features, labels = np.array([]), []
-    for row in tqdm(data_rows):
-        feat = row['features']
-        lab = row['labels']
+    features = torch.stack([torch.Tensor(row['features'])
+                           for row in data_rows])
+    labels = [row['labels'] for row in data_rows]
 
-        if features.size == 0:
-            features = np.array(feat[None, :, :, :])
-        else:
-            features = np.vstack((features, np.array(feat[None, :, :, :])))
-        labels += [lab]
-
-    return features, np.array(labels)
+    return features.numpy(), np.array(labels)
 
 
 def collate_fn(batch: Tuple) -> Dict[str, Any]:
