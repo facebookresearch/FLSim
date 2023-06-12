@@ -16,6 +16,7 @@ Note:
 """
 from __future__ import annotations
 
+import numpy as np
 import logging
 import random
 from dataclasses import dataclass
@@ -49,6 +50,8 @@ from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from functorch import make_functional_with_buffers
 from captum.attr import ShapleyValueSampling
+from sklearn.cluster import DBSCAN
+from sklearn.decomposition import PCA
 
 class Client:
     logger = Logger.get_logger(__name__)
@@ -340,7 +343,7 @@ class Client:
         if model.shap:
             svs = ShapleyValueSampling(model.model)
             current_train_dataset = list(self.dataset.train_data())
-            def flatten_dataset(dataset):
+            def split_dataset(dataset):
                 idxs, data, labels = [], [], []
                 for batch in dataset:
                     ids, data_points, targets = batch['idx'], batch['data'], batch['target']
@@ -349,8 +352,25 @@ class Client:
                         data.append(datapoint)
                         labels.append(label)
                 return idxs, data, labels
-            shap_ids, shap_images, shap_labels = flatten_dataset(current_train_dataset)
-            attr = svs.attribute(torch.stack(shap_images), target=shap_labels, show_progress=True)
+            shap_ids, shap_images, shap_labels = split_dataset(current_train_dataset)
+            flattened_images = np.array([np.array(image.flatten()) for image in shap_images])
+            pca = PCA(n_components=2)
+            X_pca = pca.fit_transform(flattened_images)
+            dbscan = DBSCAN(eps=3, min_samples=5)
+            labels = dbscan.fit_predict(X_pca)
+            
+            # these are sorted
+            unique_labels = np.unique(labels[labels != -1])
+            centroids = []
+            for label in unique_labels:
+                cluster_points = flattened_images[labels == label]
+                centroid = np.mean(cluster_points, axis=0)
+                centroids.append(centroid)
+            # once the centroids are estanblished:
+            # 1. run shapley on these, get the rest as a background
+            # 2. discard the poorest performers (rn the shape is static)
+            centroid_tensors = torch.stack([torch.from_numpy(item).reshape((3,32,32)) for item in centroids])
+            attr = svs.attribute(centroid_tensors, show_progress=True)
             l2_norms_shap = [shap.norm(2) for shap in attr]
             metrics_reporter.shap_norms = dict(zip(shap_ids, l2_norms_shap))
             desc_shap, asc_shap, shap_per_class = process_metric(scores.shap_norms, idxs_to_labels, cfg.dataset.num_classes, normalise=False)
