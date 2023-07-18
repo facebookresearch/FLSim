@@ -378,7 +378,7 @@ class TestSecureAggregator:
 
         server_model = create_model_with_value(global_param)
         # freeze one of the two linear layers
-        for p in server_model.fc2.parameters():  # pyre-ignore[16]
+        for p in server_model.fc2.parameters():
             p.requires_grad = False
         server = self._create_server(SampleNet(server_model), fixedpoint=fixedpoint)
         clients = [create_model_with_value(client_param) for _ in range(num_clients)]
@@ -386,7 +386,7 @@ class TestSecureAggregator:
         clients = []
         for _ in range(num_clients):
             client_model = create_model_with_value(client_param)
-            for p in client_model.fc2.parameters():  # pyre-ignore[16]
+            for p in client_model.fc2.parameters():
                 p.requires_grad = False
             clients.append(client_model)
 

@@ -13,7 +13,6 @@ from flsim.interfaces.model import IFLModel
 
 def FloatTensor(cuda_enabled: bool, *args):
     if cuda_enabled:
-        # pyre-fixme[16]: Module `cuda` has no attribute `FloatTensor`.
         return torch.cuda.FloatTensor(*args)
     else:
         return torch.FloatTensor(*args)
