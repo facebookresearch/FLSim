@@ -176,5 +176,5 @@ class TestTimeline:
 
         # Test calling `progress_fraction` without specifying `total_epochs`
         tl = Timeline(epoch=1, round=5, rounds_per_epoch=100)
-        with pytest.raises(Exception):  # pyre-ignore
+        with pytest.raises(Exception):
             tl.progress_fraction()

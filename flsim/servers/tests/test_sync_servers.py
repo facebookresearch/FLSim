@@ -331,7 +331,7 @@ class TestSyncSQServer:
             channel=ScalarQuantizationChannel(),
         )
         # test failure with non SQ channel
-        with pytest.raises(Exception):  # pyre-ignore
+        with pytest.raises(Exception):
             _ = instantiate(
                 SyncSQServerConfig(),
                 global_model=SampleNet(create_model_with_value(0)),
@@ -365,7 +365,7 @@ class TestSyncPQServer:
             channel=ProductQuantizationChannel(),
         )
         # test failure with non SQ channel
-        with pytest.raises(Exception):  # pyre-ignore
+        with pytest.raises(Exception):
             _ = instantiate(
                 SyncPQServerConfig(),
                 global_model=SampleNet(create_model_with_value(0)),
