@@ -9,6 +9,7 @@ Should be used in conjunction with the synchronous MIME server.
 Needs the server_opt_state and server_control_variate to function
 """
 
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
@@ -82,8 +83,8 @@ class MimeClient(Client):
         return delta, weight
 
     def _reload_server_state(self, optimizer):
-        state_dict = optimizer.state_dict()
-        state_dict["state"] = self.server_opt_state
+        state_dict = deepcopy(optimizer.state_dict())
+        state_dict["state"] = deepcopy(self.server_opt_state)
         optimizer.load_state_dict(state_dict)
         del state_dict
 

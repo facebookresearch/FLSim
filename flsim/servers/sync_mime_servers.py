@@ -107,7 +107,7 @@ class SyncMimeServer(SyncServer):
 
         return Message(
             model=self.global_model,
-            server_opt_state=self._state_optimizer.state_dict()["state"],
+            server_opt_state=copy.deepcopy(self._state_optimizer.state_dict()["state"]),
             mime_control_variate=self._grad_average,
         )
 
