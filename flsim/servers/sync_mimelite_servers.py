@@ -108,7 +108,7 @@ class SyncMimeLiteServer(SyncServer):
 
         return Message(
             model=self.global_model,
-            server_opt_state=self._state_optimizer.state_dict()["state"],
+            server_opt_state=copy.deepcopy(self._state_optimizer.state_dict()["state"]),
         )
 
     def step(self):
