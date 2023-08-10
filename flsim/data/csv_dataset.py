@@ -9,7 +9,7 @@ import abc
 from typing import Any, Dict
 
 # see https://fb.workplace.com/groups/fbcode/permalink/2440457449324413/
-# @manual=third-party//pandas:pandas-py
+# @manual=fbsource//third-party/pypi/pandas:pandas
 import pandas as pd
 from flsim.interfaces.dataset import FLDataset
 
