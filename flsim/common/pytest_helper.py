@@ -97,7 +97,7 @@ def assertListEqual(l1: List, l2: List) -> None:
     assert l1 == l2
 
 
-class assertRaises(object):
+class assertRaises:
     def __init__(self, expected_exc: type) -> None:
         self.expected_exc = expected_exc
 
