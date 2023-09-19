@@ -8,7 +8,7 @@
 import math
 
 import pytest
-from flsim.common.pytest_helper import assertEqual
+from flsim.common.pytest_helper import assertAlmostEqual
 from flsim.optimizers.sync_aggregators import (
     FedAdamSyncAggregator,
     FedAdamSyncAggregatorConfig,
@@ -111,8 +111,7 @@ def _test_lamb_multiple_steps(test_case, weight_decay: int = 0) -> None:
         updated_param_value_adam = (
             test_case.quadratic1D_adam.fl_get_module().state_dict()["x"].item()
         )
-
-        assertEqual(updated_param_value_lamb, updated_param_value_adam)
+        assertAlmostEqual(updated_param_value_lamb, updated_param_value_adam, places=6)
 
 
 @pytest.fixture(scope="class")

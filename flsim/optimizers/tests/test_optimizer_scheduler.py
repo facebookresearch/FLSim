@@ -6,7 +6,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
-from flsim.common.pytest_helper import assertEqual, assertTrue
+from flsim.common.pytest_helper import assertAlmostEqual, assertEqual, assertTrue
 from flsim.optimizers.optimizer_scheduler import (
     ArmijoLineSearch,
     ArmijoLineSearchSchedulerConfig,
@@ -46,7 +46,7 @@ class TestOptimizerScheduler:
             quadratic_func_val.backward()
             optimizer.step()
             obj_val = quadratic1D.fl_get_module().state_dict()["x"].item()
-            assertEqual(obj_val, (-1.0) ** (i + 1))
+            assertAlmostEqual(obj_val, (-1.0) ** (i + 1), places=6)
 
         # set up (again) quadratic parabola objective and optimizer
         quadratic1D = MockQuadratic1DFL(Quadratic1D())

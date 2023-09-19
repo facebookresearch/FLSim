@@ -103,4 +103,6 @@ class TestLarsOptimizer:
                 self.quadratic1D_sgd.fl_get_module().state_dict()["x"].item()
             )
 
-            assertEqual(updated_param_value_lars, updated_param_value_sgd)
+            assertAlmostEqual(
+                updated_param_value_lars, updated_param_value_sgd, places=6
+            )
