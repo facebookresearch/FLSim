@@ -384,7 +384,7 @@ class FLModel(IFLModel):
         return self.model
 
     def fl_cuda(self) -> None:
-        self.model = self.model.to(self.device)  # pyre-ignore
+        self.model = self.model.to(self.device)
 
     def get_eval_metrics(self, batch) -> FLBatchMetrics:
         with torch.no_grad():
