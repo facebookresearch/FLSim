@@ -28,8 +28,14 @@ from torchvision.datasets.vision import VisionDataset
 from tqdm import tqdm
 
 
-def collate_fn(batch: Tuple) -> Dict[str, Any]:
-    feature, label = batch
+def collate_fn(batch: Any) -> Dict[str, Any]:
+    if isinstance(batch, tuple):
+        feature,label = batch
+    elif isinstance(batch, dict):
+        feature = batch['image']
+        label = batch['label']
+    else:
+        raise TypeError("The batch must be a tuple or dict")
     return {"features": feature, "labels": label}
 
 
@@ -163,7 +169,13 @@ class UserData(IFLUserData):
     def fl_training_batch(
         features: List[torch.Tensor], labels: List[float]
     ) -> Dict[str, torch.Tensor]:
-        return {"features": torch.stack(features), "labels": torch.Tensor(labels)}
+         # Check the type of the first element in labels list to determine if conversion is needed
+        if not isinstance(labels[0],torch.Tensor):
+            labels = torch.tensor(labels, dtype=torch.float32)
+        else:
+            labels = torch.stack(labels)
+
+        return {"features": torch.stack(features), "labels": labels}
 
 
 class LEAFDataLoader(IFLDataLoader):
