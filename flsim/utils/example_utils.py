@@ -27,13 +27,16 @@ from flsim.metrics_reporter.tensorboard_metrics_reporter import FLMetricsReporte
 from flsim.utils.data.data_utils import batchify
 from flsim.utils.simple_batch_metrics import FLBatchMetrics
 
-
-
-
-
-
-
 def collate_fn(batch: Any) -> Dict[str, Any]:
+    """
+    Process the given batch and return a dictionary with features and labels.
+
+    Args:
+        batch (Any): The batch to process, can be a tuple or a dictionary.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the processed features and labels.
+    """
     if isinstance(batch, tuple):
         feature, label = batch
     elif isinstance(batch, dict):
@@ -45,6 +48,15 @@ def collate_fn(batch: Any) -> Dict[str, Any]:
 
 
 class DataLoader(IFLDataLoader):
+
+    """Data loader class for federated learning.
+
+    This data loader handles the batching and sharding of datasets for
+    federated learning scenarios.
+
+    Attributes:
+        SEED (int): Seed for random number generation.
+    """    
     SEED = 2137
     random.seed(SEED)
 
