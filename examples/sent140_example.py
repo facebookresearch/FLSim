@@ -233,6 +233,10 @@ def run(cfg: DictConfig) -> None:
     main_worker(trainer_config, model_config, data_config)
 
 
-if __name__ == "__main__":
+def main() -> None:
     cfg = maybe_parse_json_config()
     run(cfg)
+
+
+if __name__ == "__main__":
+    main()  # pragma: no cover

@@ -529,7 +529,7 @@ def create_new_fl_config_from_old_json(
     return new_config
 
 
-if __name__ == "__main__":
+def main() -> None:
     warning_msg = """ NOTE:\n
     -----\n
     THIS CONFIG CONVERTER IS A HACK AND IS NOT FULLY TESTED. \n
@@ -567,3 +567,7 @@ if __name__ == "__main__":
     print(warning_msg)
     create_new_fl_config_from_old_json(args.old, args.new, args.flsim_example)
     print("Conversion successful")
+
+
+if __name__ == "__main__":
+    main()  # pragma: no cover
