@@ -195,9 +195,9 @@ class NonOverlappingDataset(Dataset):
 
         for row in range(num_rows):
             col_start = math.floor(row / num_data_per_user) * num_nonzeros_per_user
-            non_overlap_data[
-                row, col_start : col_start + num_nonzeros_per_user
-            ] = torch.rand(1, num_nonzeros_per_user)
+            non_overlap_data[row, col_start : col_start + num_nonzeros_per_user] = (
+                torch.rand(1, num_nonzeros_per_user)
+            )
 
         labels = torch.rand(num_rows, 1)
 

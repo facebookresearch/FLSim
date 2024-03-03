@@ -63,12 +63,14 @@ class TestSecureAggregationIntegration:
             epochs=epochs,
             user_epochs_per_round=1,
             do_eval=True,
-            server_config=SyncSecAggServerConfig(
-                aggregation_type=AggregationType.AVERAGE, fixedpoint=fixedpoint
-            )
-            if sec_agg_enable
-            else SyncServerConfig(
-                aggregation_type=AggregationType.AVERAGE,
+            server_config=(
+                SyncSecAggServerConfig(
+                    aggregation_type=AggregationType.AVERAGE, fixedpoint=fixedpoint
+                )
+                if sec_agg_enable
+                else SyncServerConfig(
+                    aggregation_type=AggregationType.AVERAGE,
+                )
             ),
         )
         sync_trainer.cfg.train_metrics_reported_per_epoch = (

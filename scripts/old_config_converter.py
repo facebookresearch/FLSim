@@ -195,9 +195,9 @@ def _handle_active_user_selector(trainer):
     elif "diversity_reporting" == active_user_selector["type"].lower():
         active_user_selector["_base_"] = "base_diversity_reporting_user_selector"
     elif "diversity_statistics_reporting" == active_user_selector["type"].lower():
-        active_user_selector[
-            "_base_"
-        ] = "base_diversity_statistics_reporting_user_selector"
+        active_user_selector["_base_"] = (
+            "base_diversity_statistics_reporting_user_selector"
+        )
     elif "uniformlydiversity_maximizing_random" == active_user_selector["type"].lower():
         active_user_selector["_base_"] = "base_diversity_maximizing_user_selector"
 

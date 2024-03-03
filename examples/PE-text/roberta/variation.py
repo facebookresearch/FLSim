@@ -69,9 +69,9 @@ class Variation:
             )
             probs = torch.nn.functional.softmax(filtered_logits, dim=1)
             replacement_tokens = torch.multinomial(probs, num_samples=1)
-            curr_inputs[
-                masked_indices_row[:, i], masked_indices_col[:, i]
-            ] = replacement_tokens.squeeze()
+            curr_inputs[masked_indices_row[:, i], masked_indices_col[:, i]] = (
+                replacement_tokens.squeeze()
+            )
         return {"input_ids": curr_inputs, "attention_mask": inputs["attention_mask"]}
 
     def produce_variation(parent_set, variation_deg, config):

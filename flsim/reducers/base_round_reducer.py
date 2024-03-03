@@ -63,9 +63,9 @@ class ReductionPrecision(IntEnum):
         return (
             torch.float64
             if self == ReductionPrecision.DOUBLE
-            else torch.float32
-            if self == ReductionPrecision.FLOAT
-            else None  # ReductionPrecision.DEFAULT
+            else (
+                torch.float32 if self == ReductionPrecision.FLOAT else None
+            )  # ReductionPrecision.DEFAULT
         )
 
 

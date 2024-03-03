@@ -18,6 +18,7 @@ from sentence_transformers import SentenceTransformer
 from transformers import RobertaForMaskedLM, RobertaTokenizer
 from variation import Variation
 
+
 # pyre-ignore[C901]
 def main():
     accelerator = Accelerator()

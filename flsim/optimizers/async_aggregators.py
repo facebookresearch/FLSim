@@ -338,6 +338,7 @@ class FedBuffAggregator(AsyncAggregator):
     Keeps track of number clients reported and take a global step after reaching the
     threshold set by the config
     """
+
     logger: logging.Logger = Logger.get_logger("FedBuffAggregator")
 
     def __init__(

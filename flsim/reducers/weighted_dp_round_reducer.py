@@ -184,6 +184,7 @@ class WeightedDPRoundReducerConfig(DPRoundReducerConfig):
     might as well throw updates from clients with smaller weights
     away as they will be drowned in noise.
     """
+
     _target_: str = fullclassname(WeightedDPRoundReducer)
     min_weight: float = 1e-6
     max_weight: float = float("inf")

@@ -224,9 +224,11 @@ class FLTrainer(abc.ABC):
         ):
             extra_metrics = [
                 Metric(
-                    "Client to Server Bytes Sent"
-                    if name == ChannelDirection.CLIENT_TO_SERVER
-                    else "Server to Client Bytes Sent",
+                    (
+                        "Client to Server Bytes Sent"
+                        if name == ChannelDirection.CLIENT_TO_SERVER
+                        else "Server to Client Bytes Sent"
+                    ),
                     tracker.mean(),
                 )
                 for name, tracker in self.channel.stats_collector.get_channel_stats().items()
@@ -369,5 +371,7 @@ class FLTrainerConfig:
     client: ClientConfig = ClientConfig()
     # config for the channels
     channel: FLChannelConfig = FLChannelConfig()
-    personalized: bool = False  # flag to personalized global model by locally fine tuning before evaluation
+    personalized: bool = (
+        False  # flag to personalized global model by locally fine tuning before evaluation
+    )
     personalized_epochs: int = 1  # number of fine tune epochs to run

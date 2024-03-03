@@ -32,6 +32,7 @@ class TrainingSchedule:
     r"""
     Class to represent a client training time duration
     """
+
     creation_time: float
     start_time: float
     end_time: float

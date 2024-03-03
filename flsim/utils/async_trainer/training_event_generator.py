@@ -28,6 +28,7 @@ class EventTimingInfo:
     r"""
     Used only for testing
     """
+
     prev_event_start_to_current_start: int
     duration: int
 

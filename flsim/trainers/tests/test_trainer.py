@@ -1172,12 +1172,12 @@ class TestTrainer:
         num_total_users = 5
         num_epochs = 1
         users_per_round = 1
-        tensorboard_results: List[
-            MockRecord
-        ] = self._get_tensorboard_results_from_training(
-            num_total_users=num_total_users,
-            num_epochs=num_epochs,
-            users_per_round=users_per_round,
+        tensorboard_results: List[MockRecord] = (
+            self._get_tensorboard_results_from_training(
+                num_total_users=num_total_users,
+                num_epochs=num_epochs,
+                users_per_round=users_per_round,
+            )
         )
 
         # ensure that train, aggregation and eval metrics are all reported once
@@ -1212,12 +1212,12 @@ class TestTrainer:
         num_total_users = 10
         num_epochs = 3
         users_per_round = 2
-        tensorboard_results: List[
-            MockRecord
-        ] = self._get_tensorboard_results_from_training(
-            num_total_users=num_total_users,
-            num_epochs=num_epochs,
-            users_per_round=users_per_round,
+        tensorboard_results: List[MockRecord] = (
+            self._get_tensorboard_results_from_training(
+                num_total_users=num_total_users,
+                num_epochs=num_epochs,
+                users_per_round=users_per_round,
+            )
         )
 
         # ensure that train, aggregation and eval metrics are all reported once per epoch

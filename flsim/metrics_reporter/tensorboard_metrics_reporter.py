@@ -130,14 +130,18 @@ class FLMetricsReporter(IFLMetricsReporter, abc.ABC):
                     f"{timeline}, {metric.name}/{training_stage_in_str}: {value}"
                 )
             if Channel.TENSORBOARD in self.channels:
-                self.writer.add_scalars(
-                    f"{metric.name}/{training_stage_in_str}",
-                    value,
-                    timeline.global_round_num(),
-                ) if metric.is_compund else self.writer.add_scalar(
-                    f"{metric.name}/{training_stage_in_str}",
-                    value,
-                    timeline.global_round_num(),
+                (
+                    self.writer.add_scalars(
+                        f"{metric.name}/{training_stage_in_str}",
+                        value,
+                        timeline.global_round_num(),
+                    )
+                    if metric.is_compund
+                    else self.writer.add_scalar(
+                        f"{metric.name}/{training_stage_in_str}",
+                        value,
+                        timeline.global_round_num(),
+                    )
                 )
 
         if reset:

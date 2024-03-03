@@ -265,9 +265,9 @@ class SyncTrainer(FLTrainer):
                     clients=clients,
                     agg_metric_clients=agg_metric_clients,
                     users_per_round=users_per_round,
-                    metrics_reporter=metrics_reporter
-                    if self.cfg.report_train_metrics
-                    else None,
+                    metrics_reporter=(
+                        metrics_reporter if self.cfg.report_train_metrics else None
+                    ),
                 )
 
                 if self.logger.isEnabledFor(logging.DEBUG):
@@ -296,7 +296,10 @@ class SyncTrainer(FLTrainer):
 
                     # Report evaluation metric on evaluation clients
                     t = time()
-                    (best_metric, best_model_state,) = self._maybe_run_evaluation(
+                    (
+                        best_metric,
+                        best_model_state,
+                    ) = self._maybe_run_evaluation(
                         timeline=timeline,
                         data_provider=data_provider,
                         metrics_reporter=metrics_reporter,

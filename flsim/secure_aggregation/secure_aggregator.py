@@ -25,6 +25,7 @@ class FixedPointConverter:
     The main class that is responsible for conversion between
     fixed point and floating point.
     """
+
     MAX_WIDTH_BITS = 8 * 8  # 8 bytes
     # code handles up to 7 bytes, due to division in overflow calc
 

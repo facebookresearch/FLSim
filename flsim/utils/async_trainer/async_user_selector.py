@@ -21,6 +21,7 @@ class AsyncUserSelectorInfo:
     user_data (IFLUserData): seleected user data in the dataset
     user_index (int): the index for user_data assuming IFLDataProvider.train_users is a List
     """
+
     user_data: IFLUserData
     user_index: int
 
