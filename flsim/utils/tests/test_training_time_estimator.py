@@ -5,6 +5,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-unsafe
+
 import torch
 from flsim.common.pytest_helper import assertAlmostEqual, assertEqual
 from flsim.utils.timing.training_duration_distribution import (

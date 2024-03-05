@@ -5,6 +5,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-unsafe
+
 """In this tutorial, we will train a binary sentiment classifier on LEAF's Sent140 dataset with FLSim.
 
 Before running this file, you need to download the dataset and partition the data by users. We

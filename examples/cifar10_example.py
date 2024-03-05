@@ -5,6 +5,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-unsafe
+
 """In this tutorial, we will train an image classifier with FLSim to simulate a federated learning training environment.
 
 With this tutorial, you will learn the following key components of FLSim:

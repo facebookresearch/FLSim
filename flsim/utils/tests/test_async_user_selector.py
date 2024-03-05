@@ -5,6 +5,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-unsafe
+
 import pytest
 from flsim.common.pytest_helper import assertEqual, assertTrue
 from flsim.data.data_provider import FLDataProviderFromList

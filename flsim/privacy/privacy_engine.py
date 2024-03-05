@@ -5,6 +5,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-unsafe
+
 """
 This file contains the noise generation function and the required
 DP parameters that an entity such as an FL server uses for user-level DP.

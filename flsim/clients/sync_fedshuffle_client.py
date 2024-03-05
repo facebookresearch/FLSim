@@ -4,6 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-unsafe
+
 """This class defines a synchronous Client for the FedShuffle framework.
 Should be used in conjunction with the synchronous FedShuffle server
 Works under assumption of equal number of epochs per client

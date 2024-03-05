@@ -5,6 +5,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-unsafe
+
 """
 This file defines the concept of a base client for a
 federated learning setting. Also defines basic config,

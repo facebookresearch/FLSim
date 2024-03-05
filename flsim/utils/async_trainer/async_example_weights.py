@@ -5,6 +5,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-unsafe
+
 """Pyre complains about non-default class members in config being not initialized
 """
 from __future__ import annotations
