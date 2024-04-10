@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Union
 
 from flsim.clients.async_client import AsyncClientDevice
 from flsim.common.logger import Logger
@@ -41,7 +41,7 @@ from flsim.utils.async_trainer.training_event_generator import (
 from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.cuda import CudaTransferMinimizer, GPUMemoryMinimizer
 from hydra.utils import instantiate
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, ListConfig, OmegaConf
 from tqdm import tqdm
 
 
@@ -66,7 +66,8 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
         cuda_enabled: bool = False,
         **kwargs,
     ):
-        init_self_cfg(
+        self.cfg: Union[ListConfig, DictConfig]
+        self.cfg = init_self_cfg(
             self,
             component_class=__class__,  # pyre-fixme[10]: Name `__class__` is used but not defined.
             config_class=AsyncTrainerConfig,
@@ -76,7 +77,6 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
         super().__init__(model=model, cuda_enabled=cuda_enabled, **kwargs)
         self._cuda_state_manager = (
             CudaTransferMinimizer(cuda_enabled)
-            # pyre-fixme[16]: `AsyncTrainer` has no attribute `cfg`.
             if self.cfg.minimize_cuda_transfer
             else GPUMemoryMinimizer(cuda_enabled)
         )
@@ -162,7 +162,6 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
                 self._global_update_done()
 
     def _can_participate(self, staleness: float):
-        # pyre-fixme[16]: `AsyncTrainer` has no attribute `cfg`.
         return staleness <= self.cfg.max_staleness
 
     def _num_global_steps_in_epoch(self):
@@ -251,7 +250,6 @@ class AsyncTrainer(FLTrainer, AsyncTrainingEventHandler):
         self.num_total_users = data_provider.num_train_users()
         self.aggregator.set_num_total_users(self.num_total_users)
         user_selector = AsyncUserSelectorFactory.create_users_selector(
-            # pyre-fixme[16]: `AsyncTrainer` has no attribute `cfg`.
             self.cfg.async_user_selector_type,
             data_provider,
         )

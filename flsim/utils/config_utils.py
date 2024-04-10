@@ -10,10 +10,10 @@
 import argparse
 import collections.abc as abc
 import json
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from hydra import compose, initialize
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, ListConfig, OmegaConf
 
 
 def fullclassname(cls: Type[Any]) -> str:
@@ -43,7 +43,7 @@ def _validate_cfg(component_class: Type[Any], cfg: Any) -> None:
 
 def init_self_cfg(
     component_obj: Any, *, component_class: Type, config_class: Type, **kwargs
-) -> None:
+) -> Union[ListConfig, DictConfig]:
     """
     Initialize FL component config by constructing OmegaConf object,
     setting defaults, and validating config.
@@ -59,6 +59,7 @@ def init_self_cfg(
     cfg = OmegaConf.create(cfg)  # pyre-ignore [6]
     _validate_cfg(component_class, cfg)  # validate the config
     component_obj.cfg = cfg
+    return cfg
 
 
 # trainer config utils for consuming hydra configs
