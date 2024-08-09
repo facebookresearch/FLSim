@@ -128,6 +128,8 @@ class FLModelParamUtils:
         """
         assert weights is None or len(weights) == len(models), (
             "Weights should have the same length as models. len(wts):"
+            # pyre-fixme[6]: For 1st argument expected
+            #  `pyre_extensions.ReadOnly[Sized]` but got `Optional[List[float]]`.
             + str(len(weights))
             + ", len(models):"
             + str(len(models))

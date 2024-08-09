@@ -618,6 +618,8 @@ def calc_model_sparsity(state_dict: OrderedDict) -> float:
     non_zero = 0
     tot = 1e-6
     for _, param in state_dict.items():
+        # pyre-fixme[58]: `+` is not supported for operand types `int` and
+        #  `Union[bool, float, int]`.
         non_zero += torch.count_nonzero(param).item()
         tot += float(param.numel())
     return 1.0 - non_zero / (tot + 1e-6)

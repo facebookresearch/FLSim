@@ -53,6 +53,7 @@ class TestDataUtils:
         for i, batch in enumerate(user_dataset.train_data()):
             assertLessEqual(len(batch["data"]), expected_batch_size)
             last_batch = i
+        # pyre-fixme[61]: `last_batch` is undefined, or not always defined.
         assertEqual(last_batch + 1, expected_num_batches)
 
     def test_fake_user_data(self) -> None:
