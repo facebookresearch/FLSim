@@ -27,10 +27,12 @@ from flsim.optimizers.sync_aggregators import (
     FedAvgWithLRSyncAggregatorConfig,
     SyncAggregatorConfig,
 )
-from flsim.optimizers.tests.test_optimizer_utils import OptimizerTestUtil
 from flsim.utils.sample_model import TwoLayerNet
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
+from papaya.toolkit.simulation.flsim.optimizers.tests.test_optimizer_utils import (
+    OptimizerTestUtil,
+)
 
 
 @pytest.fixture(scope="class")
