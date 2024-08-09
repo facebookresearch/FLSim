@@ -11,11 +11,6 @@ from typing import Optional
 import flsim.configs  # noqa
 import torch
 import torch.nn as nn
-
-from flsim.active_user_selectors.simple_user_selector import (
-    ImportanceSamplingActiveUserSelectorConfig,
-    UniformlyRandomActiveUserSelectorConfig,
-)
 from flsim.channels.message import Message
 from flsim.clients.sync_fedshuffle_client import (
     FedShuffleClient,
@@ -31,6 +26,11 @@ from flsim.utils import test_utils as utils
 
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
+
+from papaya.toolkit.simulation.flsim.active_user_selectors.simple_user_selector import (
+    ImportanceSamplingActiveUserSelectorConfig,
+    UniformlyRandomActiveUserSelectorConfig,
+)
 
 
 class TestSyncFedShuffleServers:

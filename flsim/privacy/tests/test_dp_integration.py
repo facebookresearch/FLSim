@@ -12,9 +12,6 @@ from typing import Any, Dict, Optional
 import numpy as np
 import torch
 import torch.nn as nn
-from flsim.active_user_selectors.simple_user_selector import (
-    SequentialActiveUserSelectorConfig,
-)
 from flsim.clients.base_client import ClientConfig
 from flsim.clients.dp_client import DPClientConfig
 from flsim.common.pytest_helper import assertEmpty, assertEqual, assertNotEmpty
@@ -50,6 +47,9 @@ from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
 from omegaconf import OmegaConf
 from opacus import GradSampleModule
 from opacus.optimizers import DPOptimizer
+from papaya.toolkit.simulation.flsim.active_user_selectors.simple_user_selector import (
+    SequentialActiveUserSelectorConfig,
+)
 
 
 class TestDifferentialPrivacyIntegration:

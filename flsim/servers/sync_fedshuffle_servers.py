@@ -12,11 +12,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from flsim.active_user_selectors.simple_user_selector import (
-    ImportanceSamplingActiveUserSelector,
-    UniformlyRandomActiveUserSelector,
-)
-
 from flsim.channels.base_channel import IdentityChannel, IFLChannel
 from flsim.channels.message import Message
 from flsim.data.data_provider import IFLDataProvider
@@ -26,6 +21,11 @@ from flsim.servers.sync_servers import SyncServer, SyncServerConfig
 from flsim.utils.config_utils import fullclassname, init_self_cfg
 
 from hydra.utils import instantiate
+
+from papaya.toolkit.simulation.flsim.active_user_selectors.simple_user_selector import (
+    ImportanceSamplingActiveUserSelector,
+    UniformlyRandomActiveUserSelector,
+)
 
 
 class SyncFedShuffleServer(SyncServer):

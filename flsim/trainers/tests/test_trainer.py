@@ -16,9 +16,6 @@ import flsim.configs  # noqa
 import pkg_resources
 import pytest
 import torch
-from flsim.active_user_selectors.simple_user_selector import (
-    SequentialActiveUserSelectorConfig,
-)
 from flsim.clients.base_client import ClientConfig
 from flsim.common.pytest_helper import (
     assertEmpty,
@@ -65,6 +62,9 @@ from flsim.utils.timing.training_duration_distribution import (
 from hydra.experimental import compose, initialize
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
+from papaya.toolkit.simulation.flsim.active_user_selectors.simple_user_selector import (
+    SequentialActiveUserSelectorConfig,
+)
 
 CONFIG_PATH = "test_resources"
 

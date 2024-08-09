@@ -11,7 +11,16 @@ import math
 from collections import Counter
 
 import torch
-from flsim.active_user_selectors.simple_user_selector import (
+from flsim.common.pytest_helper import (
+    assertEqual,
+    assertIsInstance,
+    assertRaises,
+    assertTrue,
+)
+from flsim.utils.sample_model import DummyAlphabetFLModel
+from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
+from hydra.utils import instantiate
+from papaya.toolkit.simulation.flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorUtils,
     ImportanceSamplingActiveUserSelector,
     ImportanceSamplingActiveUserSelectorConfig,
@@ -24,15 +33,6 @@ from flsim.active_user_selectors.simple_user_selector import (
     UniformlyRandomActiveUserSelector,
     UniformlyRandomActiveUserSelectorConfig,
 )
-from flsim.common.pytest_helper import (
-    assertEqual,
-    assertIsInstance,
-    assertRaises,
-    assertTrue,
-)
-from flsim.utils.sample_model import DummyAlphabetFLModel
-from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
-from hydra.utils import instantiate
 
 
 class TestActiveUserSelector:

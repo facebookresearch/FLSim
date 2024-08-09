@@ -12,10 +12,6 @@ from typing import List
 
 import numpy as np
 import pytest
-
-from flsim.active_user_selectors.simple_user_selector import (
-    UniformlyRandomActiveUserSelectorConfig,
-)
 from flsim.channels.base_channel import IdentityChannel
 from flsim.channels.half_precision_channel import HalfPrecisionChannel
 from flsim.channels.message import Message
@@ -51,6 +47,10 @@ from flsim.utils.test_utils import (
     verify_models_equivalent_after_training,
 )
 from hydra.utils import instantiate
+
+from papaya.toolkit.simulation.flsim.active_user_selectors.simple_user_selector import (
+    UniformlyRandomActiveUserSelectorConfig,
+)
 
 
 @dataclass

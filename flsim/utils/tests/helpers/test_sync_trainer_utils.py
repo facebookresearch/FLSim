@@ -7,9 +7,6 @@
 
 # pyre-unsafe
 
-from flsim.active_user_selectors.simple_user_selector import (
-    SequentialActiveUserSelectorConfig,
-)
 from flsim.channels.base_channel import FLChannelConfig
 from flsim.clients.base_client import ClientConfig
 from flsim.common.timeout_simulator import (
@@ -25,6 +22,9 @@ from flsim.optimizers.optimizer_scheduler import (
 from flsim.servers.sync_servers import SyncServerConfig
 from flsim.trainers.sync_trainer import SyncTrainer, SyncTrainerConfig
 from omegaconf import OmegaConf
+from papaya.toolkit.simulation.flsim.active_user_selectors.simple_user_selector import (
+    SequentialActiveUserSelectorConfig,
+)
 
 # have to create a variable because python linter doesn't like performing function calls
 # in argument defaults (B008, https://github.com/PyCQA/flake8-bugbear#list-of-warnings)

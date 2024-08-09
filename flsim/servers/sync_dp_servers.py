@@ -12,9 +12,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from flsim.active_user_selectors.simple_user_selector import (
-    UniformlyRandomActiveUserSelectorConfig,
-)
 from flsim.channels.base_channel import IdentityChannel, IFLChannel
 from flsim.channels.message import Message
 from flsim.data.data_provider import IFLDataProvider
@@ -31,6 +28,10 @@ from flsim.utils.distributed.fl_distributed import FLDistributedUtils, Operation
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
+
+from papaya.toolkit.simulation.flsim.active_user_selectors.simple_user_selector import (
+    UniformlyRandomActiveUserSelectorConfig,
+)
 
 
 class SyncDPSGDServer(ISyncServer):

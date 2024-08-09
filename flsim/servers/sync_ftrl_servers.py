@@ -15,9 +15,6 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import List, Optional
 
-from flsim.active_user_selectors.simple_user_selector import (
-    UniformlyRandomActiveUserSelectorConfig,
-)
 from flsim.channels.base_channel import IdentityChannel, IFLChannel
 from flsim.channels.message import Message
 from flsim.common.logger import Logger
@@ -42,6 +39,10 @@ from flsim.utils.distributed.fl_distributed import FLDistributedUtils
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
+
+from papaya.toolkit.simulation.flsim.active_user_selectors.simple_user_selector import (
+    UniformlyRandomActiveUserSelectorConfig,
+)
 
 
 class SyncFTRLServer(SyncServer):

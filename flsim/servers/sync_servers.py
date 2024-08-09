@@ -14,10 +14,6 @@ from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import torch.nn as nn
-from flsim.active_user_selectors.simple_user_selector import (
-    ActiveUserSelectorConfig,
-    UniformlyRandomActiveUserSelectorConfig,
-)
 from flsim.channels.base_channel import IdentityChannel, IFLChannel
 from flsim.channels.message import Message
 from flsim.channels.pq_utils.pq import PQ
@@ -37,6 +33,10 @@ from flsim.utils.config_utils import fullclassname, init_self_cfg
 from flsim.utils.fl.common import FLModelParamUtils
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
+from papaya.toolkit.simulation.flsim.active_user_selectors.simple_user_selector import (
+    ActiveUserSelectorConfig,
+    UniformlyRandomActiveUserSelectorConfig,
+)
 from torch import Tensor
 
 
