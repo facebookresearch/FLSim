@@ -41,7 +41,8 @@ from flsim.utils.async_trainer.training_event_generator import (
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.sample_model import DummyAlphabetFLModel
 from flsim.utils.test_utils import verify_models_equivalent_after_training
-from flsim.utils.tests.helpers.test_async_trainer_utils import (
+from hydra.utils import instantiate
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_async_trainer_utils import (
     async_train_one_user,
     get_equal_split_data,
     get_fl_data_provider,
@@ -49,8 +50,9 @@ from flsim.utils.tests.helpers.test_async_trainer_utils import (
     run_fl_training,
     run_fl_training_with_event_generator,
 )
-from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
-from hydra.utils import instantiate
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_data_utils import (
+    DummyAlphabetDataset,
+)
 
 
 class TestAsyncTrainerWeights:

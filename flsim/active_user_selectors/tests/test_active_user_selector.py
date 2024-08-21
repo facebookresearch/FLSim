@@ -18,7 +18,6 @@ from flsim.common.pytest_helper import (
     assertTrue,
 )
 from flsim.utils.sample_model import DummyAlphabetFLModel
-from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
 from hydra.utils import instantiate
 from papaya.toolkit.simulation.flsim.active_user_selectors.simple_user_selector import (
     ActiveUserSelectorUtils,
@@ -32,6 +31,9 @@ from papaya.toolkit.simulation.flsim.active_user_selectors.simple_user_selector 
     SequentialActiveUserSelectorConfig,
     UniformlyRandomActiveUserSelector,
     UniformlyRandomActiveUserSelectorConfig,
+)
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_data_utils import (
+    DummyAlphabetDataset,
 )
 
 

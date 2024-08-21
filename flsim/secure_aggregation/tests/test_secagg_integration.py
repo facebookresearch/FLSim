@@ -16,8 +16,12 @@ from flsim.servers.sync_servers import SyncServerConfig
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.sample_model import DummyAlphabetFLModel
 from flsim.utils.test_utils import FakeMetricReporter, MetricsReporterWithMockedChannels
-from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
-from flsim.utils.tests.helpers.test_sync_trainer_utils import create_sync_trainer
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_data_utils import (
+    DummyAlphabetDataset,
+)
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_sync_trainer_utils import (
+    create_sync_trainer,
+)
 
 
 class TestSecureAggregationIntegration:

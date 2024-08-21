@@ -14,10 +14,10 @@ from flsim.utils.async_trainer.async_example_weights import (
     AsyncExampleWeightConfig,
     ExampleWeight,
 )
-from flsim.utils.tests.helpers.test_async_weights_utils import (  # noqa
+from hydra.utils import instantiate
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_async_weights_utils import (
     AsyncExampleWeightsTestUtils,
 )
-from hydra.utils import instantiate
 
 
 class TestAsyncExampleWeights:

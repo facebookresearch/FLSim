@@ -41,12 +41,6 @@ from flsim.utils.async_trainer.training_event_generator import (
 )
 from flsim.utils.sample_model import MockFLModel
 from flsim.utils.test_utils import check_inherit_logging_level
-from flsim.utils.tests.helpers.test_training_simulator_utils import (  # noqa: B950 line is too long
-    ConstantEventGenTestConfig,
-    ConstantEventGenTestConfigPerUserGaussian,
-    PoissonEventGenTestConfig,
-    PoissonEventGenTestConfigPerUserGaussian,
-)
 from flsim.utils.timing.training_duration_distribution import (
     DurationDistributionConfig,
     PerExampleGaussianDurationDistributionConfig,
@@ -56,6 +50,12 @@ from flsim.utils.timing.training_duration_distribution import (
     PerUserUniformDurationDistributionConfig,
 )
 from omegaconf import OmegaConf
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_training_simulator_utils import (
+    ConstantEventGenTestConfig,
+    ConstantEventGenTestConfigPerUserGaussian,
+    PoissonEventGenTestConfig,
+    PoissonEventGenTestConfigPerUserGaussian,
+)
 
 
 class Globals:

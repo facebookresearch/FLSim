@@ -47,12 +47,14 @@ from flsim.utils.test_utils import (
     FakeMetricReporter,
     verify_models_equivalent_after_training,
 )
-from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
-from flsim.utils.tests.helpers.test_utils import FLTestUtils
 from flsim.utils.timing.training_duration_distribution import (
     PerExampleGaussianDurationDistributionConfig,
 )
 from omegaconf import OmegaConf
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_data_utils import (
+    DummyAlphabetDataset,
+)
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_utils import FLTestUtils
 
 CONSTANT_LR_SCHEDULER_CONFIG = ConstantLRSchedulerConfig()
 EQUAL_EXAMPLE_WEIGHT_CONFIG = EqualExampleWeightConfig()

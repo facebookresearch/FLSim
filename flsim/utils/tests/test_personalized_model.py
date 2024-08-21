@@ -11,7 +11,7 @@ import pytest
 from flsim.common.pytest_helper import assertEmpty, assertEqual, assertRaises
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.fl.personalized_model import FLModelWithPrivateModules
-from flsim.utils.tests.helpers.test_models import (
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_models import (
     FC_PRIVATE_MODULE_NAMES,
     PersonalizedFCModel,
 )

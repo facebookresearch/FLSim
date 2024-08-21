@@ -18,8 +18,10 @@ from flsim.data.data_provider import FLDataProviderFromList, FLUserDataFromList
 from flsim.utils.async_trainer.async_user_selector import AsyncUserSelectorInfo
 from flsim.utils.async_trainer.device_state import TrainingSchedule
 from flsim.utils.sample_model import MockFLModel
-from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
 from omegaconf import OmegaConf
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_data_utils import (
+    DummyAlphabetDataset,
+)
 
 
 @pytest.fixture(scope="class")

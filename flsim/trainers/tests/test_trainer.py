@@ -53,9 +53,6 @@ from flsim.utils.test_utils import (
     SimpleMetricReporter,
     verify_models_equivalent_after_training,
 )
-from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
-from flsim.utils.tests.helpers.test_sync_trainer_utils import create_sync_trainer
-from flsim.utils.tests.helpers.test_utils import FLTestUtils
 from flsim.utils.timing.training_duration_distribution import (
     PerExampleGaussianDurationDistributionConfig,
 )
@@ -65,6 +62,13 @@ from omegaconf import OmegaConf
 from papaya.toolkit.simulation.flsim.active_user_selectors.simple_user_selector import (
     SequentialActiveUserSelectorConfig,
 )
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_data_utils import (
+    DummyAlphabetDataset,
+)
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_sync_trainer_utils import (
+    create_sync_trainer,
+)
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_utils import FLTestUtils
 
 CONFIG_PATH = "test_resources"
 

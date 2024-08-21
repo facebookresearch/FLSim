@@ -21,12 +21,12 @@ from flsim.common.pytest_helper import (
 )
 from flsim.utils.fl.common import FLModelParamUtils
 from flsim.utils.fl.personalized_model import FLModelWithPrivateModules
-from flsim.utils.tests.helpers.test_models import (
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_models import (
     FCModel,
     LinearRegression,
     PersonalizedLinearRegression,
 )
-from flsim.utils.tests.helpers.test_utils import FLTestUtils
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_utils import FLTestUtils
 
 PRIVATE_SLOPE_MODULE_NAME: str = (
     FLModelWithPrivateModules.USER_PRIVATE_MODULE_PREFIX + "_a"

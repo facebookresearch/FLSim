@@ -39,16 +39,18 @@ from flsim.utils.test_utils import (
     MetricsReporterWithMockedChannels,
     verify_models_equivalent_after_training,
 )
-from flsim.utils.tests.helpers.test_async_trainer_utils import (
-    get_fl_data_provider,
-    run_fl_training,
-)
-from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
 from omegaconf import OmegaConf
 from opacus import GradSampleModule
 from opacus.optimizers import DPOptimizer
 from papaya.toolkit.simulation.flsim.active_user_selectors.simple_user_selector import (
     SequentialActiveUserSelectorConfig,
+)
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_async_trainer_utils import (
+    get_fl_data_provider,
+    run_fl_training,
+)
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_data_utils import (
+    DummyAlphabetDataset,
 )
 
 

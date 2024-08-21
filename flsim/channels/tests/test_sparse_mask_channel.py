@@ -20,8 +20,8 @@ from flsim.channels.sparse_mask_channel import (
 from flsim.common.pytest_helper import assertAlmostEqual, assertEqual, assertIsInstance
 from flsim.utils import test_utils as utils
 from flsim.utils.fl.common import FLModelParamUtils
-from flsim.utils.tests.helpers.test_models import FCModel
 from hydra.utils import instantiate
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_models import FCModel
 from torch.nn.utils import prune
 
 

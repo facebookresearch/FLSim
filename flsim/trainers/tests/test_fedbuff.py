@@ -37,16 +37,20 @@ from flsim.utils.test_utils import (
     MetricsReporterWithMockedChannels,
     verify_models_equivalent_after_training,
 )
-from flsim.utils.tests.helpers.test_async_trainer_utils import (
+from hydra.utils import instantiate
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_async_trainer_utils import (
     create_async_trainer,
     create_event_generator_config,
     get_safe_global_lr,
     run_fl_training,
 )
-from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset
-from flsim.utils.tests.helpers.test_sync_trainer_utils import create_sync_trainer
-from flsim.utils.tests.helpers.test_utils import FLTestUtils
-from hydra.utils import instantiate
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_data_utils import (
+    DummyAlphabetDataset,
+)
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_sync_trainer_utils import (
+    create_sync_trainer,
+)
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_utils import FLTestUtils
 
 
 class TrainerType(Enum):

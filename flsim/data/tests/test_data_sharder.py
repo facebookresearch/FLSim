@@ -23,8 +23,11 @@ from flsim.data.data_sharder import (
 )
 from flsim.data.dataset_data_loader import FLDatasetDataLoaderWithBatch
 from flsim.utils.sample_model import TestDataSetting
-from flsim.utils.tests.helpers.test_data_utils import DummyAlphabetDataset, Utils
 from hydra.utils import instantiate
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_data_utils import (
+    DummyAlphabetDataset,
+    Utils,
+)
 
 
 class MockData:

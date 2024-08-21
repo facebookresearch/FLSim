@@ -48,7 +48,11 @@ from flsim.utils.test_utils import (
     RandomEvalMetricsReporter,
     verify_models_equivalent_after_training,
 )
-from flsim.utils.tests.helpers.test_async_trainer_utils import (
+from flsim.utils.timing.training_duration_distribution import (
+    PerExampleGaussianDurationDistributionConfig,
+    PerUserUniformDurationDistributionConfig,
+)
+from papaya.toolkit.simulation.flsim.utils.tests.helpers.test_async_trainer_utils import (
     assert_fl_nonfl_same,
     assert_fl_nonfl_same_equal_data_split,
     async_train_one_user,
@@ -61,10 +65,6 @@ from flsim.utils.tests.helpers.test_async_trainer_utils import (
     get_unequal_split_data,
     run_fl_training,
     run_fl_training_with_event_generator,
-)
-from flsim.utils.timing.training_duration_distribution import (
-    PerExampleGaussianDurationDistributionConfig,
-    PerUserUniformDurationDistributionConfig,
 )
 
 
